@@ -15,6 +15,8 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0004 | Billing cycles are ours, not the provider's | accepted |
 | 0005 | No comments in code | accepted |
 | 0006 | Multi-tenant from the first entity | accepted |
+| 0007 | OpenAPI generated from zod and documentation rendered on the server | accepted |
+| 0008 | Idempotency and rate limit stores start in memory | accepted |
 
 ## Template
 

@@ -1,7 +1,10 @@
 export { describeClockContract } from "./clock.contract";
+export { describeHumanVerifierContract, type HumanVerifierHarness } from "./human-verifier.contract";
 export { describeIdGeneratorContract } from "./id-generator.contract";
+export { describeIdempotencyStoreContract, type IdempotencyStoreHarness } from "./idempotency-store.contract";
 export { describeLoggerContract } from "./logger.contract";
 export { describeOutboxContract, type OutboxHarness } from "./outbox.contract";
 export { describePermissionsContract } from "./permissions.contract";
+export { describeRateLimiterContract, type RateLimiterHarness } from "./rate-limiter.contract";
 export { describeTenantRepositoryContract, type TenantRepositoryHarness } from "./tenant-repository.contract";
 export { describeUnitOfWorkContract } from "./unit-of-work.contract";
