@@ -103,7 +103,8 @@
   "envAccessOnlyIn": [
     "apps/web/src/main",
     "apps/worker/src/main",
-    "scripts/agent"
+    "scripts/agent",
+    "packages/infrastructure/test"
   ],
   "serverOnlyPackages": [
     "infrastructure"
