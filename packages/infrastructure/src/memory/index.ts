@@ -14,3 +14,17 @@ export { InMemoryOutbox } from "./outbox";
 export { AllowAllPermissions, DenyAllPermissions, ScopedPermissions } from "./permissions";
 export { InMemoryUnitOfWork } from "./unit-of-work";
 export { InMemoryTenantRepository, InMemoryTenantStore } from "./tenants/index";
+export {
+  InMemoryApiKeyHasher,
+  InMemoryApiKeyRepository,
+  InMemoryApiKeyStore,
+  InMemoryIdentityProvider,
+  InMemoryMembershipRepository,
+  InMemoryMembershipStore,
+  InMemoryUserRepository,
+  InMemoryUserStore,
+  inMemoryHashMarker,
+  invalidSessionError,
+  SequentialSecretGenerator,
+  sequentialSecretLength,
+} from "./identity/index";
