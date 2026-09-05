@@ -22,6 +22,10 @@ Next resolves `server-only` to an empty module under the `react-server` conditio
 - Repositories require a tenant context to be constructed and add the tenant filter to every statement.
 - Row level security stays enabled as a second barrier, with the tenant set per connection.
 - Rows are mapped to entities inside this package. Rows never leave it.
+- `createPostgresClient` disables prepared statements because the Supabase transaction pooler does not keep them between transactions. The tenant is set per transaction with `set_config(..., true)`, never with session level `SET`; see decision 0007.
+- Every repository statement runs inside a transaction. `runInTransaction` reuses the transaction opened by `PostgresUnitOfWork` through `AsyncLocalStorage`, so a repository never receives a connection as a parameter.
+- Migrations live in `migrations/` and are applied by `bun run db:migrate` from this package, which reads `DATABASE_URL` in `scripts/db`. `bun run db:generate -- --name <change>` writes a new migration from the schema; `bun run db:generate -- --custom --name <change>` prepares an empty file for hand written SQL.
+- The contract suites in `test/postgres.test.ts` run only when `DATABASE_URL` is set and truncate both tables before every test; point them at a disposable database.
 
 ## Providers
 

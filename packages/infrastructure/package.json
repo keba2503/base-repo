@@ -9,11 +9,18 @@
   "scripts": {
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit",
-    "test": "bun test --conditions react-server"
+    "test": "bun test --conditions react-server",
+    "db:generate": "drizzle-kit generate --config ../../scripts/db/drizzle.config.ts",
+    "db:migrate": "bun ../../scripts/db/migrate.ts"
   },
   "dependencies": {
     "@base/application": "workspace:*",
     "@base/domain": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9",
     "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }

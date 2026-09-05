@@ -104,6 +104,7 @@
     "apps/web/src/main",
     "apps/worker/src/main",
     "scripts/agent",
+    "scripts/db",
     "packages/infrastructure/test"
   ],
   "serverOnlyPackages": [
