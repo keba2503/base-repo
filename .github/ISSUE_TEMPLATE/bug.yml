@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a defect in the base repository or a project derived from it
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: layer
+    attributes:
+      label: Layer(s) affected
+      description: domain, application, contracts, adapters, infrastructure, web, worker
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, environment
+    validations:
+      required: false

@@ -1,0 +1,105 @@
+{
+  "scope": "@base",
+  "layers": {
+    "domain": {
+      "path": "packages/domain",
+      "ring": 1,
+      "mayImport": [],
+      "externalAllowed": []
+    },
+    "application": {
+      "path": "packages/application",
+      "ring": 2,
+      "mayImport": [
+        "domain"
+      ],
+      "externalAllowed": []
+    },
+    "contracts": {
+      "path": "packages/contracts",
+      "ring": 3,
+      "mayImport": [
+        "domain"
+      ],
+      "externalAllowed": [
+        "zod"
+      ]
+    },
+    "adapters": {
+      "path": "packages/adapters",
+      "ring": 3,
+      "mayImport": [
+        "application",
+        "domain",
+        "contracts"
+      ],
+      "externalAllowed": [
+        "zod"
+      ],
+      "externalForbidden": [
+        "next",
+        "react",
+        "react-dom",
+        "drizzle-orm",
+        "@supabase/*",
+        "hono"
+      ]
+    },
+    "infrastructure": {
+      "path": "packages/infrastructure",
+      "ring": 4,
+      "mayImport": [
+        "application",
+        "domain"
+      ],
+      "externalForbidden": [
+        "next",
+        "react",
+        "react-dom"
+      ]
+    },
+    "web": {
+      "path": "apps/web",
+      "ring": 4,
+      "mayImport": [
+        "adapters",
+        "contracts",
+        "infrastructure"
+      ],
+      "mayImportOnlyFrom": {
+        "application": [
+          "src/main"
+        ],
+        "domain": [
+          "src/main"
+        ]
+      },
+      "main": "src/main"
+    },
+    "worker": {
+      "path": "apps/worker",
+      "ring": 4,
+      "mayImport": [
+        "adapters",
+        "infrastructure"
+      ],
+      "mayImportOnlyFrom": {
+        "application": [
+          "src/main"
+        ],
+        "domain": [
+          "src/main"
+        ]
+      },
+      "main": "src/main"
+    }
+  },
+  "envAccessOnlyIn": [
+    "apps/web/src/main",
+    "apps/worker/src/main",
+    "scripts/agent"
+  ],
+  "serverOnlyPackages": [
+    "infrastructure"
+  ]
+}

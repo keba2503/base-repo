@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(npm:*)",
+      "Bash(pnpm:*)",
+      "Bash(yarn:*)",
+      "Bash(npx:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./apps/web/.env)",
+      "Read(./apps/web/.env.*)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent/prompt-context.ts\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent/pre-write.ts\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent/pre-bash.ts\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent/stop.ts\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

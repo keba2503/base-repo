@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "allowJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "@base/*": ["packages/*/src"],
+      "@/*": ["apps/web/src/*", "apps/worker/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "**/node_modules", ".next", "**/.next", "dist", "**/dist"]
+}
