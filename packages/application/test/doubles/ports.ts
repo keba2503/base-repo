@@ -4,6 +4,7 @@ import type {
   IdGenerator,
   Outbox,
   PermissionRequest,
+  StoredEvent,
   Permissions,
   TenantRepository,
   UnitOfWork,
@@ -62,6 +63,20 @@ export class StubOutbox implements Outbox {
 
   enqueue(events: readonly DomainEvent[]): Promise<void> {
     this.events.push(...events);
+    return Promise.resolve();
+  }
+
+  pullUnpublished(limit: number): Promise<readonly StoredEvent[]> {
+    return Promise.resolve(
+      this.events.slice(0, limit).map((event, index) => ({ id: String(index + 1), event, attempts: 0 })),
+    );
+  }
+
+  markPublished(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  markFailed(): Promise<void> {
     return Promise.resolve();
   }
 }

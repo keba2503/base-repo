@@ -38,5 +38,33 @@ export function describeOutboxContract(name: string, createHarness: () => Outbox
       await harness.outbox.enqueue([]);
       expect(await harness.enqueued()).toEqual([]);
     });
+
+    it("pulls unpublished events up to the limit in order", async () => {
+      const harness = createHarness();
+      await harness.outbox.enqueue([eventFactory(1), eventFactory(2), eventFactory(3)]);
+      const pulled = await harness.outbox.pullUnpublished(2);
+      expect(pulled.map((stored) => stored.event.tenantId)).toEqual([tenantIdFactory(1), tenantIdFactory(2)]);
+      expect(pulled.every((stored) => stored.attempts === 0)).toBe(true);
+    });
+
+    it("stops returning events once they are marked published", async () => {
+      const harness = createHarness();
+      await harness.outbox.enqueue([eventFactory(1), eventFactory(2)]);
+      const [first] = await harness.outbox.pullUnpublished(1);
+      if (!first) throw new Error("expected a stored event");
+      await harness.outbox.markPublished([first.id]);
+      const remaining = await harness.outbox.pullUnpublished(10);
+      expect(remaining.map((stored) => stored.event.tenantId)).toEqual([tenantIdFactory(2)]);
+    });
+
+    it("counts attempts when an event is marked failed and keeps it pending", async () => {
+      const harness = createHarness();
+      await harness.outbox.enqueue([eventFactory(1)]);
+      const [first] = await harness.outbox.pullUnpublished(1);
+      if (!first) throw new Error("expected a stored event");
+      await harness.outbox.markFailed([first.id]);
+      const [again] = await harness.outbox.pullUnpublished(1);
+      expect(again?.attempts).toBe(1);
+    });
   });
 }
