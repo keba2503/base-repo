@@ -1,20 +1,22 @@
 import type { DomainError, DomainErrorKind } from "@base/domain";
 import type { ContractIssue } from "@base/contracts";
 
-export type OutcomeKind = "ok" | "invalid" | "forbidden" | "conflict" | "notFound";
+export type OutcomeKind = "ok" | "invalid" | "forbidden" | "conflict" | "notFound" | "unavailable";
 
 export type Outcome<Value> =
   | { readonly kind: "ok"; readonly value: Value }
   | { readonly kind: "invalid"; readonly issues: readonly ContractIssue[] }
   | { readonly kind: "forbidden"; readonly code: string; readonly message: string }
   | { readonly kind: "conflict"; readonly code: string; readonly message: string }
-  | { readonly kind: "notFound"; readonly code: string; readonly message: string };
+  | { readonly kind: "notFound"; readonly code: string; readonly message: string }
+  | { readonly kind: "unavailable"; readonly code: string; readonly message: string };
 
 const failureKindByErrorKind: Readonly<Record<DomainErrorKind, Exclude<OutcomeKind, "ok">>> = {
   invariantViolation: "invalid",
   forbidden: "forbidden",
   conflict: "conflict",
   notFound: "notFound",
+  unavailable: "unavailable",
 };
 
 export function succeeded<Value>(value: Value): Outcome<Value> {

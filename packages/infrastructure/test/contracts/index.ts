@@ -1,6 +1,7 @@
 export { describeClockContract } from "./clock.contract";
 export { describeIdGeneratorContract } from "./id-generator.contract";
 export { describeLoggerContract } from "./logger.contract";
+export { describeMailerContract, type MailerHarness } from "./mailer.contract";
 export { describeOutboxContract, type OutboxHarness } from "./outbox.contract";
 export { describePermissionsContract } from "./permissions.contract";
 export { describeTenantRepositoryContract, type TenantRepositoryHarness } from "./tenant-repository.contract";

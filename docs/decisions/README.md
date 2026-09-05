@@ -15,6 +15,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0004 | Billing cycles are ours, not the provider's | accepted |
 | 0005 | No comments in code | accepted |
 | 0006 | Multi-tenant from the first entity | accepted |
+| 0007 | Provider failures are unavailable domain errors | accepted |
 
 ## Template
 

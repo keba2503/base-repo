@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 import {
   AllowAllPermissions,
   ConsoleLogger,
+  ConsoleMailer,
   DenyAllPermissions,
   FixedClock,
+  InMemoryMailer,
   InMemoryOutbox,
   InMemoryTenantRepository,
   InMemoryTenantStore,
@@ -17,11 +19,12 @@ import {
   SystemClock,
   type LogSink,
 } from "@base/infrastructure";
-import type { LogFields } from "@base/application";
+import type { LogFields, MailMessage } from "@base/application";
 import {
   describeClockContract,
   describeIdGeneratorContract,
   describeLoggerContract,
+  describeMailerContract,
   describeOutboxContract,
   describePermissionsContract,
   describeTenantRepositoryContract,
@@ -47,6 +50,12 @@ describeOutboxContract("InMemoryOutbox", () => {
 
 describeLoggerContract("SilentLogger", () => new SilentLogger());
 describeLoggerContract("ConsoleLogger", () => new ConsoleLogger({ sink: recordingSink().sink }));
+
+describeMailerContract("InMemoryMailer", () => ({ mailer: new InMemoryMailer(), recipient: "owner@example.com" }));
+describeMailerContract("ConsoleMailer", () => ({
+  mailer: new ConsoleMailer({ sink: () => undefined }),
+  recipient: "owner@example.com",
+}));
 
 describeTenantRepositoryContract("InMemoryTenantRepository", () => {
   const store = new InMemoryTenantStore();
@@ -114,5 +123,49 @@ describe("in memory outbox", () => {
     await outbox.enqueue([]);
     outbox.drain();
     expect(outbox.enqueued).toEqual([]);
+  });
+});
+
+const welcome: MailMessage = {
+  to: "owner@example.com",
+  subject: "Acme Clinic is created",
+  html: "<p>Acme Clinic is ready.</p>",
+  text: "Acme Clinic is ready.",
+};
+
+describe("in memory mailer", () => {
+  it("records every message it sends", async () => {
+    const mailer = new InMemoryMailer();
+    await mailer.send(welcome);
+    expect(mailer.sent).toEqual([welcome]);
+  });
+
+  it("records nothing for a rejected message", async () => {
+    const mailer = new InMemoryMailer();
+    await mailer.send({ ...welcome, to: "nobody" });
+    expect(mailer.sent).toEqual([]);
+  });
+
+  it("empties itself once drained", async () => {
+    const mailer = new InMemoryMailer();
+    await mailer.send(welcome);
+    mailer.drain();
+    expect(mailer.sent).toEqual([]);
+  });
+});
+
+describe("console mailer", () => {
+  it("writes the recipient, the subject and the text part to the sink", async () => {
+    const lines: string[] = [];
+    const mailer = new ConsoleMailer({ sink: (line) => lines.push(line) });
+    await mailer.send(welcome);
+    expect(lines).toEqual(["mail to owner@example.com | Acme Clinic is created\nAcme Clinic is ready."]);
+  });
+
+  it("never writes the html part", async () => {
+    const lines: string[] = [];
+    const mailer = new ConsoleMailer({ sink: (line) => lines.push(line) });
+    await mailer.send(welcome);
+    expect(lines.join("\n")).not.toContain("<p>");
   });
 });
