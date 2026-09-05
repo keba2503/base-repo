@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  transpilePackages: [
+    "@base/adapters",
+    "@base/application",
+    "@base/contracts",
+    "@base/domain",
+    "@base/infrastructure",
+  ],
   poweredByHeader: false,
   async headers() {
     return [

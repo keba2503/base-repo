@@ -25,6 +25,8 @@ This package is ring 1. It has zero dependencies. Not on node, not on zod, not o
 
 Every aggregate root carries a `TenantId`. It is part of the entity identity and is required by every factory.
 
+`Tenant` is the one exception: it is the aggregate that defines a tenant, so its `TenantId` is its own id. Its repository is therefore scoped by a `TenantScope`, either the registry, used by the operations that create or resolve a tenant before a tenant context exists, or a single tenant, used by everything that runs inside one.
+
 ## Soft delete
 
 Only entities that explicitly implement `SoftDeletable` carry a deletion mark. The rest are deleted or anonymised for real.

@@ -7,6 +7,8 @@ related: [../architecture/ports, ../standards/testing, ../standards/security, ..
 
 Ring 4. Depends on `@base/application` and `@base/domain`. Never next or react. The package entry imports `server-only`, so any client bundle that reaches it fails at build time.
 
+Next resolves `server-only` to an empty module under the `react-server` condition. A consumer outside Next, such as `apps/worker` or `bun test`, must pass `--conditions react-server` or the import throws.
+
 ## Layout
 
 - `src/memory/`: in-memory implementation of every port. Complete, not a stub.

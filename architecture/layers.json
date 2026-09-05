@@ -5,7 +5,9 @@
       "path": "packages/domain",
       "ring": 1,
       "mayImport": [],
-      "externalAllowed": []
+      "externalAllowed": [
+        "bun:test"
+      ]
     },
     "application": {
       "path": "packages/application",
@@ -13,7 +15,9 @@
       "mayImport": [
         "domain"
       ],
-      "externalAllowed": []
+      "externalAllowed": [
+        "bun:test"
+      ]
     },
     "contracts": {
       "path": "packages/contracts",
@@ -22,7 +26,8 @@
         "domain"
       ],
       "externalAllowed": [
-        "zod"
+        "zod",
+        "bun:test"
       ]
     },
     "adapters": {
@@ -34,7 +39,8 @@
         "contracts"
       ],
       "externalAllowed": [
-        "zod"
+        "zod",
+        "bun:test"
       ],
       "externalForbidden": [
         "next",

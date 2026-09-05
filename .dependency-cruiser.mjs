@@ -141,6 +141,7 @@ export default {
     ...externalRules,
   ],
   options: {
+    tsPreCompilationDeps: true,
     exclude: {
       path: "(^|/)(node_modules|\\.next|dist|coverage)(/|$)",
     },

@@ -1,0 +1,20 @@
+{
+  "name": "@base/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@base/application": "workspace:*",
+    "@base/contracts": "workspace:*",
+    "@base/domain": "workspace:*",
+    "zod": "^4.5.4"
+  }
+}

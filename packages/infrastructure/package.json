@@ -1,0 +1,19 @@
+{
+  "name": "@base/infrastructure",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --conditions react-server"
+  },
+  "dependencies": {
+    "@base/application": "workspace:*",
+    "@base/domain": "workspace:*",
+    "server-only": "^0.0.1"
+  }
+}
