@@ -14,9 +14,14 @@ export type CreateDownloadUrlRequest = StoredFileLocation & {
   readonly expiresInSeconds: number;
 };
 
+export type CreateUploadUrlRequest = StoredFileLocation & {
+  readonly expiresInSeconds: number;
+};
+
 export type FileStore = {
   save(request: SaveFileRequest): Promise<void>;
   read(location: StoredFileLocation): Promise<Uint8Array | undefined>;
   remove(location: StoredFileLocation): Promise<void>;
   createDownloadUrl(request: CreateDownloadUrlRequest): Promise<string>;
+  createUploadUrl(request: CreateUploadUrlRequest): Promise<string>;
 };

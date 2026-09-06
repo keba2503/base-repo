@@ -1,4 +1,10 @@
-import type { CreateDownloadUrlRequest, FileStore, SaveFileRequest, StoredFileLocation } from "@base/application";
+import type {
+  CreateDownloadUrlRequest,
+  CreateUploadUrlRequest,
+  FileStore,
+  SaveFileRequest,
+  StoredFileLocation,
+} from "@base/application";
 
 type StoredFile = {
   readonly contentType: string;
@@ -29,5 +35,10 @@ export class InMemoryFileStore implements FileStore {
   createDownloadUrl(request: CreateDownloadUrlRequest): Promise<string> {
     const expiresAt = Date.now() + request.expiresInSeconds * 1_000;
     return Promise.resolve(`memory-download:${this.#keyOf(request)}?expiresAt=${String(expiresAt)}`);
+  }
+
+  createUploadUrl(request: CreateUploadUrlRequest): Promise<string> {
+    const expiresAt = Date.now() + request.expiresInSeconds * 1_000;
+    return Promise.resolve(`memory-upload:${this.#keyOf(request)}?expiresAt=${String(expiresAt)}`);
   }
 }

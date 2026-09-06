@@ -45,5 +45,15 @@ export function describeFileStoreContract(name: string, createHarness: () => Fil
       const url = await harness.store.createDownloadUrl({ tenantId: ownTenant, storageKey: "a", expiresInSeconds: 60 });
       expect(url.length).toBeGreaterThan(0);
     });
+
+    it("produces an upload url for a storage key that does not exist yet", async () => {
+      const harness = createHarness();
+      const url = await harness.store.createUploadUrl({
+        tenantId: ownTenant,
+        storageKey: "upload-key",
+        expiresInSeconds: 60,
+      });
+      expect(url.length).toBeGreaterThan(0);
+    });
   });
 }

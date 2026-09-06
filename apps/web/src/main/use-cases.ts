@@ -1,5 +1,7 @@
 import {
+  confirmDocumentUpload,
   createApiKey,
+  createDocumentUpload,
   createTenant,
   getDocument,
   getTenantBySlug,
@@ -8,26 +10,27 @@ import {
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
-  uploadDocument,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
 } from "@base/application";
 import {
+  confirmDocumentUploadController,
   createApiKeyController,
+  createDocumentUploadController,
   createTenantController,
   getDocumentController,
   getTenantBySlugController,
   listDocumentsController,
   revokeApiKeyController,
-  uploadDocumentController,
+  type ConfirmDocumentUploadController,
   type CreateApiKeyController,
+  type CreateDocumentUploadController,
   type CreateTenantController,
   type GetDocumentController,
   type GetTenantBySlugController,
   type ListDocumentsController,
   type RevokeApiKeyController,
-  type UploadDocumentController,
 } from "@base/adapters";
 import { createContainer, type Container } from "./container";
 import { env } from "./env";
@@ -107,15 +110,25 @@ export function revokeApiKeyOperation(): RevokeApiKeyController {
   );
 }
 
-export function uploadDocumentOperation(): UploadDocumentController {
+export function createDocumentUploadOperation(): CreateDocumentUploadController {
   const parts = container();
-  return uploadDocumentController(
-    uploadDocument({
+  return createDocumentUploadController(
+    createDocumentUpload({
+      fileStore: parts.fileStore,
+      permissions: parts.permissions,
+      idGenerator: parts.idGenerator,
+    }),
+  );
+}
+
+export function confirmDocumentUploadOperation(): ConfirmDocumentUploadController {
+  const parts = container();
+  return confirmDocumentUploadController(
+    confirmDocumentUpload({
       documentsScopedTo: parts.documentsScopedTo,
       fileStore: parts.fileStore,
       permissions: parts.permissions,
       clock: parts.clock,
-      idGenerator: parts.idGenerator,
       unitOfWork: parts.unitOfWork,
       outbox: parts.outbox,
       jobsScopedTo: parts.jobsScopedTo,

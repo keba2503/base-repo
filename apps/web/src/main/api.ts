@@ -2,7 +2,9 @@ import type { Actor as ApplicationActor } from "@base/application";
 import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Credential } from "@/api";
 import { env } from "./env";
 import {
+  confirmDocumentUploadOperation,
   createApiKeyOperation,
+  createDocumentUploadOperation,
   createTenantOperation,
   getDocumentOperation,
   getTenantBySlugOperation,
@@ -11,7 +13,6 @@ import {
   resolveActorFromSessionOperation,
   revokeApiKeyOperation,
   sharedContainer,
-  uploadDocumentOperation,
 } from "./use-cases";
 import { isOk } from "@base/domain";
 
@@ -50,7 +51,8 @@ function buildApiDependencies(): ApiDependencies {
       getTenantBySlug: getTenantBySlugOperation(),
       createApiKey: createApiKeyOperation(),
       revokeApiKey: revokeApiKeyOperation(),
-      uploadDocument: uploadDocumentOperation(),
+      createDocumentUpload: createDocumentUploadOperation(),
+      confirmDocumentUpload: confirmDocumentUploadOperation(),
       getDocument: getDocumentOperation(),
       listDocuments: listDocumentsOperation(),
     },

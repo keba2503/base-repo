@@ -24,6 +24,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0013 | The remote address trusts the platform header first | accepted |
 | 0014 | The development actor requires its own flag, not just NODE_ENV | accepted |
 | 0015 | A deferred job queue is its own table, not pgmq | accepted |
+| 0016 | A document is uploaded directly to storage, never through the API body | accepted |
 
 ## Template
 

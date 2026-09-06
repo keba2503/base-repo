@@ -1,11 +1,12 @@
 import {
+  confirmDocumentUploadController,
   createApiKeyController,
+  createDocumentUploadController,
   createTenantController,
   getDocumentController,
   getTenantBySlugController,
   listDocumentsController,
   revokeApiKeyController,
-  uploadDocumentController,
 } from "@base/adapters";
 import {
   FixedClock,
@@ -22,7 +23,8 @@ type CreateTenantUseCase = Parameters<typeof createTenantController>[0];
 type GetTenantBySlugUseCase = Parameters<typeof getTenantBySlugController>[0];
 type CreateApiKeyUseCase = Parameters<typeof createApiKeyController>[0];
 type RevokeApiKeyUseCase = Parameters<typeof revokeApiKeyController>[0];
-type UploadDocumentUseCase = Parameters<typeof uploadDocumentController>[0];
+type CreateDocumentUploadUseCase = Parameters<typeof createDocumentUploadController>[0];
+type ConfirmDocumentUploadUseCase = Parameters<typeof confirmDocumentUploadController>[0];
 type GetDocumentUseCase = Parameters<typeof getDocumentController>[0];
 type ListDocumentsUseCase = Parameters<typeof listDocumentsController>[0];
 
@@ -104,9 +106,15 @@ export const documentOutput = {
   processedAt: null,
 };
 
-export const validUploadDocumentPayload = {
+export const createDocumentUploadResponse = {
+  storageKey: "00000000-0000-4000-8000-000000000040",
+  uploadUrl: "https://storage.example.com/upload/signed",
+  expiresInSeconds: 300,
+};
+
+export const validConfirmDocumentUploadPayload = {
+  storageKey: "00000000-0000-4000-8000-000000000040",
   filename: "informe.pdf",
-  content: Buffer.from("%PDF-1.7 fake pdf body").toString("base64"),
 };
 
 export type HarnessOptions = {
@@ -114,7 +122,8 @@ export type HarnessOptions = {
   readonly getTenantBySlug?: GetTenantBySlugUseCase;
   readonly createApiKey?: CreateApiKeyUseCase;
   readonly revokeApiKey?: RevokeApiKeyUseCase;
-  readonly uploadDocument?: UploadDocumentUseCase;
+  readonly createDocumentUpload?: CreateDocumentUploadUseCase;
+  readonly confirmDocumentUpload?: ConfirmDocumentUploadUseCase;
   readonly getDocument?: GetDocumentUseCase;
   readonly listDocuments?: ListDocumentsUseCase;
   readonly routes?: readonly RouteDefinition[];
@@ -141,7 +150,8 @@ const succeedingCreate: CreateTenantUseCase = () => Promise.resolve(ok(tenantRes
 const succeedingGet: GetTenantBySlugUseCase = () => Promise.resolve(ok(tenantResponse));
 const succeedingCreateApiKey: CreateApiKeyUseCase = () => Promise.resolve(ok(apiKeyCreatedResponse));
 const succeedingRevokeApiKey: RevokeApiKeyUseCase = () => Promise.resolve(ok(apiKeyRevokedResponse));
-const succeedingUploadDocument: UploadDocumentUseCase = () => Promise.resolve(ok(documentResponse));
+const succeedingCreateDocumentUpload: CreateDocumentUploadUseCase = () => Promise.resolve(ok(createDocumentUploadResponse));
+const succeedingConfirmDocumentUpload: ConfirmDocumentUploadUseCase = () => Promise.resolve(ok(documentResponse));
 const succeedingGetDocument: GetDocumentUseCase = () => Promise.resolve(ok(documentResponse));
 const succeedingListDocuments: ListDocumentsUseCase = () => Promise.resolve(ok({ documents: [documentResponse] }));
 
@@ -156,7 +166,8 @@ export function harnessFactory(options: HarnessOptions = {}): Harness {
       getTenantBySlug: getTenantBySlugController(options.getTenantBySlug ?? succeedingGet),
       createApiKey: createApiKeyController(options.createApiKey ?? succeedingCreateApiKey),
       revokeApiKey: revokeApiKeyController(options.revokeApiKey ?? succeedingRevokeApiKey),
-      uploadDocument: uploadDocumentController(options.uploadDocument ?? succeedingUploadDocument),
+      createDocumentUpload: createDocumentUploadController(options.createDocumentUpload ?? succeedingCreateDocumentUpload),
+      confirmDocumentUpload: confirmDocumentUploadController(options.confirmDocumentUpload ?? succeedingConfirmDocumentUpload),
       getDocument: getDocumentController(options.getDocument ?? succeedingGetDocument),
       listDocuments: listDocumentsController(options.listDocuments ?? succeedingListDocuments),
     },
@@ -229,13 +240,27 @@ export function postRevokeApiKey(
   );
 }
 
-export function postDocument(
+export function postConfirmDocument(
   api: Api,
   payload: unknown,
   headers: Readonly<Record<string, string>> = { cookie: sessionCookie },
 ): Promise<Response> {
   return Promise.resolve(
     api.request("/api/v1/documents", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: typeof payload === "string" ? payload : JSON.stringify(payload),
+    }),
+  );
+}
+
+export function postCreateDocumentUpload(
+  api: Api,
+  payload: unknown = {},
+  headers: Readonly<Record<string, string>> = { cookie: sessionCookie },
+): Promise<Response> {
+  return Promise.resolve(
+    api.request("/api/v1/documents/upload-urls", {
       method: "POST",
       headers: { "content-type": "application/json", ...headers },
       body: typeof payload === "string" ? payload : JSON.stringify(payload),

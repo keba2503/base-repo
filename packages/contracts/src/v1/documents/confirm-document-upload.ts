@@ -4,33 +4,30 @@ import { documentOutput, type DocumentOutput } from "./document-output";
 
 export const documentFilenameMinimumLength = 1;
 export const documentFilenameMaximumLength = 255;
-export const documentMaxSizeBytes = 20 * 1024 * 1024;
 
-const base64MaximumLength = Math.ceil(documentMaxSizeBytes / 3) * 4;
-
-const uploadDocumentInput = z.object({
+const confirmDocumentUploadInput = z.object({
+  storageKey: z.uuid(),
   filename: z.string().trim().min(documentFilenameMinimumLength).max(documentFilenameMaximumLength),
-  content: z.base64().max(base64MaximumLength),
 });
 
-export type UploadDocumentInput = z.infer<typeof uploadDocumentInput>;
+export type ConfirmDocumentUploadInput = z.infer<typeof confirmDocumentUploadInput>;
 
-export type UploadDocumentOutput = DocumentOutput;
+export type ConfirmDocumentUploadOutput = DocumentOutput;
 
-export const uploadDocumentErrorCodes = [
+export const confirmDocumentUploadErrorCodes = [
+  "document.upload.notFound",
   "document.filename.length",
   "document.contentType.unsupported",
   "document.size.invalid",
   "document.size.tooLarge",
-  "document.content.malformed",
   "authorization.denied",
 ] as const;
 
-export const uploadDocumentContract: Contract<UploadDocumentInput, UploadDocumentOutput> = {
-  name: "documents.upload",
-  input: uploadDocumentInput,
+export const confirmDocumentUploadContract: Contract<ConfirmDocumentUploadInput, ConfirmDocumentUploadOutput> = {
+  name: "documents.confirmUpload",
+  input: confirmDocumentUploadInput,
   output: documentOutput,
-  errorCodes: uploadDocumentErrorCodes,
+  errorCodes: confirmDocumentUploadErrorCodes,
   metadata: {
     auth: "either",
     humanCheck: false,

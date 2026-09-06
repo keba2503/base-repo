@@ -1,10 +1,20 @@
 import { resourceOfAction } from "@base/domain";
 import type { Actor } from "../kernel/actor";
 
-export type UploadDocumentRequest = {
+export type CreateDocumentUploadRequest = {
   readonly actor: Actor;
+};
+
+export type CreateDocumentUploadResponse = {
+  readonly storageKey: string;
+  readonly uploadUrl: string;
+  readonly expiresInSeconds: number;
+};
+
+export type ConfirmDocumentUploadRequest = {
+  readonly actor: Actor;
+  readonly storageKey: string;
   readonly filename: string;
-  readonly base64Content: string;
 };
 
 export type GetDocumentRequest = {
@@ -39,6 +49,7 @@ export const readDocumentsAction = "documents:read";
 export const documentResource = resourceOfAction(uploadDocumentAction);
 
 export const documentProcessJobName = "documents.process";
+export const documentUploadUrlExpiresInSeconds = 5 * 60;
 
 export type ProcessDocumentJobPayload = {
   readonly documentId: string;

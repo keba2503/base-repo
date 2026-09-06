@@ -1,44 +1,71 @@
 import { describe, expect, it } from "bun:test";
 import {
+  createDocumentUploadResponse,
   documentOutput,
   domainError,
   errorOf,
   getDocumentByPath,
   getDocuments,
   harnessFactory,
-  postDocument,
-  validUploadDocumentPayload,
+  postConfirmDocument,
+  postCreateDocumentUpload,
+  validConfirmDocumentUploadPayload,
 } from "./harness";
+
+describe("POST /api/v1/documents/upload-urls", () => {
+  it("answers 200 with a storage key and an upload url", async () => {
+    const response = await postCreateDocumentUpload(harnessFactory().api);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(createDocumentUploadResponse);
+  });
+
+  it("answers 403 when the use case forbids the actor", async () => {
+    const harness = harnessFactory({
+      createDocumentUpload: () => Promise.resolve(domainError("forbidden", "authorization.denied", "denied")),
+    });
+    const response = await postCreateDocumentUpload(harness.api);
+    expect(response.status).toBe(403);
+  });
+});
 
 describe("POST /api/v1/documents", () => {
   it("answers 201 with the contract output on success", async () => {
-    const response = await postDocument(harnessFactory().api, validUploadDocumentPayload);
+    const response = await postConfirmDocument(harnessFactory().api, validConfirmDocumentUploadPayload);
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual(documentOutput);
   });
 
   it("answers 422 with the issues when the payload breaks the contract", async () => {
-    const response = await postDocument(harnessFactory().api, { content: validUploadDocumentPayload.content });
+    const response = await postConfirmDocument(harnessFactory().api, { filename: "informe.pdf" });
     const error = await errorOf(response);
     expect(response.status).toBe(422);
-    expect(error.issues).toEqual([expect.objectContaining({ path: "filename" })]);
+    expect(error.issues).toEqual([expect.objectContaining({ path: "storageKey" })]);
+  });
+
+  it("answers 404 when nothing was uploaded for that storage key", async () => {
+    const harness = harnessFactory({
+      confirmDocumentUpload: () => Promise.resolve(domainError("notFound", "document.upload.notFound", "missing")),
+    });
+    const response = await postConfirmDocument(harness.api, validConfirmDocumentUploadPayload);
+    expect(response.status).toBe(404);
+    expect((await errorOf(response)).code).toBe("document.upload.notFound");
   });
 
   it("answers 422 carrying the domain code when the content type is unsupported", async () => {
     const harness = harnessFactory({
-      uploadDocument: () =>
+      confirmDocumentUpload: () =>
         Promise.resolve(domainError("invariantViolation", "document.contentType.unsupported", "unsupported")),
     });
-    const response = await postDocument(harness.api, validUploadDocumentPayload);
+    const response = await postConfirmDocument(harness.api, validConfirmDocumentUploadPayload);
     expect(response.status).toBe(422);
     expect((await errorOf(response)).code).toBe("document.contentType.unsupported");
   });
 
   it("answers 403 when the use case forbids the actor", async () => {
     const harness = harnessFactory({
-      uploadDocument: () => Promise.resolve(domainError("forbidden", "authorization.denied", "denied")),
+      confirmDocumentUpload: () => Promise.resolve(domainError("forbidden", "authorization.denied", "denied")),
     });
-    const response = await postDocument(harness.api, validUploadDocumentPayload);
+    const response = await postConfirmDocument(harness.api, validConfirmDocumentUploadPayload);
     expect(response.status).toBe(403);
   });
 });

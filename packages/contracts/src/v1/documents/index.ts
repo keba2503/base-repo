@@ -1,3 +1,17 @@
+export {
+  confirmDocumentUploadContract,
+  confirmDocumentUploadErrorCodes,
+  documentFilenameMaximumLength,
+  documentFilenameMinimumLength,
+  type ConfirmDocumentUploadInput,
+  type ConfirmDocumentUploadOutput,
+} from "./confirm-document-upload";
+export {
+  createDocumentUploadContract,
+  createDocumentUploadErrorCodes,
+  type CreateDocumentUploadInput,
+  type CreateDocumentUploadOutput,
+} from "./create-document-upload";
 export { documentOutput, documentStatus, type DocumentOutput } from "./document-output";
 export { getDocumentContract, getDocumentErrorCodes, type GetDocumentInput, type GetDocumentOutput } from "./get-document";
 export {
@@ -8,12 +22,3 @@ export {
   type ListDocumentsInput,
   type ListDocumentsOutput,
 } from "./list-documents";
-export {
-  documentFilenameMaximumLength,
-  documentFilenameMinimumLength,
-  documentMaxSizeBytes,
-  uploadDocumentContract,
-  uploadDocumentErrorCodes,
-  type UploadDocumentInput,
-  type UploadDocumentOutput,
-} from "./upload-document";

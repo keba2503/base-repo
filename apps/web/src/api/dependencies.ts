@@ -1,12 +1,13 @@
 import type {
+  ConfirmDocumentUploadController,
   CreateApiKeyController,
+  CreateDocumentUploadController,
   CreateTenantCommand,
   CreateTenantController,
   GetDocumentController,
   GetTenantBySlugController,
   ListDocumentsController,
   RevokeApiKeyController,
-  UploadDocumentController,
 } from "@base/adapters";
 import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter } from "./ports";
 
@@ -24,7 +25,8 @@ export type ApiControllers = {
   readonly getTenantBySlug: GetTenantBySlugController;
   readonly createApiKey: CreateApiKeyController;
   readonly revokeApiKey: RevokeApiKeyController;
-  readonly uploadDocument: UploadDocumentController;
+  readonly createDocumentUpload: CreateDocumentUploadController;
+  readonly confirmDocumentUpload: ConfirmDocumentUploadController;
   readonly getDocument: GetDocumentController;
   readonly listDocuments: ListDocumentsController;
 };

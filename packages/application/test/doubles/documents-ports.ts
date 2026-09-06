@@ -1,6 +1,7 @@
 import { ok, type Document, type DomainError, type EntityId, type Result, type TenantId } from "@base/domain";
 import type {
   CreateDownloadUrlRequest,
+  CreateUploadUrlRequest,
   DocumentProcessingOutcome,
   DocumentProcessingRequest,
   DocumentProcessor,
@@ -85,6 +86,10 @@ export class StubFileStore implements FileStore {
 
   createDownloadUrl(request: CreateDownloadUrlRequest): Promise<string> {
     return Promise.resolve(`stub-download:${request.tenantId}/${request.storageKey}?expiresIn=${String(request.expiresInSeconds)}`);
+  }
+
+  createUploadUrl(request: CreateUploadUrlRequest): Promise<string> {
+    return Promise.resolve(`stub-upload:${request.tenantId}/${request.storageKey}?expiresIn=${String(request.expiresInSeconds)}`);
   }
 
   get savedKeys(): readonly string[] {

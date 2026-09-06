@@ -1,9 +1,10 @@
 import type { Outcome } from "@base/adapters";
 import {
+  confirmDocumentUploadContract,
+  createDocumentUploadContract,
   getDocumentContract,
   listDocumentsContract,
   parseContractInput,
-  uploadDocumentContract,
   type DocumentOutput,
   type ListDocumentsOutput,
 } from "@base/contracts";
@@ -45,15 +46,26 @@ function listSerialised(outcome: Outcome<ListDocumentsResponse>): Outcome<ListDo
 export function documentRoutes(controllers: ApiControllers): readonly RouteDefinition[] {
   return [
     {
-      operationId: "uploadDocument",
-      summary: "Upload a document",
+      operationId: "createDocumentUploadUrl",
+      summary: "Request a signed url to upload a document directly to storage",
+      tag: "documents",
+      method: "post",
+      path: "/v1/documents/upload-urls",
+      contract: createDocumentUploadContract,
+      inputLocation: "body",
+      successStatus: 200,
+      execute: async ({ actor, payload }) => controllers.createDocumentUpload({ actor, payload }),
+    },
+    {
+      operationId: "confirmDocumentUpload",
+      summary: "Confirm a document already uploaded to storage and start processing it",
       tag: "documents",
       method: "post",
       path: "/v1/documents",
-      contract: uploadDocumentContract,
+      contract: confirmDocumentUploadContract,
       inputLocation: "body",
       successStatus: 201,
-      execute: async ({ actor, payload }) => documentSerialised(await controllers.uploadDocument({ actor, payload })),
+      execute: async ({ actor, payload }) => documentSerialised(await controllers.confirmDocumentUpload({ actor, payload })),
     },
     {
       operationId: "getDocument",

@@ -1,4 +1,10 @@
-import type { CreateDownloadUrlRequest, FileStore, SaveFileRequest, StoredFileLocation } from "@base/application";
+import type {
+  CreateDownloadUrlRequest,
+  CreateUploadUrlRequest,
+  FileStore,
+  SaveFileRequest,
+  StoredFileLocation,
+} from "@base/application";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SupabaseStorageClient = Pick<SupabaseClient, "storage">;
@@ -49,6 +55,16 @@ export class SupabaseFileStore implements FileStore {
       .createSignedUrl(this.#pathOf(request), request.expiresInSeconds);
     if (error) {
       throw new Error(`Supabase Storage could not sign a download url: ${error.message}`);
+    }
+    return data.signedUrl;
+  }
+
+  async createUploadUrl(request: CreateUploadUrlRequest): Promise<string> {
+    const { data, error } = await this.#client.storage
+      .from(this.#bucket)
+      .createSignedUploadUrl(this.#pathOf(request), { upsert: false });
+    if (error) {
+      throw new Error(`Supabase Storage could not sign an upload url: ${error.message}`);
     }
     return data.signedUrl;
   }
