@@ -23,19 +23,68 @@ function scriptKind(ext: string): ts.ScriptKind {
   return ts.ScriptKind.TS;
 }
 
+const triviaTokens = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.WhitespaceTrivia,
+  ts.SyntaxKind.NewLineTrivia,
+  ts.SyntaxKind.SingleLineCommentTrivia,
+  ts.SyntaxKind.MultiLineCommentTrivia,
+  ts.SyntaxKind.ShebangTrivia,
+  ts.SyntaxKind.ConflictMarkerTrivia,
+]);
+
+const tokensAfterWhichSlashIsDivision = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.Identifier,
+  ts.SyntaxKind.NumericLiteral,
+  ts.SyntaxKind.BigIntLiteral,
+  ts.SyntaxKind.StringLiteral,
+  ts.SyntaxKind.NoSubstitutionTemplateLiteral,
+  ts.SyntaxKind.TemplateTail,
+  ts.SyntaxKind.RegularExpressionLiteral,
+  ts.SyntaxKind.CloseParenToken,
+  ts.SyntaxKind.CloseBracketToken,
+  ts.SyntaxKind.ThisKeyword,
+  ts.SyntaxKind.SuperKeyword,
+  ts.SyntaxKind.TrueKeyword,
+  ts.SyntaxKind.FalseKeyword,
+  ts.SyntaxKind.NullKeyword,
+  ts.SyntaxKind.PlusPlusToken,
+  ts.SyntaxKind.MinusMinusToken,
+]);
+
 function commentIssuesInScript(file: string, source: ts.SourceFile): Issue[] {
   const issues: Issue[] = [];
   const text = source.getFullText();
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, source.languageVariant, text);
+  const braceOpenedByTemplate: boolean[] = [];
+  let previous: ts.SyntaxKind = ts.SyntaxKind.Unknown;
   let token = scanner.scan();
   while (token !== ts.SyntaxKind.EndOfFileToken) {
-    if (token === ts.SyntaxKind.SingleLineCommentTrivia || token === ts.SyntaxKind.MultiLineCommentTrivia) {
+    if (
+      (token === ts.SyntaxKind.SlashToken || token === ts.SyntaxKind.SlashEqualsToken) &&
+      !tokensAfterWhichSlashIsDivision.has(previous)
+    ) {
+      token = scanner.reScanSlashToken();
+    }
+
+    if (token === ts.SyntaxKind.TemplateHead) {
+      braceOpenedByTemplate.push(true);
+    } else if (token === ts.SyntaxKind.OpenBraceToken) {
+      braceOpenedByTemplate.push(false);
+    } else if (token === ts.SyntaxKind.CloseBraceToken && braceOpenedByTemplate.pop() === true) {
+      token = scanner.reScanTemplateToken(false);
+      if (token === ts.SyntaxKind.TemplateMiddle) braceOpenedByTemplate.push(true);
+      previous = token;
+      token = scanner.scan();
+      continue;
+    } else if (token === ts.SyntaxKind.SingleLineCommentTrivia || token === ts.SyntaxKind.MultiLineCommentTrivia) {
       const start = scanner.getTokenStart();
       const isTripleSlashDirective = text.startsWith("///", start);
       if (!isTripleSlashDirective) {
         issues.push({ file, line: lineOf(text, start), rule: "no-comments", message: "Comments are forbidden" });
       }
     }
+
+    if (!triviaTokens.has(token)) previous = token;
     token = scanner.scan();
   }
   return issues;
@@ -120,6 +169,35 @@ function importIssues(file: string, layer: Layer, source: ts.SourceFile): Issue[
   return issues;
 }
 
+const rawElementDirectory = "apps/web/src/app";
+const rawElementFreeDirectory = "apps/web/src/ui";
+const forbiddenRawElements = new Set(["button", "input", "select", "textarea"]);
+
+function jsxTagName(node: ts.JsxOpeningElement | ts.JsxSelfClosingElement): string {
+  return node.tagName.getText();
+}
+
+function rawElementIssues(file: string, source: ts.SourceFile): Issue[] {
+  if (!file.startsWith(`${rawElementDirectory}/`) || file.startsWith(`${rawElementFreeDirectory}/`)) return [];
+  const issues: Issue[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tagName = jsxTagName(node);
+      if (forbiddenRawElements.has(tagName)) {
+        issues.push({
+          file,
+          line: lineOf(source.getFullText(), node.getStart(source)),
+          rule: "reuse-ui-primitives",
+          message: `<${tagName}> is forbidden outside ${rawElementFreeDirectory}; use the matching component from @/ui`,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return issues;
+}
+
 function plainTextCommentIssues(file: string, text: string, pattern: RegExp, message: string): Issue[] {
   const issues: Issue[] = [];
   let match: RegExpExecArray | null;
@@ -134,7 +212,12 @@ export function checkSource(file: string, text: string): Issue[] {
   const base = file.slice(file.lastIndexOf("/") + 1);
   if (scriptExtensions.includes(ext)) {
     const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKind(ext));
-    const issues = [...commentIssuesInScript(file, source), ...anyIssues(file, source), ...envIssues(file, source)];
+    const issues = [
+      ...commentIssuesInScript(file, source),
+      ...anyIssues(file, source),
+      ...envIssues(file, source),
+      ...rawElementIssues(file, source),
+    ];
     const layer = layerOf(file);
     if (layer) issues.push(...importIssues(file, layer, source));
     return issues;
