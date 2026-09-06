@@ -4,6 +4,8 @@ import {
   ConsoleLogger,
   DenyAllPermissions,
   FixedClock,
+  InMemoryHumanVerifier,
+  InMemoryIdempotencyStore,
   InMemoryOutbox,
   InMemoryTenantRepository,
   InMemoryTenantStore,
@@ -14,16 +16,20 @@ import {
   ScopedPermissions,
   SequentialIdGenerator,
   SilentLogger,
+  SlidingWindowRateLimiter,
   SystemClock,
   type LogSink,
 } from "@base/infrastructure";
 import type { LogFields } from "@base/application";
 import {
   describeClockContract,
+  describeHumanVerifierContract,
+  describeIdempotencyStoreContract,
   describeIdGeneratorContract,
   describeLoggerContract,
   describeOutboxContract,
   describePermissionsContract,
+  describeRateLimiterContract,
   describeTenantRepositoryContract,
   describeUnitOfWorkContract,
 } from "./contracts/index";
@@ -53,6 +59,35 @@ describeTenantRepositoryContract("InMemoryTenantRepository", () => {
   return {
     registry: new InMemoryTenantRepository(store, { kind: "registry" }),
     scopedTo: (tenantId) => new InMemoryTenantRepository(store, { kind: "tenant", tenantId }),
+  };
+});
+
+describeHumanVerifierContract("InMemoryHumanVerifier", () => ({
+  verifier: new InMemoryHumanVerifier(["known-token"]),
+  recognisedToken: "known-token",
+  unrecognisedToken: "unknown-token",
+}));
+
+const idempotencyTimeToLive = 24 * 60 * 60 * 1000;
+
+describeIdempotencyStoreContract("InMemoryIdempotencyStore", () => {
+  const clock = new FixedClock(new Date("2026-01-15T10:00:00.000Z"));
+  return {
+    store: new InMemoryIdempotencyStore({ clock, timeToLiveMilliseconds: idempotencyTimeToLive }),
+    timeToLiveMilliseconds: idempotencyTimeToLive,
+    advanceBy: (milliseconds) => {
+      clock.advanceBy(milliseconds);
+    },
+  };
+});
+
+describeRateLimiterContract("SlidingWindowRateLimiter", () => {
+  const clock = new FixedClock(new Date("2026-01-15T10:00:00.000Z"));
+  return {
+    limiter: new SlidingWindowRateLimiter({ clock }),
+    advanceBy: (milliseconds) => {
+      clock.advanceBy(milliseconds);
+    },
   };
 });
 

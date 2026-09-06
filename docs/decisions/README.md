@@ -17,6 +17,8 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0006 | Multi-tenant from the first entity | accepted |
 | 0007 | Row level security keyed on a transaction local setting | accepted |
 | 0008 | Identity resolution and api keys | accepted |
+| 0009 | OpenAPI generated from zod and documentation rendered on the server | accepted |
+| 0010 | Idempotency and rate limit stores start in memory | accepted |
 
 ## Template
 
