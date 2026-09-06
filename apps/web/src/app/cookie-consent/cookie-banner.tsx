@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Input } from "@/ui";
 import { submitConsentDecision } from "./actions";
 
 type ConsentDecision = Readonly<{ functional: boolean; analytics: boolean; marketing: boolean }>;
@@ -59,7 +60,7 @@ export function CookieBanner({ initiallyKnown }: { initiallyKnown: boolean }) {
           <ul className="mt-4 flex flex-col gap-3">
             {categories.map((category) => (
               <li key={category.key} className="flex items-start gap-3">
-                <input
+                <Input
                   checked={selection[category.key]}
                   className="mt-1"
                   id={`consent-${category.key}`}
@@ -78,30 +79,30 @@ export function CookieBanner({ initiallyKnown }: { initiallyKnown: boolean }) {
         ) : null}
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button
-            className="border border-foreground/30 px-3 py-2 text-sm"
+          <Button
+            className="border border-foreground/30 px-3 py-3 text-sm"
             disabled={isPending}
             onClick={() => commit(allRejected)}
             type="button"
           >
             Solo necesarias
-          </button>
-          <button
-            className="border border-foreground/30 px-3 py-2 text-sm"
+          </Button>
+          <Button
+            className="border border-foreground/30 px-3 py-3 text-sm"
             disabled={isPending}
             onClick={() => (expanded ? commit(selection) : setExpanded(true))}
             type="button"
           >
             {expanded ? "Confirmar selección" : "Elegir categorías"}
-          </button>
-          <button
-            className="border border-foreground/30 px-3 py-2 text-sm"
+          </Button>
+          <Button
+            className="border border-foreground/30 px-3 py-3 text-sm"
             disabled={isPending}
             onClick={() => commit(allAccepted)}
             type="button"
           >
             Aceptar todas
-          </button>
+          </Button>
         </div>
       </div>
     </div>

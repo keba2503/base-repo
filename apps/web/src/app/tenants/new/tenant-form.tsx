@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { TenantFormViewModel } from "@base/adapters";
+import { Button, Input } from "@/ui";
 import { submitTenant } from "./actions";
 
 export function TenantForm({ initial }: { initial: TenantFormViewModel }) {
@@ -14,8 +15,8 @@ export function TenantForm({ initial }: { initial: TenantFormViewModel }) {
     <form action={action} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1" htmlFor="name">
         <span>{form.nameLabel}</span>
-        <input
-          className="border border-foreground/20 px-3 py-2"
+        <Input
+          className="border border-foreground/20 px-3 py-3"
           id="name"
           name="name"
           required
@@ -24,8 +25,8 @@ export function TenantForm({ initial }: { initial: TenantFormViewModel }) {
       </label>
       <label className="flex flex-col gap-1" htmlFor="slug">
         <span>{form.slugLabel}</span>
-        <input
-          className="border border-foreground/20 px-3 py-2"
+        <Input
+          className="border border-foreground/20 px-3 py-3"
           id="slug"
           name="slug"
           required
@@ -39,9 +40,9 @@ export function TenantForm({ initial }: { initial: TenantFormViewModel }) {
           ))}
         </ul>
       ) : null}
-      <button className="bg-foreground px-4 py-2 text-background" disabled={pending} type="submit">
+      <Button className="bg-foreground px-4 py-3 text-background" disabled={pending} type="submit">
         {form.submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }
