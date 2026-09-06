@@ -1,6 +1,8 @@
 import type {
+  Analytics,
   ApiKeyHasher,
   ApiKeyRepository,
+  AuditTrail,
   Clock,
   ConsentRepository,
   DocumentProcessor,
@@ -19,6 +21,7 @@ import type {
   Permissions,
   RateLimiter,
   SecretGenerator,
+  Telemetry,
   TenantRepository,
   UnitOfWork,
   UserRepository,
@@ -26,6 +29,7 @@ import type {
 import { RolePermissions } from "@base/application";
 import {
   apiKeyFieldClassifications,
+  consentFieldClassifications,
   documentFieldClassifications,
   membershipFieldClassifications,
   tenantFieldClassifications,
@@ -40,9 +44,12 @@ import {
   createResendClient,
   createTurnstileClient,
   FixedClock,
+  InMemoryAnalytics,
   InMemoryApiKeyHasher,
   InMemoryApiKeyRepository,
   InMemoryApiKeyStore,
+  InMemoryAuditStore,
+  InMemoryAuditTrail,
   InMemoryConsentRepository,
   InMemoryConsentStore,
   InMemoryDocumentRepository,
@@ -58,13 +65,19 @@ import {
   InMemoryMembershipRepository,
   InMemoryMembershipStore,
   InMemoryOutbox,
+  InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
   InMemoryUserRepository,
   InMemoryUserStore,
+  MeasurementProtocolAnalytics,
+  NoopAnalytics,
+  NoopTelemetry,
   NullDocumentProcessor,
+  OtelTelemetry,
   PostgresApiKeyRepository,
+  PostgresAuditTrail,
   PostgresConsentRepository,
   PostgresDocumentRepository,
   PostgresJobQueue,
@@ -77,6 +90,8 @@ import {
   RandomSecretGenerator,
   redactionPolicyFrom,
   ResendMailer,
+  createOtelClient,
+  sentryOtlpEndpointFrom,
   SequentialIdGenerator,
   SequentialSecretGenerator,
   Sha256ApiKeyHasher,
@@ -86,7 +101,9 @@ import {
   SupabaseIdentityProvider,
   SystemClock,
   TurnstileHumanVerifier,
+  type OtelClient,
   type PostgresClient,
+  type RedactionPolicy,
 } from "@base/infrastructure";
 import { createClient } from "@supabase/supabase-js";
 import type { Environment } from "./env";
@@ -100,6 +117,7 @@ export type Container = {
   readonly unitOfWork: UnitOfWork;
   readonly outbox: Outbox;
   readonly logger: Logger;
+  readonly telemetry: Telemetry;
   readonly userRegistry: UserRepository;
   readonly membershipRegistry: MembershipRepository;
   membershipsScopedTo(tenantId: TenantId): MembershipRepository;
@@ -109,6 +127,7 @@ export type Container = {
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
   jobsScopedTo(tenantId: TenantId): JobQueue;
   consentsScopedTo(tenantId: TenantId): ConsentRepository;
+  auditScopedTo(tenantId: TenantId): AuditTrail;
   readonly fileStore: FileStore;
   readonly documentProcessor: DocumentProcessor;
   readonly identityProvider: IdentityProvider;
@@ -118,6 +137,7 @@ export type Container = {
   readonly idempotencyStore: IdempotencyStore;
   readonly rateLimiter: RateLimiter;
   readonly mailer: Mailer;
+  readonly analytics: Analytics;
   close(): Promise<void>;
 };
 
@@ -127,6 +147,7 @@ const logRedactionPolicy = redactionPolicyFrom(
   apiKeyFieldClassifications,
   membershipFieldClassifications,
   documentFieldClassifications,
+  consentFieldClassifications,
 );
 
 function deterministicParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
@@ -168,18 +189,20 @@ function postgresPersistence(
 
 type DocumentsPersistence = Pick<
   Container,
-  "documentRegistry" | "documentsScopedTo" | "jobsScopedTo" | "consentsScopedTo"
+  "documentRegistry" | "documentsScopedTo" | "jobsScopedTo" | "consentsScopedTo" | "auditScopedTo"
 >;
 
 function memoryDocumentsPersistence(): DocumentsPersistence {
   const documents = new InMemoryDocumentStore();
   const jobs = new InMemoryJobStore();
   const consents = new InMemoryConsentStore();
+  const audit = new InMemoryAuditStore();
   return {
     documentRegistry: new InMemoryDocumentRepository(documents, { kind: "registry" }),
     documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documents, { kind: "tenant", tenantId }),
     jobsScopedTo: (tenantId) => new InMemoryJobQueue(jobs, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new InMemoryConsentRepository(consents, tenantId),
+    auditScopedTo: (tenantId) => new InMemoryAuditTrail(audit, tenantId),
   };
 }
 
@@ -189,6 +212,7 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
     documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, cipher),
     jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new PostgresConsentRepository(client.db, tenantId),
+    auditScopedTo: (tenantId) => new PostgresAuditTrail(client.db, tenantId),
   };
 }
 
@@ -293,6 +317,32 @@ function humanVerifierFor(environment: Environment): HumanVerifier {
   );
 }
 
+function telemetryFor(environment: Environment, logger: Logger, policy: RedactionPolicy): { telemetry: Telemetry; otelClient: OtelClient | undefined } {
+  if (environment.nodeEnv === "test") return { telemetry: new InMemoryTelemetry({ policy }), otelClient: undefined };
+  if (environment.sentryDsn === undefined) {
+    logger.warn("SENTRY_DSN is not configured: request and job spans are not exported anywhere");
+    return { telemetry: new NoopTelemetry(), otelClient: undefined };
+  }
+  const otelClient = createOtelClient({
+    serviceName: "base-web",
+    endpoint: sentryOtlpEndpointFrom(environment.sentryDsn),
+  });
+  return { telemetry: new OtelTelemetry(otelClient.tracer, { policy }), otelClient };
+}
+
+function analyticsFor(environment: Environment, logger: Logger): Analytics {
+  if (environment.nodeEnv === "test") return new InMemoryAnalytics();
+  if (environment.gaMeasurementId === undefined || environment.gaApiSecret === undefined) {
+    logger.warn("GA_MEASUREMENT_ID or GA_API_SECRET is not configured: server side analytics events are dropped");
+    return new NoopAnalytics();
+  }
+  return new MeasurementProtocolAnalytics({
+    measurementId: environment.gaMeasurementId,
+    apiSecret: environment.gaApiSecret,
+    timeoutMilliseconds: 5000,
+  });
+}
+
 function mailerFor(environment: Environment): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
   if (environment.nodeEnv === "development") return new ConsoleMailer();
@@ -319,11 +369,14 @@ export function createContainer(environment: Environment): Container {
   const documents =
     client !== undefined ? postgresDocumentsPersistence(client, fieldCipher) : memoryDocumentsPersistence();
 
+  const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);
+
   return {
     ...parts,
     ...persistence,
     ...identity,
     ...documents,
+    telemetry,
     permissions: new RolePermissions({ membershipsScopedTo: identity.membershipsScopedTo }),
     ...identityParts(environment),
     fileStore: fileStoreFor(environment),
@@ -332,6 +385,10 @@ export function createContainer(environment: Environment): Container {
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock: parts.clock }),
     mailer: mailerFor(environment),
-    close: () => client?.close() ?? Promise.resolve(),
+    analytics: analyticsFor(environment, parts.logger),
+    close: async () => {
+      await client?.close();
+      await otelClient?.shutdown();
+    },
   };
 }

@@ -79,6 +79,7 @@ export function dispatchJobsOperation(container: Container) {
     permissions: container.permissions,
     logger: container.logger,
     clock: container.clock,
+    telemetry: container.telemetry,
   });
 
   return async (limit: number): Promise<DispatchJobsOutcome> => {

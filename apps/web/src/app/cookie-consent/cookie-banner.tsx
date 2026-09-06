@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { submitConsentDecision } from "./actions";
 
 type ConsentDecision = Readonly<{ functional: boolean; analytics: boolean; marketing: boolean }>;
@@ -33,6 +34,7 @@ export function CookieBanner({ initiallyKnown }: { initiallyKnown: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [selection, setSelection] = useState<ConsentDecision>(allRejected);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   if (!visible) return null;
 
@@ -40,6 +42,7 @@ export function CookieBanner({ initiallyKnown }: { initiallyKnown: boolean }) {
     startTransition(async () => {
       await submitConsentDecision(decision);
       setVisible(false);
+      router.refresh();
     });
   }
 

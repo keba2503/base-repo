@@ -58,6 +58,7 @@ function buildApiDependencies(): ApiDependencies {
     },
     resolveActor: apiActorResolver(),
     logger: parts.logger,
+    telemetry: parts.telemetry,
     humanVerifier: parts.humanVerifier,
     idempotencyStore: parts.idempotencyStore,
     rateLimiter: parts.rateLimiter,

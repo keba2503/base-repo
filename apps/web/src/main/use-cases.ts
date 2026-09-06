@@ -7,6 +7,7 @@ import {
   getTenantBySlug,
   grantConsent,
   hasActiveConsent,
+  listAuditEntries,
   listDocuments,
   registerUser,
   resolveActorFromApiKey,
@@ -15,6 +16,7 @@ import {
   withdrawConsent,
   type GrantConsent,
   type HasActiveConsent,
+  type ListAuditEntries,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
@@ -58,6 +60,7 @@ export function createTenantOperation(): CreateTenantController {
   return createTenantController(
     createTenant({
       tenants: parts.tenantRegistry,
+      auditScopedTo: parts.auditScopedTo,
       permissions: parts.permissions,
       clock: parts.clock,
       idGenerator: parts.idGenerator,
@@ -109,6 +112,7 @@ export function revokeApiKeyOperation(): RevokeApiKeyController {
   return revokeApiKeyController(
     revokeApiKey({
       apiKeysScopedTo: parts.apiKeysScopedTo,
+      auditScopedTo: parts.auditScopedTo,
       permissions: parts.permissions,
       clock: parts.clock,
       unitOfWork: parts.unitOfWork,
@@ -157,13 +161,14 @@ export function listDocumentsOperation(): ListDocumentsController {
   );
 }
 
-const consentPermissions = new ScopedPermissions();
+const scopedPermissions = new ScopedPermissions();
 
 export function grantConsentOperation(): GrantConsent {
   const parts = container();
   return grantConsent({
     consentsScopedTo: parts.consentsScopedTo,
-    permissions: consentPermissions,
+    auditScopedTo: parts.auditScopedTo,
+    permissions: scopedPermissions,
     clock: parts.clock,
     idGenerator: parts.idGenerator,
     unitOfWork: parts.unitOfWork,
@@ -175,7 +180,8 @@ export function withdrawConsentOperation(): WithdrawConsent {
   const parts = container();
   return withdrawConsent({
     consentsScopedTo: parts.consentsScopedTo,
-    permissions: consentPermissions,
+    auditScopedTo: parts.auditScopedTo,
+    permissions: scopedPermissions,
     clock: parts.clock,
     unitOfWork: parts.unitOfWork,
     outbox: parts.outbox,
@@ -186,7 +192,7 @@ export function hasActiveConsentOperation(): HasActiveConsent {
   const parts = container();
   return hasActiveConsent({
     consentsScopedTo: parts.consentsScopedTo,
-    permissions: consentPermissions,
+    permissions: scopedPermissions,
   });
 }
 
@@ -199,5 +205,13 @@ export function registerUserOperation(): RegisterUser {
     clock: parts.clock,
     unitOfWork: parts.unitOfWork,
     outbox: parts.outbox,
+  });
+}
+
+export function listAuditEntriesOperation(): ListAuditEntries {
+  const parts = container();
+  return listAuditEntries({
+    auditScopedTo: parts.auditScopedTo,
+    permissions: scopedPermissions,
   });
 }

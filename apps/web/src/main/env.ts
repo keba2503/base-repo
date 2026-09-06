@@ -34,6 +34,10 @@ const environmentSchema = z
     mailWelcomeTo: z.email().default("owner@example.com"),
     resendApiKey: z.string().min(1).optional(),
     resendTimeoutMs: z.coerce.number().int().positive().default(10_000),
+    sentryDsn: z.url().optional(),
+    gtmContainerId: z.string().min(1).optional(),
+    gaMeasurementId: z.string().min(1).optional(),
+    gaApiSecret: z.string().min(1).optional(),
     allowInsecureDevActor: z.stringbool().default(false),
     allowEphemeralFieldEncryptionKey: z.stringbool().default(false),
   })
@@ -83,6 +87,10 @@ export const env: Environment = environmentSchema.parse({
   mailWelcomeTo: process.env.MAIL_WELCOME_TO,
   resendApiKey: process.env.RESEND_API_KEY,
   resendTimeoutMs: process.env.RESEND_TIMEOUT_MS,
+  sentryDsn: process.env.SENTRY_DSN,
+  gtmContainerId: process.env.GTM_CONTAINER_ID,
+  gaMeasurementId: process.env.GA_MEASUREMENT_ID,
+  gaApiSecret: process.env.GA_API_SECRET,
   allowInsecureDevActor: process.env.ALLOW_INSECURE_DEV_ACTOR,
   allowEphemeralFieldEncryptionKey: process.env.ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY,
 });

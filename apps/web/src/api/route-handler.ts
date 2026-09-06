@@ -53,53 +53,92 @@ export function routeHandler(route: RouteDefinition, dependencies: ApiDependenci
     const remoteAddress = remoteAddressOf(request);
     const credential = credentialOf(request, remoteAddress);
 
-    const rateLimit = await enforceRateLimit({
-      limiter: dependencies.rateLimiter,
-      policies: dependencies.rateLimits,
-      bucket: metadata.rateLimit,
-      subject: await rateLimitSubjectOf(credential),
+    const span = dependencies.telemetry.startSpan("http.request", {
+      requestId,
+      operationId: route.operationId,
+      method: request.method,
+      path: context.req.path,
     });
-    if (rateLimit.kind === "limited") return failureResponse(rateLimit.reason, requestId);
-    const responseHeaders = rateLimit.headers;
 
-    const authentication = await authenticate({ auth: metadata.auth, credential, resolveActor: dependencies.resolveActor });
-    if (authentication.kind === "refused") {
-      return failureResponse({ ...authentication.reason, headers: responseHeaders }, requestId);
-    }
-    const { actor } = authentication;
-
-    if (metadata.humanCheck) {
-      const rejected = await verifyHuman({
-        token: request.headers.get(humanTokenHeader) ?? undefined,
-        remoteAddress,
-        verifier: dependencies.humanVerifier,
-        logger: dependencies.logger,
-        requestId,
+    try {
+      const rateLimit = await enforceRateLimit({
+        limiter: dependencies.rateLimiter,
+        policies: dependencies.rateLimits,
+        bucket: metadata.rateLimit,
+        subject: await rateLimitSubjectOf(credential),
       });
-      if (rejected) return failureResponse({ ...rejected, headers: responseHeaders }, requestId);
+      if (rateLimit.kind === "limited") {
+        span.setAttribute("statusCode", 429);
+        span.end("error");
+        return failureResponse(rateLimit.reason, requestId);
+      }
+      const responseHeaders = rateLimit.headers;
+
+      const authentication = await authenticate({ auth: metadata.auth, credential, resolveActor: dependencies.resolveActor });
+      if (authentication.kind === "refused") {
+        span.setAttribute("statusCode", authentication.reason.status);
+        span.end("error");
+        return failureResponse({ ...authentication.reason, headers: responseHeaders }, requestId);
+      }
+      const { actor } = authentication;
+      span.setAttribute("tenantId", actor.tenantId);
+      span.setAttribute("subjectId", actor.subjectId);
+      span.setAttribute("actorKind", actor.kind);
+
+      if (metadata.humanCheck) {
+        const rejected = await verifyHuman({
+          token: request.headers.get(humanTokenHeader) ?? undefined,
+          remoteAddress,
+          verifier: dependencies.humanVerifier,
+          logger: dependencies.logger,
+          requestId,
+        });
+        if (rejected) {
+          span.setAttribute("statusCode", rejected.status);
+          span.end("error");
+          return failureResponse({ ...rejected, headers: responseHeaders }, requestId);
+        }
+      }
+
+      const payload = await payloadOf(route, context);
+      if (payload.kind === "refused") {
+        span.setAttribute("statusCode", payload.reason.status);
+        span.end("error");
+        return failureResponse({ ...payload.reason, headers: responseHeaders }, requestId);
+      }
+
+      const idempotency = usesIdempotency
+        ? await lookupIdempotency({
+            key: request.headers.get(idempotencyKeyHeader) ?? undefined,
+            operationId: route.operationId,
+            actor,
+            rawBody: payload.rawBody,
+            store: dependencies.idempotencyStore,
+          })
+        : { kind: "notRequested" as const };
+      if (idempotency.kind === "refused") {
+        span.setAttribute("statusCode", idempotency.reason.status);
+        span.end("error");
+        return failureResponse({ ...idempotency.reason, headers: responseHeaders }, requestId);
+      }
+      if (idempotency.kind === "replay") {
+        span.setAttribute("statusCode", idempotency.reply.status);
+        span.setAttribute("idempotencyReplay", true);
+        span.end("ok");
+        return replyResponse(idempotency.reply, { ...responseHeaders, [idempotencyReplayedHeader]: "true" });
+      }
+
+      const outcome = await route.execute({ actor, payload: payload.payload });
+      const reply = replyOf(outcome, route.successStatus, requestId);
+      if (idempotency.kind === "fresh") await dependencies.idempotencyStore.save(idempotency.record(reply));
+
+      span.setAttribute("statusCode", reply.status);
+      span.end(reply.status < 500 ? "ok" : "error");
+      return replyResponse(reply, responseHeaders);
+    } catch (thrown: unknown) {
+      span.recordException(thrown instanceof Error ? thrown : new Error(String(thrown)));
+      span.end("error");
+      throw thrown;
     }
-
-    const payload = await payloadOf(route, context);
-    if (payload.kind === "refused") return failureResponse({ ...payload.reason, headers: responseHeaders }, requestId);
-
-    const idempotency = usesIdempotency
-      ? await lookupIdempotency({
-          key: request.headers.get(idempotencyKeyHeader) ?? undefined,
-          operationId: route.operationId,
-          actor,
-          rawBody: payload.rawBody,
-          store: dependencies.idempotencyStore,
-        })
-      : { kind: "notRequested" as const };
-    if (idempotency.kind === "refused") return failureResponse({ ...idempotency.reason, headers: responseHeaders }, requestId);
-    if (idempotency.kind === "replay") {
-      return replyResponse(idempotency.reply, { ...responseHeaders, [idempotencyReplayedHeader]: "true" });
-    }
-
-    const outcome = await route.execute({ actor, payload: payload.payload });
-    const reply = replyOf(outcome, route.successStatus, requestId);
-    if (idempotency.kind === "fresh") await dependencies.idempotencyStore.save(idempotency.record(reply));
-
-    return replyResponse(reply, responseHeaders);
   };
 }

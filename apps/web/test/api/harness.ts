@@ -12,6 +12,7 @@ import {
   FixedClock,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
+  InMemoryTelemetry,
   RandomIdGenerator,
   SilentLogger,
   SlidingWindowRateLimiter,
@@ -180,6 +181,7 @@ export function harnessFactory(options: HarnessOptions = {}): Harness {
       return Promise.resolve(undefined);
     },
     logger: new SilentLogger(),
+    telemetry: new InMemoryTelemetry(),
     humanVerifier: new InMemoryHumanVerifier([recognisedHumanToken]),
     idempotencyStore: new InMemoryIdempotencyStore({ clock, timeToLiveMilliseconds: 60_000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock }),

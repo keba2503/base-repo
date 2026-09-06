@@ -9,7 +9,7 @@ import type {
   ListDocumentsController,
   RevokeApiKeyController,
 } from "@base/adapters";
-import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter } from "./ports";
+import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter, Telemetry } from "./ports";
 
 export type Actor = CreateTenantCommand["actor"];
 
@@ -49,6 +49,7 @@ export type ApiDependencies = {
   readonly controllers: ApiControllers;
   readonly resolveActor: ActorResolver;
   readonly logger: Logger;
+  readonly telemetry: Telemetry;
   readonly humanVerifier: HumanVerifier;
   readonly idempotencyStore: IdempotencyStore;
   readonly rateLimiter: RateLimiter;

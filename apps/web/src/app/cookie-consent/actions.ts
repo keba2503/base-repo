@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { recordConsentDecision, type ConsentDecision } from "@/main/privacy";
+import { trackServerEvent } from "@/main/analytics";
 
 const visitorCookieName = "visitor_id";
 const visitorCookieMaxAgeSeconds = 60 * 60 * 24 * 365;
@@ -15,5 +16,10 @@ export async function submitConsentDecision(decision: ConsentDecision): Promise<
     sameSite: "lax",
     maxAge: visitorCookieMaxAgeSeconds,
     path: "/",
+  });
+  await trackServerEvent(visitorId, "consent_updated", {
+    functional: decision.functional,
+    analytics: decision.analytics,
+    marketing: decision.marketing,
   });
 }

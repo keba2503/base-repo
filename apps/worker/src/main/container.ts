@@ -10,6 +10,7 @@ import type {
   Mailer,
   Outbox,
   Permissions,
+  Telemetry,
   TenantRepository,
   UnitOfWork,
 } from "@base/application";
@@ -18,6 +19,7 @@ import {
   AesGcmFieldCipher,
   ConsoleLogger,
   ConsoleMailer,
+  createOtelClient,
   createPostgresClient,
   createResendClient,
   InMemoryDocumentRepository,
@@ -28,10 +30,13 @@ import {
   InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
+  InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  NoopTelemetry,
   NullDocumentProcessor,
+  OtelTelemetry,
   PostgresDocumentRepository,
   PostgresJobQueue,
   PostgresOutbox,
@@ -41,10 +46,13 @@ import {
   redactionPolicyFrom,
   ResendMailer,
   ScopedPermissions,
+  sentryOtlpEndpointFrom,
   SilentLogger,
   SupabaseFileStore,
   SystemClock,
+  type OtelClient,
   type PostgresClient,
+  type RedactionPolicy,
 } from "@base/infrastructure";
 import { createClient } from "@supabase/supabase-js";
 import type { Environment } from "./env";
@@ -61,6 +69,7 @@ export type Container = {
   readonly fileStore: FileStore;
   readonly documentProcessor: DocumentProcessor;
   readonly logger: Logger;
+  readonly telemetry: Telemetry;
   readonly mailer: Mailer;
   close(): Promise<void>;
 };
@@ -134,6 +143,23 @@ function fileStoreFor(environment: Environment): FileStore {
   });
 }
 
+function telemetryFor(
+  environment: Environment,
+  logger: Logger,
+  policy: RedactionPolicy,
+): { telemetry: Telemetry; otelClient: OtelClient | undefined } {
+  if (environment.nodeEnv === "test") return { telemetry: new InMemoryTelemetry({ policy }), otelClient: undefined };
+  if (environment.sentryDsn === undefined) {
+    logger.warn("SENTRY_DSN is not configured: job spans are not exported anywhere");
+    return { telemetry: new NoopTelemetry(), otelClient: undefined };
+  }
+  const otelClient = createOtelClient({
+    serviceName: environment.workerName,
+    endpoint: sentryOtlpEndpointFrom(environment.sentryDsn),
+  });
+  return { telemetry: new OtelTelemetry(otelClient.tracer, { policy }), otelClient };
+}
+
 function mailerFor(environment: Environment): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
   if (environment.nodeEnv === "development") return new ConsoleMailer();
@@ -154,6 +180,7 @@ export function createContainer(environment: Environment): Container {
     environment.nodeEnv === "test" ? new SilentLogger() : new ConsoleLogger({ policy: logRedactionPolicy });
   const fieldCipher = fieldCipherFor(environment, logger);
   const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
+  const { telemetry, otelClient } = telemetryFor(environment, logger, logRedactionPolicy);
 
   return {
     ...persistence,
@@ -164,6 +191,10 @@ export function createContainer(environment: Environment): Container {
     documentProcessor: new NullDocumentProcessor(),
     mailer: mailerFor(environment),
     logger,
-    close: () => client?.close() ?? Promise.resolve(),
+    telemetry,
+    close: async () => {
+      await client?.close();
+      await otelClient?.shutdown();
+    },
   };
 }
