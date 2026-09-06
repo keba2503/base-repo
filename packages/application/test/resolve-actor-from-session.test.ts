@@ -56,7 +56,7 @@ describe("resolving an actor from a session", () => {
       tenantId: firstTenantId,
       subjectId: userId,
       kind: "user",
-      scopes: ["tenants:create", "tenants:read", "apikeys:manage", "members:manage"],
+      scopes: ["tenants:create", "tenants:read", "apikeys:manage", "members:manage", "documents:upload", "documents:read"],
     });
   });
 
@@ -64,7 +64,10 @@ describe("resolving an actor from a session", () => {
     const harness = harnessFactory();
     seedTwoMemberships(harness);
     const actor = expectActor(await harness.useCase({ token: "valid-token", tenantId: secondTenantId }));
-    expect([actor.tenantId, actor.scopes]).toEqual([secondTenantId, ["tenants:read"]]);
+    expect([actor.tenantId, actor.scopes]).toEqual([
+      secondTenantId,
+      ["tenants:read", "documents:upload", "documents:read"],
+    ]);
   });
 
   it("selects the membership named by tenant slug", async () => {
