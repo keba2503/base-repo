@@ -8,6 +8,8 @@ export function requestIdOf(request: Request): string {
 }
 
 export function remoteAddressOf(request: Request): string {
+  const vercelForwarded = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+  if (vercelForwarded !== undefined && vercelForwarded.length > 0) return vercelForwarded;
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (forwarded !== undefined && forwarded.length > 0) return forwarded;
   const real = request.headers.get("x-real-ip")?.trim();
