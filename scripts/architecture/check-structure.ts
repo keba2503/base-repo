@@ -70,3 +70,29 @@ export function checkStructure(projectDirectory: string, trackedFiles: readonly 
   const document = readFileSync(join(projectDirectory, structureDocument), "utf8");
   return compareStructure(trackedDirectories(trackedFiles), documentedDirectories(document));
 }
+
+export const plannedHeading = "## Lo que aún no existe";
+
+export function plannedDirectories(document: string): readonly string[] {
+  const block = fencedBlockAfterHeading(document, plannedHeading);
+  if (block === undefined) return [];
+
+  return block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.split(/\s+/)[0] ?? "");
+}
+
+export function arrivedPlans(
+  tracked: readonly string[],
+  planned: readonly string[],
+): readonly string[] {
+  const trackedSet = new Set(tracked);
+  return planned.filter((path) => trackedSet.has(path));
+}
+
+export function checkPlanned(projectDirectory: string, trackedFiles: readonly string[]): readonly string[] {
+  const document = readFileSync(join(projectDirectory, structureDocument), "utf8");
+  return arrivedPlans(trackedDirectories(trackedFiles), plannedDirectories(document));
+}

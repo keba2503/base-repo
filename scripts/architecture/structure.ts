@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { checkStructure, structureDocument } from "./check-structure";
+import { checkPlanned, checkStructure, structureDocument } from "./check-structure";
 
 function trackedFiles(): string[] {
   return execSync("git ls-files --cached --others --exclude-standard", { encoding: "utf8" })
@@ -7,7 +7,15 @@ function trackedFiles(): string[] {
     .filter((file) => file.length > 0);
 }
 
-const failures = checkStructure(process.cwd(), trackedFiles());
+const files = trackedFiles();
+const failures = checkStructure(process.cwd(), files);
+const arrived = checkPlanned(process.cwd(), files);
+
+if (arrived.length > 0) {
+  console.error(`Listed as not existing yet in ${structureDocument} but already present, move each one into the tree:`);
+  for (const path of arrived) console.error(`  ${path}`);
+  process.exit(1);
+}
 
 if (failures.length > 0) {
   const undocumented = failures.filter((failure) => failure.reason === "undocumented");
@@ -24,4 +32,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`${structureDocument} describes every tracked directory`);
+console.log(`${structureDocument} describes every tracked directory and no planned one has arrived unnoticed`);

@@ -178,15 +178,37 @@ La configuración se lee en `apps/*/src/main` y en ningún otro sitio. El compro
 
 ## Lo que aún no existe
 
-El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene ya su sitio decidido:
+El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene su sitio decidido, y ninguno de estos directorios existe todavía: `bun run structure` falla si alguno aparece sin salir de aquí y entrar en el árbol.
 
-| Pieza | Dónde irá |
-| --- | --- |
-| Documentos y su procesado por OCR o modelo | Agregado en `packages/domain/src/documents`, puerto de almacenamiento y puerto de procesado en `packages/application`, Supabase Storage en `packages/infrastructure/src/supabase` |
-| Pagos, con Stripe intercambiable por Redsys | Ciclo de facturación propio en `packages/domain/src/billing`, un proveedor por carpeta en `packages/infrastructure` y un solo adaptador que cambiar |
-| Caché, banderas de funcionalidad, webhooks, búsqueda, importación y exportación | Un puerto cada uno en `packages/application`, su implementación en memoria y su proveedor real en `packages/infrastructure` |
+```
+packages/domain/src/billing                  Pagos: ciclo de facturación propio, para que cambiar de proveedor sea cambiar un adaptador
+packages/application/src/billing             Pagos: suscribir, facturar, conciliar, y sus puertos
+packages/infrastructure/src/stripe           Pagos: el proveedor, un solo sitio que sustituir por Redsys
+packages/application/src/search              Búsqueda: el puerto y sus casos de uso
+packages/infrastructure/src/search           Búsqueda: el proveedor real
+packages/application/src/webhooks            Webhooks salientes: firma, reintento y registro de entregas
+packages/application/src/transfer            Importación y exportación de datos de negocio, no de datos personales
+scripts/setup                                Arranque de un proyecto derivado: migrar, crear el bucket, verificar y sembrar el primer tenant
+```
+
+Caché y banderas de funcionalidad no llevan carpeta propia: la caché es un puerto en `packages/application/src/kernel/ports` con su implementación real junto a las demás, y las banderas de funcionalidad son un puerto más una tabla con aislamiento por tenant, no variables de entorno.
 
 El patrón se repite siempre: la capacidad se declara como puerto en el anillo 2, se prueba con una suite de contrato, se implementa dos veces (memoria y proveedor real) y se conecta en la raíz de composición. Nada de esto obliga a tocar el dominio.
+
+## Huecos conocidos
+
+Deuda concreta, no capacidades nuevas. Vive aquí para que no se pierda:
+
+| Hueco | Por qué importa |
+| --- | --- |
+| No hay pantalla de acceso, y la resolución de actor redirige a ella | Sin ella no hay forma de entrar salvo por clave de API |
+| Un despliegue nuevo no puede crear su primer tenant | Crear un tenant exige un actor, que exige un usuario, que exige un tenant. Lo resuelve el arranque sembrando el primero |
+| Nada siembra el primer trabajo de retención de cada tenant | Una política de retención que nunca se ejecuta aparenta cumplir sin cumplir |
+| Sin ruta HTTP para consultar la auditoría ni para gestionar membresías | Los casos de uso existen y nadie puede llamarlos |
+| Sin pantallas de documentos | Solo hay API y worker |
+| Nadie limpia los objetos de almacenamiento cuya subida nunca se confirmó | Crecen sin límite y nadie los reclama |
+| Nadie purga los trabajos completados ni agotados | La tabla crece siempre; el rol de aplicación no puede borrar, así que hace falta mantenimiento con la conexión privilegiada |
+| Ninguna suite de contrato se ha ejecutado contra un proveedor real | Están escritas y se saltan. Es lo único que puede desmentir lo que creemos que funciona |
 
 ## Este documento se actualiza siempre
 
