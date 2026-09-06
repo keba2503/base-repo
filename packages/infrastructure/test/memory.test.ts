@@ -2,6 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   AllowAllPermissions,
   ConsoleLogger,
+  InMemoryAnalytics,
+  InMemoryAuditStore,
+  InMemoryAuditTrail,
   ConsoleMailer,
   DenyAllPermissions,
   FixedClock,
@@ -18,6 +21,9 @@ import {
   InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
+  InMemoryTelemetry,
+  NoopAnalytics,
+  NoopTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
@@ -36,6 +42,8 @@ import {
 import type { LogFields, MailMessage } from "@base/application";
 import { tenantIdFactory } from "./factories/tenant";
 import {
+  describeAnalyticsContract,
+  describeAuditTrailContract,
   describeClockContract,
   describeConsentRepositoryContract,
   describeDocumentProcessorContract,
@@ -51,6 +59,7 @@ import {
   describeOutboxContract,
   describePermissionsContract,
   describeRateLimiterContract,
+  describeTelemetryContract,
   describeTenantRepositoryContract,
   describeUnitOfWorkContract,
 } from "./contracts/index";
@@ -71,12 +80,22 @@ describeConsentRepositoryContract("InMemoryConsentRepository", () => ({
   consents: new InMemoryConsentRepository(new InMemoryConsentStore(), tenantIdFactory(1)),
 }));
 
+describeAuditTrailContract("InMemoryAuditTrail", () => ({
+  audit: new InMemoryAuditTrail(new InMemoryAuditStore(), tenantIdFactory(1)),
+}));
+
 describeUnitOfWorkContract("InMemoryUnitOfWork", () => new InMemoryUnitOfWork());
 
 describeOutboxContract("InMemoryOutbox", () => {
   const outbox = new InMemoryOutbox();
   return { outbox, enqueued: () => Promise.resolve(outbox.enqueued) };
 });
+
+describeTelemetryContract("InMemoryTelemetry", () => new InMemoryTelemetry());
+describeTelemetryContract("NoopTelemetry", () => new NoopTelemetry());
+
+describeAnalyticsContract("InMemoryAnalytics", () => new InMemoryAnalytics());
+describeAnalyticsContract("NoopAnalytics", () => new NoopAnalytics());
 
 describeLoggerContract("SilentLogger", () => new SilentLogger());
 describeLoggerContract("ConsoleLogger", () => new ConsoleLogger({ sink: recordingSink().sink }));
@@ -234,6 +253,41 @@ describe("in memory outbox", () => {
     await outbox.enqueue([]);
     outbox.drain();
     expect(outbox.enqueued).toEqual([]);
+  });
+});
+
+describe("in memory telemetry", () => {
+  it("records a span with its attributes", () => {
+    const telemetry = new InMemoryTelemetry();
+    const span = telemetry.startSpan("http.request", { requestId: "req-1", tenantId: "tenant-1" });
+    span.setAttribute("statusCode", 200);
+    span.end("ok");
+    expect(telemetry.spans).toEqual([
+      {
+        name: "http.request",
+        attributes: { requestId: "req-1", tenantId: "tenant-1", statusCode: 200 },
+        exceptions: [],
+        status: "ok",
+        ended: true,
+      },
+    ]);
+  });
+
+  it("redacts an attribute classified as personal before recording the span", () => {
+    const telemetry = new InMemoryTelemetry({ policy: { subjectId: "personal" } });
+    const span = telemetry.startSpan("http.request", { subjectId: "user-1", tenantId: "tenant-1" });
+    span.end();
+    expect(telemetry.spans[0]?.attributes).toEqual({ subjectId: redactedMarker, tenantId: "tenant-1" });
+  });
+
+  it("marks the span as failed once an exception is recorded", () => {
+    const telemetry = new InMemoryTelemetry();
+    const span = telemetry.startSpan("job.execute");
+    span.recordException(new Error("boom"));
+    span.end();
+    const recorded = telemetry.spans[0];
+    expect(recorded?.status).toBe("error");
+    expect(recorded?.exceptions).toHaveLength(1);
   });
 });
 

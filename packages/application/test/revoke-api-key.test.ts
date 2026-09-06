@@ -4,7 +4,7 @@ import { revokeApiKey, type ApiKeyResponse, type RevokeApiKey } from "../src/ind
 import { actorFactory, tenantIdFactory } from "./factories/actor";
 import { apiKeyFactory, entityIdFactory } from "./factories/identity";
 import { StubApiKeyRepository } from "./doubles/identity-ports";
-import { StubClock, StubOutbox, StubPermissions, StubUnitOfWork } from "./doubles/ports";
+import { StubAuditTrail, StubClock, StubOutbox, StubPermissions, StubUnitOfWork } from "./doubles/ports";
 
 const revokedAt = new Date("2026-02-01T00:00:00.000Z");
 const ownKeyId = entityIdFactory(20);
@@ -15,6 +15,7 @@ type Harness = {
   apiKeys: StubApiKeyRepository;
   outbox: StubOutbox;
   unitOfWork: StubUnitOfWork;
+  audit: StubAuditTrail;
 };
 
 function harnessFactory(granted: readonly string[] = ["apikeys:manage"]): Harness {
@@ -23,14 +24,16 @@ function harnessFactory(granted: readonly string[] = ["apikeys:manage"]): Harnes
   apiKeys.seed(apiKeyFactory({ id: foreignKeyId, tenantId: tenantIdFactory(901) }));
   const outbox = new StubOutbox();
   const unitOfWork = new StubUnitOfWork();
+  const audit = new StubAuditTrail();
   const useCase = revokeApiKey({
     apiKeysScopedTo: (tenantId) => apiKeys.scopedTo(tenantId),
+    auditScopedTo: () => audit,
     permissions: new StubPermissions(granted),
     clock: new StubClock(revokedAt),
     unitOfWork,
     outbox,
   });
-  return { useCase, apiKeys, outbox, unitOfWork };
+  return { useCase, apiKeys, outbox, unitOfWork, audit };
 }
 
 function expectOk(result: Result<ApiKeyResponse, DomainError>): ApiKeyResponse {

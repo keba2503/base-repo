@@ -16,6 +16,11 @@
   "dependencies": {
     "@base/application": "workspace:*",
     "@base/domain": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@supabase/supabase-js": "^2.115.0",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",

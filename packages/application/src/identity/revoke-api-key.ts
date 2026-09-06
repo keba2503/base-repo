@@ -8,6 +8,7 @@ import {
   type Result,
   type TenantId,
 } from "@base/domain";
+import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { Outbox } from "../kernel/ports/outbox";
@@ -18,6 +19,7 @@ import type { ApiKeyRepository } from "./ports/api-key-repository";
 
 export type RevokeApiKeyDependencies = {
   readonly apiKeysScopedTo: (tenantId: TenantId) => ApiKeyRepository;
+  readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly unitOfWork: UnitOfWork;
@@ -29,7 +31,7 @@ export type RevokeApiKey = (request: RevokeApiKeyRequest) => Promise<Result<ApiK
 const missingKey = notFound("apiKey.notFound", "No api key of this tenant has this id");
 
 export function revokeApiKey(dependencies: RevokeApiKeyDependencies): RevokeApiKey {
-  const { apiKeysScopedTo, permissions, clock, unitOfWork, outbox } = dependencies;
+  const { apiKeysScopedTo, auditScopedTo, permissions, clock, unitOfWork, outbox } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -53,6 +55,15 @@ export function revokeApiKey(dependencies: RevokeApiKeyDependencies): RevokeApiK
     await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
       await apiKeys.save(apiKey);
       await outbox.enqueue(apiKey.pullEvents());
+      await auditScopedTo(request.actor.tenantId).record({
+        tenantId: request.actor.tenantId,
+        occurredAt: clock.now(),
+        actorId: request.actor.subjectId,
+        actorKind: request.actor.kind,
+        action: manageApiKeysAction,
+        resourceType: "apiKey",
+        resourceId: apiKey.id,
+      });
     });
 
     return ok({

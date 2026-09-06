@@ -1,4 +1,5 @@
 import { Consent, isErr, ok, type DomainError, type Result, type TenantId } from "@base/domain";
+import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { IdGenerator } from "../kernel/ports/id-generator";
@@ -10,6 +11,7 @@ import type { ConsentRepository } from "./ports/consent-repository";
 
 export type GrantConsentDependencies = {
   readonly consentsScopedTo: (tenantId: TenantId) => ConsentRepository;
+  readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
@@ -31,7 +33,7 @@ function toResponse(consent: Consent): ConsentResponse {
 }
 
 export function grantConsent(dependencies: GrantConsentDependencies): GrantConsent {
-  const { consentsScopedTo, permissions, clock, idGenerator, unitOfWork, outbox } = dependencies;
+  const { consentsScopedTo, auditScopedTo, permissions, clock, idGenerator, unitOfWork, outbox } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -59,6 +61,15 @@ export function grantConsent(dependencies: GrantConsentDependencies): GrantConse
     await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
       await consents.save(consent);
       await outbox.enqueue(consent.pullEvents());
+      await auditScopedTo(request.actor.tenantId).record({
+        tenantId: request.actor.tenantId,
+        occurredAt: clock.now(),
+        actorId: request.actor.subjectId,
+        actorKind: request.actor.kind,
+        action: grantConsentAction,
+        resourceType: "consent",
+        resourceId: consent.id,
+      });
     });
 
     return ok(toResponse(consent));

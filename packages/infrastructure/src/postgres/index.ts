@@ -6,12 +6,14 @@ export {
   type PostgresSchema,
 } from "./client";
 export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRepository } from "./identity/index";
+export { PostgresAuditTrail } from "./audit-trail";
 export { PostgresDocumentRepository } from "./documents/index";
 export { PostgresConsentRepository } from "./privacy/index";
 export { PostgresJobQueue } from "./jobs/index";
 export { PostgresOutbox, outboxRowToEvent } from "./outbox";
 export {
   apiKeys,
+  auditLog,
   consents,
   documents,
   jobs,
@@ -21,6 +23,7 @@ export {
   tenants,
   users,
   type ApiKeyRow,
+  type AuditLogRow,
   type ConsentRow,
   type DocumentRow,
   type JobRow,

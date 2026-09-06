@@ -69,6 +69,7 @@ apps/web/src/api/v1                          Definición de rutas de la versión
 apps/web/src/app                             Rutas y páginas del App Router. Las vistas no deciden nada
 apps/web/src/app/api                         Punto de montaje de la API dentro del App Router
 apps/web/src/app/api/[[...route]]            Ruta atrapatodo que entrega las peticiones a Hono
+apps/web/src/app/analytics                   Carga del contenedor GTM tras el consentimiento de analítica
 apps/web/src/app/cookie-consent              Banner de consentimiento de cookies por categoría y su Server Action
 apps/web/src/app/tenants                     Pantallas de tenants
 apps/web/src/app/tenants/[slug]              Ficha de un tenant
@@ -98,6 +99,8 @@ packages/adapters/test                       Tests de traductores como funciones
 packages/adapters/test/factories             Constructores de datos para los tests de adaptadores
 packages/application                         Anillo 2: casos de uso y puertos
 packages/application/src                     Casos de uso agrupados por componente de negocio
+packages/application/src/audit               Quién hizo qué, a qué recurso y cuándo; su consulta autorizada
+packages/application/src/audit/ports         Puerto del registro de auditoría
 packages/application/src/documents           Subir, listar y procesar documentos: el ejecutor de trabajos que hace avanzar la máquina de estados
 packages/application/src/documents/ports     Puertos de documentos: repositorio, almacenamiento de ficheros y procesado
 packages/application/src/identity            Resolver actor, registrar usuario, crear y revocar claves de API
@@ -136,6 +139,7 @@ packages/infrastructure                      Anillo 4: lo que habla de verdad co
 packages/infrastructure/migrations           SQL versionado: tablas, rol app_user y seguridad a nivel de fila
 packages/infrastructure/migrations/meta      Estado que genera Drizzle para calcular la siguiente migración
 packages/infrastructure/src                  Una carpeta por proveedor, más la implementación en memoria
+packages/infrastructure/src/analytics        Envío de eventos de servidor a Measurement Protocol
 packages/infrastructure/src/crypto           Hash de claves de API con pimienta y comparación en tiempo constante
 packages/infrastructure/src/documents        El punto de enchufe del procesado real: NullDocumentProcessor, a sustituir por OCR o modelo
 packages/infrastructure/src/memory           Implementación en memoria de cada puerto, completa, no un esbozo
@@ -143,6 +147,7 @@ packages/infrastructure/src/memory/documents Repositorio de documentos, almacena
 packages/infrastructure/src/memory/identity  Repositorios de identidad en memoria
 packages/infrastructure/src/memory/privacy   Repositorio de consentimiento en memoria
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
+packages/infrastructure/src/otel             Telemetría real con OpenTelemetry, exportada a Sentry por OTLP
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
 packages/infrastructure/src/postgres/documents Repositorio de documentos sobre Postgres
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
@@ -160,6 +165,7 @@ scripts                                      Herramientas propias, fuera de los 
 scripts/agent                                Hooks de Claude Code: revisan lo que se va a escribir y lo que se va a ejecutar
 scripts/architecture                         El comprobador propio de capas, comentarios, any y process.env
 scripts/db                                   Configuración de Drizzle y aplicación de migraciones
+scripts/load                                 Guiones de carga con k6 contra la API, umbrales incluidos
 ```
 
 ## Las filas nunca salen, la configuración nunca entra
@@ -177,7 +183,6 @@ El esqueleto está pensado para que estas piezas entren sin mover las anteriores
 | Pieza | Dónde irá |
 | --- | --- |
 | Documentos y su procesado por OCR o modelo | Agregado en `packages/domain/src/documents`, puerto de almacenamiento y puerto de procesado en `packages/application`, Supabase Storage en `packages/infrastructure/src/supabase` |
-| Observabilidad, trazas y métricas | Puerto de telemetría en `packages/application/src/kernel/ports`, exportador en `packages/infrastructure/src/otel`, analítica en `apps/web` tras el consentimiento |
 | Pagos, con Stripe intercambiable por Redsys | Ciclo de facturación propio en `packages/domain/src/billing`, un proveedor por carpeta en `packages/infrastructure` y un solo adaptador que cambiar |
 | Caché, banderas de funcionalidad, webhooks, búsqueda, importación y exportación | Un puerto cada uno en `packages/application`, su implementación en memoria y su proveedor real en `packages/infrastructure` |
 

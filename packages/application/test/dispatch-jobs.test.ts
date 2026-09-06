@@ -10,7 +10,7 @@ import {
 } from "../src/index";
 import { actorFactory } from "./factories/actor";
 import { storedJobFactory } from "./factories/job";
-import { StubClock, StubJobQueue, StubLogger, StubPermissions } from "./doubles/ports";
+import { StubClock, StubJobQueue, StubLogger, StubPermissions, StubTelemetry } from "./doubles/ports";
 
 type Harness = {
   useCase: DispatchJobs;
@@ -44,6 +44,7 @@ function harnessFactory(executors: readonly JobExecutor[], granted: readonly str
     permissions: new StubPermissions(granted),
     logger,
     clock,
+    telemetry: new StubTelemetry(),
   });
   return { useCase, jobs, logger, clock, executed: [] };
 }
@@ -209,6 +210,7 @@ describe("dispatching unknown jobs", () => {
       permissions,
       logger: new StubLogger(),
       clock: new StubClock(startedAt),
+      telemetry: new StubTelemetry(),
     });
     await oldWorker(request);
     expect(queue.failed).toEqual([id]);
@@ -221,6 +223,7 @@ describe("dispatching unknown jobs", () => {
       permissions,
       logger: new StubLogger(),
       clock: laterClock,
+      telemetry: new StubTelemetry(),
     });
     await newWorker(request);
     expect(queue.completed).toEqual([id]);

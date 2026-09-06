@@ -13,7 +13,15 @@ import {
   type WithdrawConsent,
 } from "../src/index";
 import { actorFactory, tenantIdFactory } from "./factories/actor";
-import { StubClock, StubIdGenerator, StubJobQueue, StubOutbox, StubPermissions, StubUnitOfWork } from "./doubles/ports";
+import {
+  StubAuditTrail,
+  StubClock,
+  StubIdGenerator,
+  StubJobQueue,
+  StubOutbox,
+  StubPermissions,
+  StubUnitOfWork,
+} from "./doubles/ports";
 import { StubConsentRepository } from "./doubles/privacy-ports";
 
 const grantedAt = new Date("2026-01-15T10:00:00.000Z");
@@ -35,15 +43,18 @@ type Harness = {
   hasConsent: HasActiveConsent;
   consents: StubConsentRepository;
   outbox: StubOutbox;
+  audit: StubAuditTrail;
 };
 
 function harnessFactory(granted: readonly string[] = ["consent:grant", "consent:withdraw", "consent:read"]): Harness {
   const consents = new StubConsentRepository();
   const outbox = new StubOutbox();
+  const audit = new StubAuditTrail();
   const permissions = new StubPermissions(granted);
   const clock = new StubClock(grantedAt);
   const grant = grantConsent({
     consentsScopedTo: () => consents,
+    auditScopedTo: () => audit,
     permissions,
     clock,
     idGenerator: new StubIdGenerator(),
@@ -52,13 +63,14 @@ function harnessFactory(granted: readonly string[] = ["consent:grant", "consent:
   });
   const withdraw = withdrawConsent({
     consentsScopedTo: () => consents,
+    auditScopedTo: () => audit,
     permissions,
     clock,
     unitOfWork: new StubUnitOfWork(),
     outbox,
   });
   const hasConsent = hasActiveConsent({ consentsScopedTo: () => consents, permissions });
-  return { grant, withdraw, hasConsent, consents, outbox };
+  return { grant, withdraw, hasConsent, consents, outbox, audit };
 }
 
 let harness: Harness;

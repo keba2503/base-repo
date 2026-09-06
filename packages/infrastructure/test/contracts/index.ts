@@ -1,5 +1,7 @@
+export { describeAnalyticsContract } from "./analytics.contract";
 export { describeApiKeyHasherContract } from "./api-key-hasher.contract";
 export { describeApiKeyRepositoryContract, type ApiKeyRepositoryHarness } from "./api-key-repository.contract";
+export { describeAuditTrailContract, type AuditTrailHarness } from "./audit-trail.contract";
 export { describeClockContract } from "./clock.contract";
 export { describeDocumentRepositoryContract, type DocumentRepositoryHarness } from "./document-repository.contract";
 export { describeDocumentProcessorContract, type DocumentProcessorHarness } from "./document-processor.contract";
@@ -25,6 +27,7 @@ export { describeOutboxContract, type OutboxHarness } from "./outbox.contract";
 export { describePermissionsContract } from "./permissions.contract";
 export { describeRateLimiterContract, type RateLimiterHarness } from "./rate-limiter.contract";
 export { describeSecretGeneratorContract } from "./secret-generator.contract";
+export { describeTelemetryContract } from "./telemetry.contract";
 export { describeTenantRepositoryContract, type TenantRepositoryHarness } from "./tenant-repository.contract";
 export { describeUnitOfWorkContract } from "./unit-of-work.contract";
 export { describeUserRepositoryContract, type UserRepositoryHarness } from "./user-repository.contract";

@@ -7,7 +7,9 @@ import {
   tenantIdOf,
   type DomainError,
   type Result,
+  type TenantId,
 } from "@base/domain";
+import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { IdGenerator } from "../kernel/ports/id-generator";
@@ -24,6 +26,7 @@ import type { TenantRepository } from "./ports/tenant-repository";
 
 export type CreateTenantDependencies = {
   readonly tenants: TenantRepository;
+  readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
@@ -34,7 +37,7 @@ export type CreateTenantDependencies = {
 export type CreateTenant = (request: CreateTenantRequest) => Promise<Result<TenantResponse, DomainError>>;
 
 export function createTenant(dependencies: CreateTenantDependencies): CreateTenant {
-  const { tenants, permissions, clock, idGenerator, unitOfWork, outbox } = dependencies;
+  const { tenants, auditScopedTo, permissions, clock, idGenerator, unitOfWork, outbox } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -62,6 +65,15 @@ export function createTenant(dependencies: CreateTenantDependencies): CreateTena
     await unitOfWork.run({ kind: "registry" }, async () => {
       await tenants.save(tenant);
       await outbox.enqueue(tenant.pullEvents());
+      await auditScopedTo(tenant.id).record({
+        tenantId: tenant.id,
+        occurredAt: clock.now(),
+        actorId: request.actor.subjectId,
+        actorKind: request.actor.kind,
+        action: createTenantAction,
+        resourceType: "tenant",
+        resourceId: tenant.id,
+      });
     });
 
     return ok({

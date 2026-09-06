@@ -3,6 +3,7 @@ import { isErr, isOk, Tenant, type DomainError, type Result } from "@base/domain
 import { createTenant, type CreateTenant, type TenantResponse } from "../src/index";
 import { actorFactory, tenantIdFactory } from "./factories/actor";
 import {
+  StubAuditTrail,
   StubClock,
   StubIdGenerator,
   StubOutbox,
@@ -19,6 +20,7 @@ type Harness = {
   outbox: StubOutbox;
   unitOfWork: StubUnitOfWork;
   permissions: StubPermissions;
+  audit: StubAuditTrail;
 };
 
 function harnessFactory(granted: readonly string[] = ["tenants:create"]): Harness {
@@ -26,15 +28,17 @@ function harnessFactory(granted: readonly string[] = ["tenants:create"]): Harnes
   const outbox = new StubOutbox();
   const unitOfWork = new StubUnitOfWork();
   const permissions = new StubPermissions(granted);
+  const audit = new StubAuditTrail();
   const useCase = createTenant({
     tenants,
+    auditScopedTo: () => audit,
     permissions,
     clock: new StubClock(createdAt),
     idGenerator: new StubIdGenerator(),
     unitOfWork,
     outbox,
   });
-  return { useCase, tenants, outbox, unitOfWork, permissions };
+  return { useCase, tenants, outbox, unitOfWork, permissions, audit };
 }
 
 function expectOk(result: Result<TenantResponse, DomainError>): TenantResponse {

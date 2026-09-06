@@ -4,6 +4,7 @@ import {
   aesGcmKeyByteLength,
   AesGcmFieldCipher,
   apiKeys,
+  auditLog,
   consents,
   createPostgresClient,
   documents,
@@ -12,6 +13,7 @@ import {
   outbox,
   outboxRowToEvent,
   PostgresApiKeyRepository,
+  PostgresAuditTrail,
   PostgresConsentRepository,
   PostgresDocumentRepository,
   PostgresJobQueue,
@@ -28,6 +30,7 @@ import {
 import { migrateDatabase } from "../src/postgres/migrate";
 import {
   describeApiKeyRepositoryContract,
+  describeAuditTrailContract,
   describeConsentRepositoryContract,
   describeDocumentRepositoryContract,
   describeJobQueueContract,
@@ -38,6 +41,7 @@ import {
   describeUserRepositoryContract,
 } from "./contracts/index";
 import { tenantIdFactory } from "./factories/tenant";
+import { auditEntryInputFactory } from "./factories/audit";
 import { documentFactory } from "./factories/document";
 import { entityIdFactory } from "./factories/identity";
 
@@ -78,7 +82,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     beforeEach(async () => {
       await adminClient.db.execute(
-        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}, ${consents}`,
+        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}, ${consents}, ${auditLog}`,
       );
     });
 
@@ -130,6 +134,57 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
     describeConsentRepositoryContract("PostgresConsentRepository", () => ({
       consents: new PostgresConsentRepository(client.db, tenantIdFactory(1)),
     }));
+
+    describeAuditTrailContract("PostgresAuditTrail", () => ({
+      audit: new PostgresAuditTrail(client.db, tenantIdFactory(1)),
+    }));
+
+    describe("PostgresAuditTrail row level security isolates tenants independently of the application filter", () => {
+      it("hides another tenant's audit entry from a raw, unfiltered select once the connection is scoped", async () => {
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await new PostgresAuditTrail(client.db, ownTenant).record(auditEntryInputFactory({ tenantId: ownTenant }));
+        await new PostgresAuditTrail(client.db, otherTenant).record(auditEntryInputFactory({ tenantId: otherTenant }));
+
+        const visibleToOwnTenant = await runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.select().from(auditLog),
+        );
+
+        expect(visibleToOwnTenant).toHaveLength(1);
+        expect(visibleToOwnTenant[0]?.tenantId).toBe(ownTenant);
+      });
+    });
+
+    describe("audit_log is append only", () => {
+      it("rejects an update attempted through the application connection", async () => {
+        const ownTenant = tenantIdFactory(1);
+        await new PostgresAuditTrail(client.db, ownTenant).record(auditEntryInputFactory({ tenantId: ownTenant }));
+
+        const attempt = runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.update(auditLog).set({ action: "tampered" }).where(eq(auditLog.tenantId, ownTenant)),
+        );
+        const caught = await attempt.then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+        expect(caught).toBeInstanceOf(Error);
+      });
+
+      it("rejects a delete attempted through the application connection", async () => {
+        const ownTenant = tenantIdFactory(1);
+        await new PostgresAuditTrail(client.db, ownTenant).record(auditEntryInputFactory({ tenantId: ownTenant }));
+
+        const attempt = runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.delete(auditLog).where(eq(auditLog.tenantId, ownTenant)),
+        );
+        const caught = await attempt.then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+        expect(caught).toBeInstanceOf(Error);
+      });
+    });
 
     describe("PostgresDocumentRepository encrypts the sensitive extracted text field", () => {
       it("stores the extracted text unreadable in the raw table", async () => {

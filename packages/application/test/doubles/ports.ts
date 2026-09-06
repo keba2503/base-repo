@@ -12,6 +12,9 @@ import {
   type TenantId,
 } from "@base/domain";
 import type {
+  AuditEntry,
+  AuditEntryInput,
+  AuditTrail,
   Clock,
   IdGenerator,
   JobQueue,
@@ -22,9 +25,13 @@ import type {
   MailMessage,
   Outbox,
   PermissionRequest,
+  Span,
+  SpanAttributes,
+  SpanStatus,
   StoredEvent,
   StoredJob,
   Permissions,
+  Telemetry,
   TenantRepository,
   TenantScope,
   UnitOfWork,
@@ -302,5 +309,53 @@ export class StubLogger implements Logger {
 
   messagesAt(level: LogLine["level"]): readonly string[] {
     return this.lines.filter((line) => line.level === level).map((line) => line.message);
+  }
+}
+
+export type RecordedSpan = {
+  readonly name: string;
+  readonly attributes: Record<string, string | number | boolean>;
+  readonly exceptions: Error[];
+  status: SpanStatus;
+};
+
+export class StubTelemetry implements Telemetry {
+  readonly spans: RecordedSpan[] = [];
+
+  startSpan(name: string, attributes: SpanAttributes = {}): Span {
+    const recorded: RecordedSpan = { name, attributes: { ...attributes }, exceptions: [], status: "ok" };
+    this.spans.push(recorded);
+    return {
+      setAttribute: (attributeName, value) => {
+        recorded.attributes[attributeName] = value;
+      },
+      recordException: (error) => {
+        recorded.exceptions.push(error);
+      },
+      end: (status) => {
+        if (status !== undefined) recorded.status = status;
+      },
+    };
+  }
+}
+
+export class StubAuditTrail implements AuditTrail {
+  readonly entries: AuditEntry[] = [];
+  #sequence = 0;
+
+  record(entry: AuditEntryInput): Promise<void> {
+    this.#sequence += 1;
+    this.entries.push({ id: String(this.#sequence), ...entry });
+    return Promise.resolve();
+  }
+
+  findRecent(limit: number): Promise<readonly AuditEntry[]> {
+    return Promise.resolve(
+      [...this.entries].sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime()).slice(0, limit),
+    );
+  }
+
+  findForResource(resourceType: string, resourceId: string): Promise<readonly AuditEntry[]> {
+    return Promise.resolve(this.entries.filter((entry) => entry.resourceType === resourceType && entry.resourceId === resourceId));
   }
 }

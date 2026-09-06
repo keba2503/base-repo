@@ -28,6 +28,9 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0017 | Consent categories exclude what is strictly necessary, and coverage is checked against the policy version | accepted |
 | 0018 | The right to erasure anonymizes in place; it never deletes a row | accepted |
 | 0019 | Field-level encryption keys are rotated by keeping old ones, not by re-encrypting | accepted |
+| 0020 | Telemetry traces one span per HTTP request and one per job execution, never per database query | accepted |
+| 0021 | The audit trail is a cross-cutting application port, append only at the database level, and it survives anonymization | accepted |
+| 0022 | Analytics loads under the existing strict-dynamic policy, and server events never let the browser talk to the provider | accepted |
 
 ## Template
 

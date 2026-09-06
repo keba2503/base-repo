@@ -1,4 +1,5 @@
 import { err, isErr, notFound, ok, type Consent, type DomainError, type Result, type TenantId } from "@base/domain";
+import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { Outbox } from "../kernel/ports/outbox";
@@ -9,6 +10,7 @@ import type { ConsentRepository } from "./ports/consent-repository";
 
 export type WithdrawConsentDependencies = {
   readonly consentsScopedTo: (tenantId: TenantId) => ConsentRepository;
+  readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly unitOfWork: UnitOfWork;
@@ -29,7 +31,7 @@ function toResponse(consent: Consent): ConsentResponse {
 }
 
 export function withdrawConsent(dependencies: WithdrawConsentDependencies): WithdrawConsent {
-  const { consentsScopedTo, permissions, clock, unitOfWork, outbox } = dependencies;
+  const { consentsScopedTo, auditScopedTo, permissions, clock, unitOfWork, outbox } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -52,6 +54,15 @@ export function withdrawConsent(dependencies: WithdrawConsentDependencies): With
     await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
       await consents.save(consent);
       await outbox.enqueue(consent.pullEvents());
+      await auditScopedTo(request.actor.tenantId).record({
+        tenantId: request.actor.tenantId,
+        occurredAt: clock.now(),
+        actorId: request.actor.subjectId,
+        actorKind: request.actor.kind,
+        action: withdrawConsentAction,
+        resourceType: "consent",
+        resourceId: consent.id,
+      });
     });
 
     return ok(toResponse(consent));
