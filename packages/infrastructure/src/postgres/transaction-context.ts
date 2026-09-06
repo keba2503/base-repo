@@ -13,13 +13,38 @@ export type PostgresTransaction = PgTransaction<PostgresJsQueryResultHKT, Postgr
 
 const ambientTransaction = new AsyncLocalStorage<PostgresTransaction>();
 
+type BypassRlsRow = { readonly rolbypassrls: boolean };
+
+async function assertRoleCannotBypassRowLevelSecurity(db: PostgresDatabase): Promise<void> {
+  const rows = (await db.execute(
+    sql`select rolbypassrls from pg_roles where rolname = current_user`,
+  )) as readonly BypassRlsRow[];
+  if (rows[0]?.rolbypassrls === true) {
+    throw new Error(
+      "The Postgres role connected to this client may bypass row level security; tenant isolation cannot be trusted",
+    );
+  }
+}
+
+const rowLevelSecurityVerifications = new WeakMap<PostgresDatabase, Promise<void>>();
+
+function verifiedRowLevelSecurity(db: PostgresDatabase): Promise<void> {
+  const cached = rowLevelSecurityVerifications.get(db);
+  if (cached) return cached;
+  const verification = assertRoleCannotBypassRowLevelSecurity(db);
+  rowLevelSecurityVerifications.set(db, verification);
+  return verification;
+}
+
 export function runInTransaction<Value>(
   db: PostgresDatabase,
   work: (transaction: PostgresTransaction) => Promise<Value>,
 ): Promise<Value> {
   const ambient = ambientTransaction.getStore();
   if (ambient) return work(ambient);
-  return db.transaction((transaction) => ambientTransaction.run(transaction, () => work(transaction)));
+  return verifiedRowLevelSecurity(db).then(() =>
+    db.transaction((transaction) => ambientTransaction.run(transaction, () => work(transaction))),
+  );
 }
 
 export const tenantSettingName = "app.tenant_id";

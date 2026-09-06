@@ -50,7 +50,7 @@ export function revokeApiKey(dependencies: RevokeApiKeyDependencies): RevokeApiK
     const revoked = apiKey.revoke(clock.now());
     if (isErr(revoked)) return revoked;
 
-    await unitOfWork.run(async () => {
+    await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
       await apiKeys.save(apiKey);
       await outbox.enqueue(apiKey.pullEvents());
     });

@@ -8,4 +8,4 @@ export {
   type GetTenantBySlugRequest,
   type TenantResponse,
 } from "./models";
-export type { TenantRepository, TenantScope } from "./ports/tenant-repository";
+export type { TenantRepository } from "./ports/tenant-repository";

@@ -107,7 +107,7 @@ export function registerUser(dependencies: RegisterUserDependencies): RegisterUs
     if (isErr(membership)) return membership;
 
     const user = registered.value;
-    await unitOfWork.run(async () => {
+    await unitOfWork.run({ kind: "tenant", tenantId }, async () => {
       if (!existing) {
         await users.save(user);
         await outbox.enqueue(user.pullEvents());

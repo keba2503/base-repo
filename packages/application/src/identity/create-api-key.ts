@@ -106,7 +106,7 @@ export function createApiKey(dependencies: CreateApiKeyDependencies): CreateApiK
 
     const apiKey = created.value;
     const apiKeys = apiKeysScopedTo(request.actor.tenantId);
-    await unitOfWork.run(async () => {
+    await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
       await apiKeys.save(apiKey);
       await outbox.enqueue(apiKey.pullEvents());
     });

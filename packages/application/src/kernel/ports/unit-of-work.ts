@@ -1,3 +1,5 @@
+import type { TenantScope } from "../tenant-scope";
+
 export type UnitOfWork = {
-  run<Value>(work: () => Promise<Value>): Promise<Value>;
+  run<Value>(scope: TenantScope, work: () => Promise<Value>): Promise<Value>;
 };
