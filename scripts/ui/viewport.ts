@@ -3,7 +3,8 @@ import { execSync, spawn } from "node:child_process";
 import { chromium, type Page } from "playwright";
 import { formatIssues, routesFromPageFiles, viewportIssues, type Issue, type PageSnapshot, type Viewport } from "./check-viewport";
 
-const webRoot = `${import.meta.dir}/../../apps/web`;
+const projectRoot = `${import.meta.dir}/../..`;
+const webRoot = `${projectRoot}/apps/web`;
 const port = 4319;
 const baseUrl = `http://localhost:${port}`;
 const bootTimeoutMs = 60_000;
@@ -94,19 +95,25 @@ function collectSnapshot(): PageSnapshot {
   };
 }
 
-async function issuesForRoute(page: Page, route: string): Promise<Issue[]> {
+async function issuesForTarget(page: Page, label: string, url: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: pageHeight });
-    await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle" });
+    await page.goto(url, { waitUntil: "networkidle" });
     const snapshot = await page.evaluate(collectSnapshot);
-    issues.push(...viewportIssues(route, viewport, snapshot));
+    issues.push(...viewportIssues(label, viewport, snapshot));
   }
   return issues;
 }
 
+function documentsFrom(files: readonly string[]): string[] {
+  return files.filter((file) => file.startsWith("docs/") && file.endsWith(".html")).sort();
+}
+
 async function main(): Promise<void> {
-  const routes = routesFromPageFiles(trackedFiles());
+  const files = trackedFiles();
+  const routes = routesFromPageFiles(files);
+  const documents = documentsFrom(files);
   if (routes.length === 0) throw new Error("no route was found under apps/web/src/app");
 
   const server = spawn("bun", ["run", "dev", "--", "-p", String(port)], {
@@ -129,14 +136,19 @@ async function main(): Promise<void> {
     try {
       const page = await browser.newPage();
       const issues: Issue[] = [];
-      for (const route of routes) issues.push(...(await issuesForRoute(page, route)));
+      for (const route of routes) issues.push(...(await issuesForTarget(page, route, `${baseUrl}${route}`)));
+      for (const document of documents) {
+        issues.push(...(await issuesForTarget(page, document, `file://${projectRoot}/${document}`)));
+      }
 
       if (issues.length > 0) {
         console.error(formatIssues(issues));
         process.exitCode = 1;
         return;
       }
-      console.log(`viewport check passed for ${routes.length} routes across ${viewports.length} widths`);
+      console.log(
+        `viewport check passed for ${routes.length} routes and ${documents.length} documents across ${viewports.length} widths`,
+      );
     } finally {
       await browser.close();
     }

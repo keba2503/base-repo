@@ -166,10 +166,17 @@
     background: var(--surface);
     border: 1px solid var(--line);
     padding: 28px 24px 20px;
-    overflow-x: auto;
   }
 
-  figure svg { display: block; width: 100%; max-width: 100%; height: auto; color: var(--ink); }
+  figure svg { display: block; width: 100%; height: auto; color: var(--ink); }
+
+  .figure-narrow { display: none; }
+
+  @media (max-width: 719px) {
+    figure { padding: 20px 16px 14px; }
+    .figure-wide { display: none; }
+    .figure-narrow { display: block; }
+  }
 
   figcaption {
     font-family: var(--mono);
@@ -201,6 +208,29 @@
   td { padding: 13px 14px 13px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 
   td:first-child { white-space: nowrap; }
+
+  @media (max-width: 719px) {
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    tr {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      padding: 4px 16px 10px;
+      margin-bottom: 14px;
+    }
+    td { border-bottom: none; padding: 9px 0 0; }
+    td:first-child { white-space: normal; font-weight: 600; }
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+  }
 
   td code { background: none; padding: 0; color: var(--accent); }
 
@@ -312,7 +342,7 @@
       <p class="lede">Cuatro anillos. Las dependencias apuntan siempre hacia dentro. El anillo interior no sabe que existe el exterior, y por eso cambiar la base de datos o el framework no toca una sola regla de negocio.</p>
 
       <figure>
-        <svg viewBox="0 0 720 330" role="img" aria-label="Cuatro anillos concéntricos, del más exterior al más interior: infraestructura y aplicaciones, contratos y adaptadores, aplicación, dominio. Una flecha en la base apunta hacia el centro.">
+        <svg class="figure-wide" viewBox="0 0 720 330" role="img" aria-label="Cuatro anillos concéntricos, del más exterior al más interior: infraestructura y aplicaciones, contratos y adaptadores, aplicación, dominio. Una flecha en la base apunta hacia el centro.">
           <rect x="16" y="16" width="688" height="252" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/>
           <rect x="104" y="52" width="512" height="180" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55"/>
           <rect x="200" y="88" width="320" height="108" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>
@@ -337,6 +367,27 @@
           <line x1="640" y1="300" x2="380" y2="300" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#ar)"/>
           <text x="648" y="304" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">importa</text>
         </svg>
+        <svg class="figure-narrow" viewBox="0 0 360 410" role="img" aria-label="Cuatro anillos concéntricos, del exterior al interior: infraestructura y aplicaciones, contratos y adaptadores, aplicación, dominio. Una flecha apunta hacia el centro.">
+          <rect x="8" y="8" width="344" height="296" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+          <rect x="40" y="44" width="280" height="224" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+          <rect x="76" y="84" width="208" height="144" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+          <rect x="116" y="122" width="128" height="52" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 4</text>
+          <text x="52" y="64" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 3</text>
+          <text x="88" y="104" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 2</text>
+          <text x="180" y="142" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--accent)">ANILLO 1</text>
+          <text x="180" y="162" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="var(--accent)">domain</text>
+          <text x="180" y="204" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">application</text>
+          <text x="180" y="250" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">contracts · adapters</text>
+          <text x="180" y="290" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">infrastructure · web · worker</text>
+          <defs>
+            <marker id="arn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <line x1="180" y1="380" x2="180" y2="322" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arn)"/>
+          <text x="180" y="400" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">importa</text>
+        </svg>
         <figcaption><b>Figura 1.</b> Un anillo solo puede importar hacia dentro. El dominio no importa nada, ni siquiera una librería. El grafo de quién puede importar a quién vive en un único fichero, <code>architecture/layers.json</code>, y de ahí lo leen el comprobador de arquitectura, dependency&#8209;cruiser y ESLint.</figcaption>
       </figure>
 
@@ -346,13 +397,13 @@
             <tr><th>Anillo</th><th>Paquete</th><th>Qué decide</th></tr>
           </thead>
           <tbody>
-            <tr><td>1</td><td><code>packages/domain</code></td><td>Las reglas de negocio. No importa nada.</td></tr>
-            <tr><td>2</td><td><code>packages/application</code></td><td>Qué operaciones existen, quién puede hacerlas y en qué orden.</td></tr>
-            <tr><td>3</td><td><code>packages/contracts</code></td><td>Qué entra y qué sale por la API, y con qué exigencias.</td></tr>
-            <tr><td>3</td><td><code>packages/adapters</code></td><td>Traducción entre el mundo y los casos de uso, sin efectos.</td></tr>
-            <tr><td>4</td><td><code>packages/infrastructure</code></td><td>Postgres, Supabase, Resend, Turnstile. Lo que habla de verdad.</td></tr>
-            <tr><td>4</td><td><code>apps/web</code></td><td>Entrega por HTTP y por pantalla.</td></tr>
-            <tr><td>4</td><td><code>apps/worker</code></td><td>Proceso fuera de la petición.</td></tr>
+            <tr><td data-label="Anillo">1</td><td data-label="Paquete"><code>packages/domain</code></td><td data-label="Qué decide">Las reglas de negocio. No importa nada.</td></tr>
+            <tr><td data-label="Anillo">2</td><td data-label="Paquete"><code>packages/application</code></td><td data-label="Qué decide">Qué operaciones existen, quién puede hacerlas y en qué orden.</td></tr>
+            <tr><td data-label="Anillo">3</td><td data-label="Paquete"><code>packages/contracts</code></td><td data-label="Qué decide">Qué entra y qué sale por la API, y con qué exigencias.</td></tr>
+            <tr><td data-label="Anillo">3</td><td data-label="Paquete"><code>packages/adapters</code></td><td data-label="Qué decide">Traducción entre el mundo y los casos de uso, sin efectos.</td></tr>
+            <tr><td data-label="Anillo">4</td><td data-label="Paquete"><code>packages/infrastructure</code></td><td data-label="Qué decide">Postgres, Supabase, Resend, Turnstile. Lo que habla de verdad.</td></tr>
+            <tr><td data-label="Anillo">4</td><td data-label="Paquete"><code>apps/web</code></td><td data-label="Qué decide">Entrega por HTTP y por pantalla.</td></tr>
+            <tr><td data-label="Anillo">4</td><td data-label="Paquete"><code>apps/worker</code></td><td data-label="Qué decide">Proceso fuera de la petición.</td></tr>
           </tbody>
         </table>
       </div>
@@ -370,13 +421,13 @@
             <tr><th>Módulo</th><th>Qué hace</th><th>Tipo</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>tenants</code></td><td>Las organizaciones. Cada cliente que usa la aplicación es un tenant, y todo dato pertenece a uno.</td><td>Núcleo</td></tr>
-            <tr><td><code>identity</code></td><td>Quién entra, a qué organización pertenece y qué puede hacer. Incluye las claves de API.</td><td>Núcleo</td></tr>
-            <tr><td><code>audit</code></td><td>Quién hizo qué y cuándo. No se puede modificar ni borrar, ni con acceso directo a la base.</td><td>Núcleo</td></tr>
-            <tr><td><code>jobs</code></td><td>Trabajo que no se hace mientras el usuario espera. Se encola y lo ejecuta otro proceso.</td><td>Opcional</td></tr>
-            <tr><td><code>documents</code></td><td>Ficheros que suben los usuarios, con su máquina de estados y el hueco para el procesado.</td><td>Opcional</td></tr>
-            <tr><td><code>notifications</code></td><td>Correo, y el mecanismo para reaccionar a lo que ocurre.</td><td>Opcional</td></tr>
-            <tr><td><code>privacy</code></td><td>Consentimiento y los derechos que la ley da sobre los datos.</td><td>Opcional</td></tr>
+            <tr><td data-label="Módulo"><code>tenants</code></td><td data-label="Qué hace">Las organizaciones. Cada cliente que usa la aplicación es un tenant, y todo dato pertenece a uno.</td><td data-label="Tipo">Núcleo</td></tr>
+            <tr><td data-label="Módulo"><code>identity</code></td><td data-label="Qué hace">Quién entra, a qué organización pertenece y qué puede hacer. Incluye las claves de API.</td><td data-label="Tipo">Núcleo</td></tr>
+            <tr><td data-label="Módulo"><code>audit</code></td><td data-label="Qué hace">Quién hizo qué y cuándo. No se puede modificar ni borrar, ni con acceso directo a la base.</td><td data-label="Tipo">Núcleo</td></tr>
+            <tr><td data-label="Módulo"><code>jobs</code></td><td data-label="Qué hace">Trabajo que no se hace mientras el usuario espera. Se encola y lo ejecuta otro proceso.</td><td data-label="Tipo">Opcional</td></tr>
+            <tr><td data-label="Módulo"><code>documents</code></td><td data-label="Qué hace">Ficheros que suben los usuarios, con su máquina de estados y el hueco para el procesado.</td><td data-label="Tipo">Opcional</td></tr>
+            <tr><td data-label="Módulo"><code>notifications</code></td><td data-label="Qué hace">Correo, y el mecanismo para reaccionar a lo que ocurre.</td><td data-label="Tipo">Opcional</td></tr>
+            <tr><td data-label="Módulo"><code>privacy</code></td><td data-label="Qué hace">Consentimiento y los derechos que la ley da sobre los datos.</td><td data-label="Tipo">Opcional</td></tr>
           </tbody>
         </table>
       </div>
@@ -390,12 +441,12 @@
             <tr><th>Pieza</th><th>Dónde vive</th><th>Qué hace</th></tr>
           </thead>
           <tbody>
-            <tr><td>Contrato</td><td><code>packages/contracts</code></td><td>Comprueba lo que llega de fuera y declara si la operación exige autenticación, captcha o límite de peticiones.</td></tr>
-            <tr><td>Traductor</td><td><code>packages/adapters</code></td><td>Convierte la petición en lo que el caso de uso entiende, y la respuesta en lo que la pantalla muestra.</td></tr>
-            <tr><td>Caso de uso</td><td><code>packages/application</code></td><td>Autoriza, orquesta, persiste. El que manda.</td></tr>
-            <tr><td>Entidad</td><td><code>packages/domain</code></td><td>Las reglas puras. No sabe que existe una base de datos.</td></tr>
-            <tr><td>Puerto</td><td><code>packages/application</code></td><td>La necesidad escrita sin la solución: alguien tiene que saber guardar esto.</td></tr>
-            <tr><td>Implementación</td><td><code>packages/infrastructure</code></td><td>Dos por puerto: una real y otra en memoria. Por eso el repositorio arranca sin configurar nada.</td></tr>
+            <tr><td data-label="Pieza">Contrato</td><td data-label="Dónde vive"><code>packages/contracts</code></td><td data-label="Qué hace">Comprueba lo que llega de fuera y declara si la operación exige autenticación, captcha o límite de peticiones.</td></tr>
+            <tr><td data-label="Pieza">Traductor</td><td data-label="Dónde vive"><code>packages/adapters</code></td><td data-label="Qué hace">Convierte la petición en lo que el caso de uso entiende, y la respuesta en lo que la pantalla muestra.</td></tr>
+            <tr><td data-label="Pieza">Caso de uso</td><td data-label="Dónde vive"><code>packages/application</code></td><td data-label="Qué hace">Autoriza, orquesta, persiste. El que manda.</td></tr>
+            <tr><td data-label="Pieza">Entidad</td><td data-label="Dónde vive"><code>packages/domain</code></td><td data-label="Qué hace">Las reglas puras. No sabe que existe una base de datos.</td></tr>
+            <tr><td data-label="Pieza">Puerto</td><td data-label="Dónde vive"><code>packages/application</code></td><td data-label="Qué hace">La necesidad escrita sin la solución: alguien tiene que saber guardar esto.</td></tr>
+            <tr><td data-label="Pieza">Implementación</td><td data-label="Dónde vive"><code>packages/infrastructure</code></td><td data-label="Qué hace">Dos por puerto: una real y otra en memoria. Por eso el repositorio arranca sin configurar nada.</td></tr>
           </tbody>
         </table>
       </div>
@@ -406,7 +457,7 @@
       <p class="lede">Alguien crea la organización Clínica Sol. Esto es lo que pasa, y en qué orden.</p>
 
       <figure>
-        <svg viewBox="0 0 720 470" role="img" aria-label="Recorrido de una petición en forma de U. Baja por la izquierda desde el contrato hasta la entidad, pasa por la base de datos en el centro inferior, y sube por la derecha hasta la vista. Una rama lateral lleva los eventos al outbox y al worker.">
+        <svg class="figure-wide" viewBox="0 0 720 470" role="img" aria-label="Recorrido de una petición en forma de U. Baja por la izquierda desde el contrato hasta la entidad, pasa por la base de datos en el centro inferior, y sube por la derecha hasta la vista. Una rama lateral lleva los eventos al outbox y al worker.">
           <defs>
             <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <polygon points="0,0 10,5 0,10" fill="currentColor"/>
@@ -459,6 +510,43 @@
           <text x="258" y="212" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.65">devuelve el resultado</text>
           <text x="600" y="330" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">encola eventos</text>
         </svg>
+        <svg class="figure-narrow" viewBox="0 0 360 690" role="img" aria-label="Recorrido de una petición en vertical: contrato, controlador, caso de uso, entidad, repositorio, presentador y vista. Una rama discontinua lleva los eventos al outbox y al worker.">
+          <defs>
+            <marker id="a2n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon points="0,0 10,5 0,10" fill="currentColor"/></marker>
+            <marker id="a3n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon points="0,0 10,5 0,10" fill="var(--mark)"/></marker>
+          </defs>
+          <rect x="16" y="8" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="28" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Contrato</text>
+          <text x="30" y="44" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">valida lo que llega</text>
+          <line x1="180" y1="56" x2="180" y2="84" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="92" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="112" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Controlador</text>
+          <text x="30" y="128" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">traduce, no decide</text>
+          <line x1="180" y1="140" x2="180" y2="168" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="176" width="328" height="48" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="30" y="196" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--accent)">Caso de uso</text>
+          <text x="30" y="212" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--accent)">autoriza y ordena</text>
+          <line x1="180" y1="224" x2="180" y2="252" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="260" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="280" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Entidad</text>
+          <text x="30" y="296" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">aplica las reglas</text>
+          <line x1="180" y1="308" x2="180" y2="336" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="344" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="364" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Repositorio</text>
+          <text x="30" y="380" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">escribe con el tenant fijado</text>
+          <line x1="180" y1="392" x2="180" y2="420" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="428" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="448" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Presentador</text>
+          <text x="30" y="464" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">decide qué se ve</text>
+          <line x1="180" y1="476" x2="180" y2="504" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2n)"/>
+          <rect x="16" y="512" width="328" height="48" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="30" y="532" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Vista</text>
+          <text x="30" y="548" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">muestra, no decide</text>
+          <line x1="180" y1="560" x2="180" y2="588" stroke="var(--mark)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a3n)"/>
+          <rect x="16" y="596" width="328" height="48" fill="var(--mark-soft)" stroke="var(--mark)" stroke-width="1"/>
+          <text x="30" y="616" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--mark)">Outbox y worker</text>
+          <text x="30" y="632" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--mark)">fuera de la petición</text>
+          </svg>
         <figcaption><b>Figura 2.</b> El caso de uso pide, el puerto describe la necesidad y la infraestructura la cumple. La línea discontinua es lo que ocurre después: los eventos de dominio se guardan en la misma transacción que el dato, y el worker los recoge más tarde. Si esa transacción falla, no se publica nada.</figcaption>
       </figure>
     </section>
@@ -468,7 +556,7 @@
       <p class="lede">El repositorio está pensado para que lo escriban modelos de lenguaje sin que puedan romperlo. La diferencia entre una regla y una puerta es que la regla se puede ignorar.</p>
 
       <figure>
-        <svg viewBox="0 0 720 300" role="img" aria-label="Un agente intenta escribir un fichero. Un hook lo intercepta antes de que se guarde: si viola una regla lo rechaza y devuelve el motivo; si no, el fichero se guarda y pasa por las puertas del commit, de la subida y de la integración continua.">
+        <svg class="figure-wide" viewBox="0 0 720 300" role="img" aria-label="Un agente intenta escribir un fichero. Un hook lo intercepta antes de que se guarde: si viola una regla lo rechaza y devuelve el motivo; si no, el fichero se guarda y pasa por las puertas del commit, de la subida y de la integración continua.">
           <defs>
             <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <polygon points="0,0 10,5 0,10" fill="currentColor"/>
@@ -509,6 +597,32 @@
 
           <text x="410" y="88" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.65">si cumple</text>
         </svg>
+        <svg class="figure-narrow" viewBox="0 0 360 470" role="img" aria-label="Un agente intenta escribir. Un hook lo intercepta antes de guardar: si viola una regla lo rechaza con el motivo, y si cumple el fichero pasa por las puertas de commit, de subida y de integración continua.">
+          <defs>
+            <marker id="a4n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon points="0,0 10,5 0,10" fill="currentColor"/></marker>
+            <marker id="a5n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon points="0,0 10,5 0,10" fill="var(--mark)"/></marker>
+          </defs>
+          <rect x="96" y="8" width="176" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="184" y="30" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Agente</text>
+          <text x="184" y="46" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity="0.7">va a escribir</text>
+          <rect x="96" y="94" width="176" height="46" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="184" y="116" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--accent)">Hook</text>
+          <text x="184" y="132" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--accent)">antes de guardar</text>
+          <rect x="96" y="196" width="176" height="42" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="184" y="222" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Fichero</text>
+          <rect x="96" y="272" width="176" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="184" y="296" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Puerta de commit</text>
+          <rect x="96" y="326" width="176" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="184" y="350" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Puerta de subida</text>
+          <rect x="96" y="380" width="176" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="184" y="404" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Integración continua</text>
+          <line x1="184" y1="54" x2="184" y2="90" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4n)"/>
+          <line x1="184" y1="140" x2="184" y2="192" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4n)"/>
+          <line x1="184" y1="238" x2="184" y2="268" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4n)"/>
+          <polyline points="96,117 40,117 40,31 92,31" fill="none" stroke="var(--mark)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a5n)"/>
+          <text x="292" y="121" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--mark)">rechaza</text>
+          <text x="196" y="182" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity="0.65">si cumple</text>
+        </svg>
         <figcaption><b>Figura 3.</b> Un comentario, un <code>any</code> o una importación prohibida no llegan a guardarse: el hook devuelve el motivo y el agente corrige. Las tres puertas de la derecha ejecutan lo mismo en momentos distintos, de la más rápida a la más completa. Un cuarto hook impide dar una tarea por terminada mientras la puerta esté en rojo.</figcaption>
       </figure>
 
@@ -521,12 +635,12 @@
             <tr><th>Pieza</th><th>Dónde vive</th><th>Cuándo se carga</th></tr>
           </thead>
           <tbody>
-            <tr><td>Mapa y reglas</td><td><code>AGENTS.md</code></td><td>Siempre. Es la entrada.</td></tr>
-            <tr><td>Reglas por capa</td><td><code>.claude/rules</code></td><td>Al abrir un fichero de esa capa.</td></tr>
-            <tr><td>Documentación</td><td><code>docs/</code></td><td>Solo el nodo que la tarea necesita.</td></tr>
-            <tr><td>Decisiones</td><td><code>docs/decisions</code></td><td>Cuando alguien pregunta por qué algo es así.</td></tr>
-            <tr><td>Agentes</td><td><code>.claude/agents</code></td><td>Al delegar: arquitecto, implementador, guardián de capas, revisor de seguridad, escritor de tests.</td></tr>
-            <tr><td>Procedimientos</td><td><code>.claude/skills</code></td><td>Al invocarlos: nueva funcionalidad, nuevo puerto, nueva vista, dirección de diseño, origen de componentes.</td></tr>
+            <tr><td data-label="Pieza">Mapa y reglas</td><td data-label="Dónde vive"><code>AGENTS.md</code></td><td data-label="Cuándo se carga">Siempre. Es la entrada.</td></tr>
+            <tr><td data-label="Pieza">Reglas por capa</td><td data-label="Dónde vive"><code>.claude/rules</code></td><td data-label="Cuándo se carga">Al abrir un fichero de esa capa.</td></tr>
+            <tr><td data-label="Pieza">Documentación</td><td data-label="Dónde vive"><code>docs/</code></td><td data-label="Cuándo se carga">Solo el nodo que la tarea necesita.</td></tr>
+            <tr><td data-label="Pieza">Decisiones</td><td data-label="Dónde vive"><code>docs/decisions</code></td><td data-label="Cuándo se carga">Cuando alguien pregunta por qué algo es así.</td></tr>
+            <tr><td data-label="Pieza">Agentes</td><td data-label="Dónde vive"><code>.claude/agents</code></td><td data-label="Cuándo se carga">Al delegar: arquitecto, implementador, guardián de capas, revisor de seguridad, escritor de tests.</td></tr>
+            <tr><td data-label="Pieza">Procedimientos</td><td data-label="Dónde vive"><code>.claude/skills</code></td><td data-label="Cuándo se carga">Al invocarlos: nueva funcionalidad, nuevo puerto, nueva vista, dirección de diseño, origen de componentes.</td></tr>
           </tbody>
         </table>
       </div>
@@ -547,12 +661,12 @@
             <tr><th>Puerta</th><th>Qué rechaza</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>arch</code></td><td>Comentarios de cualquier sintaxis, <code>any</code>, configuración leída fuera del sitio permitido, importaciones entre capas, elementos interactivos escritos a mano fuera de las primitivas.</td></tr>
-            <tr><td><code>depcruise</code></td><td>Cualquier arista del grafo de dependencias que no esté permitida, incluidas las que solo son de tipos.</td></tr>
-            <tr><td><code>structure</code></td><td>Un directorio que existe y no está descrito, o descrito y ya no existe. También una pieza anunciada como futura que ya ha llegado.</td></tr>
-            <tr><td><code>env-example</code></td><td>Una variable obligatoria en producción que falta del fichero de ejemplo, o una variable opcional sin ninguna regla que la gobierne.</td></tr>
-            <tr><td><code>ui</code></td><td>Desbordamiento horizontal, zonas pulsables por debajo de 44 píxeles, texto de formulario por debajo de 16, etiquetas solapadas. En cuatro anchos, con un navegador real.</td></tr>
-            <tr><td><code>test</code></td><td>Ochocientos ochenta y cinco tests, con las suites de contrato de cada puerto ejecutadas contra sus dos implementaciones.</td></tr>
+            <tr><td data-label="Puerta"><code>arch</code></td><td data-label="Qué rechaza">Comentarios de cualquier sintaxis, <code>any</code>, configuración leída fuera del sitio permitido, importaciones entre capas, elementos interactivos escritos a mano fuera de las primitivas.</td></tr>
+            <tr><td data-label="Puerta"><code>depcruise</code></td><td data-label="Qué rechaza">Cualquier arista del grafo de dependencias que no esté permitida, incluidas las que solo son de tipos.</td></tr>
+            <tr><td data-label="Puerta"><code>structure</code></td><td data-label="Qué rechaza">Un directorio que existe y no está descrito, o descrito y ya no existe. También una pieza anunciada como futura que ya ha llegado.</td></tr>
+            <tr><td data-label="Puerta"><code>env-example</code></td><td data-label="Qué rechaza">Una variable obligatoria en producción que falta del fichero de ejemplo, o una variable opcional sin ninguna regla que la gobierne.</td></tr>
+            <tr><td data-label="Puerta"><code>ui</code></td><td data-label="Qué rechaza">Desbordamiento horizontal, zonas pulsables por debajo de 44 píxeles, texto de formulario por debajo de 16, etiquetas solapadas. En cuatro anchos, con un navegador real.</td></tr>
+            <tr><td data-label="Puerta"><code>test</code></td><td data-label="Qué rechaza">Ochocientos ochenta y cinco tests, con las suites de contrato de cada puerto ejecutadas contra sus dos implementaciones.</td></tr>
           </tbody>
         </table>
       </div>
@@ -575,7 +689,7 @@
       <p class="lede">La misma base recorre tres etapas sin reescribirse. Lo que cambia entre ellas es quién ejecuta el trabajo de fondo y quién opera la infraestructura.</p>
 
       <figure>
-        <svg viewBox="0 0 720 350" role="img" aria-label="Tres etapas de despliegue en columnas. En la primera, la web va en Vercel, la base de datos en Supabase y el trabajo de fondo lo dispara un cron. En la segunda, todo vive en contenedores en un servidor propio con un worker permanente. En la tercera, los servicios se separan en máquinas distintas con varios workers.">
+        <svg class="figure-wide" viewBox="0 0 720 350" role="img" aria-label="Tres etapas de despliegue en columnas. En la primera, la web va en Vercel, la base de datos en Supabase y el trabajo de fondo lo dispara un cron. En la segunda, todo vive en contenedores en un servidor propio con un worker permanente. En la tercera, los servicios se separan en máquinas distintas con varios workers.">
           <defs>
             <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <polygon points="0,0 10,5 0,10" fill="var(--mark)"/>
@@ -625,6 +739,33 @@
 
           <text x="360" y="300" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">salta cuando el trabajo de fondo no cabe en una función</text>
           <text x="360" y="318" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">salta cuando un servicio compite por los recursos de otro</text>
+        </svg>
+        <svg class="figure-narrow" viewBox="0 0 360 620" role="img" aria-label="Tres etapas de despliegue apiladas. Primero la web en Vercel con base de datos gestionada y un cron que dispara lotes. Después todo en contenedores con un worker permanente. Por último los servicios separados con varios workers.">
+          <defs>
+            <marker id="a6n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon points="0,0 10,5 0,10" fill="var(--mark)"/></marker>
+          </defs>
+          <text x="8" y="18" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 1</text>
+          <rect x="8" y="28" width="344" height="126" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <text x="24" y="54" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Web en Vercel · Postgres gestionado</text>
+          <text x="24" y="78" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="var(--mark)">Un cron dispara cada lote</text>
+          <text x="24" y="108" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">latencia de minutos</text>
+          <text x="24" y="130" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">cero operación</text>
+          <line x1="180" y1="160" x2="180" y2="192" stroke="var(--mark)" stroke-width="1.3" marker-end="url(#a6n)"/>
+          <text x="196" y="182" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--mark)">el fondo no cabe en una función</text>
+          <text x="8" y="222" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 2</text>
+          <rect x="8" y="232" width="344" height="126" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <text x="24" y="258" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Contenedores · Postgres y Redis</text>
+          <text x="24" y="282" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="var(--accent)">Worker permanente</text>
+          <text x="24" y="312" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">latencia de segundos</text>
+          <text x="24" y="334" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">operas tú</text>
+          <line x1="180" y1="364" x2="180" y2="396" stroke="var(--mark)" stroke-width="1.3" marker-end="url(#a6n)"/>
+          <text x="196" y="386" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--mark)">un servicio ahoga a otro</text>
+          <text x="8" y="426" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 3</text>
+          <rect x="8" y="436" width="344" height="126" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <text x="24" y="462" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Varias webs · base de datos aparte</text>
+          <text x="24" y="486" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="var(--accent)">Varios workers en máquinas propias</text>
+          <text x="24" y="516" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">escala por partes</text>
+          <text x="24" y="538" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">operación dedicada</text>
         </svg>
         <figcaption><b>Figura 4.</b> El código es el mismo en las tres. Lo único que cambia es quién llama al despacho de trabajo: un cron, un proceso permanente, o varios procesos a la vez. La cola usa bloqueo con salto de filas ocupadas, así que varios trabajadores conviven sin pisarse desde la primera etapa.</figcaption>
       </figure>
@@ -678,10 +819,6 @@
 
       <p>Ese patrón es lo que permite cambiar Postgres por otra base de datos, o un proveedor de pagos por otro, tocando un solo fichero. También es lo que hace que la promesa sea comprobable: si una implementación nueva pasa la suite del puerto, encaja.</p>
 
-      <div class="note">
-        <span class="tag">Lo que aún no está probado</span>
-        <p>Nadie ha derivado todavía un proyecto de esta base, ninguna suite de contrato se ha ejecutado contra un proveedor real, y las pruebas de carga están escritas sin haberse ejecutado. Hasta entonces, cualquier cifra de capacidad es una estimación y no un dato.</p>
-      </div>
     </section>
 
     <footer>
