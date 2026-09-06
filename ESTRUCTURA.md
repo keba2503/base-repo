@@ -35,11 +35,23 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 
 Esto es lo que hace cada uno.
 
+## Módulos núcleo y módulos opcionales
+
+No todos los módulos pesan igual. `tenants`, `identity` y `audit` son **núcleo**: no se pueden desactivar porque casos de uso centrales dependen de ellos en firme, no a través de un mecanismo que tolera su ausencia. Crear un tenant escribe una entrada de auditoría en la misma transacción, no se la envía a un manejador que puede faltar; revocar una clave de API hace lo mismo. Si `audit` faltara, esas dos operaciones no podrían compilar ni ejecutarse. `tenants` e `identity` son la base sobre la que todo lo demás se apoya: casi cualquier caso de uso necesita un tenant y un actor resuelto.
+
+`jobs`, `documents`, `notifications` y `privacy` son **opcionales**. Se activan o desactivan en `architecture/modules.json`, el mismo tipo de fichero que `architecture/layers.json`: una única fuente de verdad, sin condicionales repartidos por el código. Cada módulo declara `core`, `active` y `dependsOn`. Las raíces de composición (`apps/web/src/main` y `apps/worker/src/main`) leen ese fichero a través de `architecture/modules.ts` y montan casos de uso, rutas HTTP, ejecutores de trabajos y manejadores de eventos solo si el módulo está activo. Si no se monta, su código nunca corre, así que no hace falta preguntar `isEnabled()` en ningún sitio: la pregunta ya la resolvió quién construyó el grafo de objetos.
+
+La dependencia entre módulos opcionales es real, no decorativa: `documents` depende de `jobs` porque confirmar una subida encola un trabajo de procesado sin mecanismo de resguardo; `privacy` depende de `jobs` y de `documents` porque exportar los datos de una persona escribe el resultado en el mismo almacén de ficheros que usa `documents`. Activar un módulo cuya dependencia está inactiva es un error que se detecta al arrancar (`assertModuleGraphIsValid`), no un fallo a medio camino de una petición. `notifications` no tiene esa clase de dependencia: si está inactivo, un evento como `tenant.created` se queda sin manejador y el despachador del outbox ya lo trataba como un caso normal, marcándolo publicado sin reintentarlo para siempre.
+
+El consentimiento de cookies (`apps/web/src/app/cookie-consent`) usa el módulo `privacy` para registrar cada decisión. Si `privacy` está desactivado, el banner se sigue mostrando pero las decisiones no se persisten y la analítica se trata como no consentida por defecto: es una consecuencia real de apagar el módulo, no un error.
+
 ### `tenants` — Organizaciones
 
 Cada cliente que usa tu aplicación es un tenant. Una clínica, una empresa, un colegio. Todo dato pertenece a uno y nunca se mezcla con el de otro.
 
 Está montado desde el principio aunque tu proyecto vaya a tener una sola organización. La razón es práctica: añadirlo después obliga a revisar cada consulta a la base de datos y cada permiso, uno por uno.
+
+Un tenant es la organización entera y es la frontera de seguridad: todo dato y todo permiso se comprueban contra su identificador. Una sucursal o sede es una subdivisión **dentro** de un tenant, nunca un tenant aparte. Modelarla como un tenant propio rompe el caso más común: alguien que trabaja en dos sedes de la misma organización necesitaría dos cuentas, y nadie podría ver la organización completa de una vez. Las sucursales no existen todavía en este repositorio y no se deben construir por adelantado, pero cuando se añadan, cambia la forma de los permisos: hoy un rol autoriza "puede ver X"; con sucursales, autoriza "puede ver X de su sede", y esa comprobación se añade en el mismo lugar donde hoy se comprueba el tenant, nunca sustituyéndola.
 
 ### `identity` — Quién entra y qué puede hacer
 
@@ -133,10 +145,13 @@ apps/web/src/app/tenants/new                 Alta de tenant
 apps/web/src/main                            Raíz de composición: el único sitio que lee configuración y construye el grafo de objetos
 apps/web/test                                Tests de la web
 apps/web/test/api                            Tests de las rutas HTTP contra la aplicación Hono real
+apps/web/test/main                           Tests de la raíz de composición: módulos activos y desactivados
 apps/worker                                  Proceso de fondo, independiente de la web
 apps/worker/src                              Arranque y parada ordenada del proceso
 apps/worker/src/main                         Raíz de composición del worker
-architecture                                 La única fuente del grafo de dependencias entre capas
+apps/worker/test                             Tests del worker
+apps/worker/test/main                        Tests de la raíz de composición: módulos activos y desactivados
+architecture                                 La única fuente del grafo de dependencias entre capas y de qué módulos están activos
 docs                                         Documentación en nodos pequeños, pensada para leerse por partes
 docs/architecture                            Regla de dependencia, capas, puertos, fronteras y raíz de composición
 docs/decisions                               Registros de decisión numerados: por qué las cosas son como son
