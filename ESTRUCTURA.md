@@ -29,6 +29,62 @@ El grafo de quién puede importar a quién vive en un único fichero, `architect
 | 4 | `apps/web` | Cómo se entrega por HTTP y por pantalla |
 | 4 | `apps/worker` | Cómo se procesa fuera de la petición |
 
+## Los módulos, explicados
+
+La aplicación está dividida por módulos de negocio. Cada módulo es una carpeta con el mismo nombre que se repite en cada capa: lo que decide, lo que orquesta, lo que valida y lo que habla con el exterior. Si vas a trabajar en documentos, todo lo de documentos está en carpetas llamadas `documents`.
+
+Esto es lo que hace cada uno.
+
+### `tenants` — Organizaciones
+
+Cada cliente que usa tu aplicación es un tenant. Una clínica, una empresa, un colegio. Todo dato pertenece a uno y nunca se mezcla con el de otro.
+
+Está montado desde el principio aunque tu proyecto vaya a tener una sola organización. La razón es práctica: añadirlo después obliga a revisar cada consulta a la base de datos y cada permiso, uno por uno.
+
+### `identity` — Quién entra y qué puede hacer
+
+Los usuarios, a qué organización pertenece cada uno, y qué rol tiene dentro de ella. El rol decide qué operaciones puede realizar.
+
+Incluye también las claves de API, que sirven para que otro programa se conecte a tu aplicación sin ser una persona sentada delante de una pantalla.
+
+### `documents` — Ficheros que suben los usuarios
+
+Guarda los ficheros y lleva la cuenta de en qué estado está cada uno: subido, procesándose, procesado o fallido.
+
+Deja preparado el sitio donde mañana conectas un OCR o un modelo de lenguaje que lea su contenido. Hoy ese hueco está vacío a propósito y no rompe nada.
+
+### `consent` — Qué ha aceptado cada persona
+
+Registra qué consintió alguien, para qué, y bajo qué versión de tu política de privacidad. Cuando cambias la política, el consentimiento anterior deja de valer automáticamente.
+
+Es la base del banner de cookies y de que la analítica no se cargue mientras nadie haya dicho que sí.
+
+### `privacy` — Los derechos que la ley da sobre los datos
+
+Pedir una copia de todo lo que tienes sobre una persona, llevárselo a otro sitio, o que lo borres.
+
+Aquí borrar significa anonimizar, no eliminar filas: hay datos que deben sobrevivir a la persona, como una factura o la prueba de que consintió algo. También vive aquí la retención, que es cuánto tiempo se guarda cada cosa antes de anonimizarla sola.
+
+### `notifications` — Correo y reacciones a lo que ocurre
+
+El envío de correo, y el mecanismo general para reaccionar cuando algo pasa. Alguien crea una organización, y eso dispara un correo de bienvenida sin que quien creó la organización tenga que saber nada del correo.
+
+### `audit` — Quién hizo qué y cuándo
+
+El registro de las acciones importantes: quién las hizo, sobre qué, en qué momento.
+
+No se puede modificar ni borrar, ni siquiera con acceso directo a la base de datos. Es lo que consultas el día que alguien pregunta quién cambió algo, y es distinto de los logs, que se rotan y se pierden.
+
+### `jobs` — Trabajo que no se hace mientras el usuario espera
+
+Procesar un documento, enviar un correo, limpiar datos antiguos. Todo eso se encola y lo ejecuta un proceso aparte, para que la persona que pulsó el botón reciba su respuesta al instante.
+
+Si algo falla, se reintenta solo, esperando cada vez un poco más, y se rinde después de unos cuantos intentos.
+
+### `kernel` — Las piezas compartidas
+
+Aparece dentro de varias capas. No es un módulo de negocio: son las herramientas que todos los demás usan. El resultado de una operación, los identificadores, los errores, la autorización, el reloj, y la clasificación de qué campos contienen datos personales.
+
 ## Cómo circula una petición
 
 ```
