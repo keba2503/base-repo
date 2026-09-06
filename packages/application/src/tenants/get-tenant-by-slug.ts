@@ -1,4 +1,4 @@
-import { isErr, notFound, ok, err, type DomainError, type Result } from "@base/domain";
+import { isErr, notFound, ok, err, type DomainError, type Result, type TenantId } from "@base/domain";
 import { authorize } from "../kernel/authorize";
 import type { Permissions } from "../kernel/ports/permissions";
 import {
@@ -10,7 +10,7 @@ import {
 import type { TenantRepository } from "./ports/tenant-repository";
 
 export type GetTenantBySlugDependencies = {
-  readonly tenants: TenantRepository;
+  readonly tenantsScopedTo: (tenantId: TenantId) => TenantRepository;
   readonly permissions: Permissions;
 };
 
@@ -19,7 +19,7 @@ export type GetTenantBySlug = (
 ) => Promise<Result<TenantResponse, DomainError>>;
 
 export function getTenantBySlug(dependencies: GetTenantBySlugDependencies): GetTenantBySlug {
-  const { tenants, permissions } = dependencies;
+  const { tenantsScopedTo, permissions } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -30,6 +30,7 @@ export function getTenantBySlug(dependencies: GetTenantBySlugDependencies): GetT
     });
     if (isErr(authorization)) return authorization;
 
+    const tenants = tenantsScopedTo(request.actor.tenantId);
     const tenant = await tenants.findBySlug(request.slug);
     if (!tenant) {
       return err(notFound("tenant.notFound", "No tenant uses this slug"));

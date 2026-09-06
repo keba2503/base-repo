@@ -51,7 +51,7 @@ export function createTenantOperation(): CreateTenantController {
 export function getTenantBySlugOperation(): GetTenantBySlugController {
   const parts = container();
   return getTenantBySlugController(
-    getTenantBySlug({ tenants: parts.tenantRegistry, permissions: parts.permissions }),
+    getTenantBySlug({ tenantsScopedTo: parts.tenantsScopedTo, permissions: parts.permissions }),
   );
 }
 
