@@ -4,6 +4,7 @@ date: 2026-09-06
 found_in: bun run ui (scripts/ui/viewport.ts), primera ejecución de la puerta visual
 prevented_by: gate
 gate: scripts/ui/viewport.ts
+regression_test: scripts/ui/check-viewport.test.ts
 ---
 
 # DEF-0005 El reset de `globals.css` vivía fuera de toda capa y ganaba en silencio a Tailwind

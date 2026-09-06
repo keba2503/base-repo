@@ -4,6 +4,7 @@ date: 2026-09-06
 found_in: revisión de arquitectura al introducir apps/web/src/layouts
 prevented_by: gate
 gate: scripts/architecture/check-source.ts
+regression_test: scripts/architecture/check-source.test.ts
 ---
 
 # DEF-0003 La puerta de elementos crudos cubría `apps/web/src/app` pero no `apps/web/src/layouts`

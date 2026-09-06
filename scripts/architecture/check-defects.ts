@@ -104,6 +104,18 @@ function checkDefectFile(
         reason: `gate ${gate} existe pero nadie lo ejecuta: no aparece en los scripts de package.json ni en ningún workflow`,
       });
     }
+
+    const regression = frontmatter.regression_test;
+    if (regression === undefined || regression.length === 0) {
+      failures.push({
+        path,
+        reason: "prevented_by es gate pero falta regression_test, el fichero que demuestra que la puerta atrapa este caso",
+      });
+    } else if (!regression.endsWith(".test.ts")) {
+      failures.push({ path, reason: `regression_test ${regression} no es un fichero .test.ts` });
+    } else if (!trackedFiles.has(regression)) {
+      failures.push({ path, reason: `regression_test ${regression} no existe en el disco` });
+    }
   }
 
   if (preventedBy === "test") {

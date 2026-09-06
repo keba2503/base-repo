@@ -7,6 +7,7 @@ function defect(frontmatter: string): string {
 
 const trackedFiles = [
   "scripts/architecture/check-env-completeness.ts",
+  "scripts/architecture/check-env-completeness.test.ts",
   "packages/application/test/dispatch-jobs.test.ts",
   ".github/workflows/ci.yml",
 ];
@@ -35,6 +36,7 @@ describe("checkDefectRegistry", () => {
         "found_in: revisión de seguridad",
         "prevented_by: gate",
         "gate: scripts/architecture/check-env-completeness.ts",
+        "regression_test: scripts/architecture/check-env-completeness.test.ts",
       ].join("\n"),
     );
     expect(checkDefectRegistry([{ path: "docs/defects/DEF-0001-x.md", content }], trackedFiles, invokedGates)).toEqual([]);
@@ -48,6 +50,7 @@ describe("checkDefectRegistry", () => {
         "found_in: revisión de la suite de Postgres",
         "prevented_by: gate",
         "gate: .github/workflows/ci.yml",
+        "regression_test: scripts/architecture/check-env-completeness.test.ts",
       ].join("\n"),
     );
     expect(checkDefectRegistry([{ path: "docs/defects/DEF-0016-x.md", content }], trackedFiles, invokedGates)).toEqual([]);
@@ -134,12 +137,11 @@ describe("checkDefectRegistry", () => {
       ].join("\n"),
     );
     const failures = checkDefectRegistry([{ path: "docs/defects/DEF-0008-x.md", content }], trackedFiles);
-    expect(failures).toEqual([
-      {
-        path: "docs/defects/DEF-0008-x.md",
-        reason: "gate scripts/architecture/does-not-exist.ts no existe entre los scripts o los workflows del repositorio",
-      },
-    ]);
+    expect(
+      failures.some((failure) =>
+        failure.reason.includes("does-not-exist.ts no existe entre los scripts o los workflows"),
+      ),
+    ).toBe(true);
   });
 
   it("rejects a gate that does not live under scripts/ or .github/workflows/", () => {
@@ -147,9 +149,9 @@ describe("checkDefectRegistry", () => {
       ["id: DEF-0009", "date: 2026-09-06", "found_in: x", "prevented_by: gate", "gate: package.json"].join("\n"),
     );
     const failures = checkDefectRegistry([{ path: "docs/defects/DEF-0009-x.md", content }], trackedFiles);
-    expect(failures).toEqual([
-      { path: "docs/defects/DEF-0009-x.md", reason: "gate package.json no vive bajo scripts/ ni bajo .github/workflows/" },
-    ]);
+    expect(
+      failures.some((failure) => failure.reason.includes("package.json no vive bajo scripts/")),
+    ).toBe(true);
   });
 
   it("rejects prevented_by none with no reason written", () => {
@@ -208,5 +210,48 @@ describe("checkDefectRegistry", () => {
     expect(failures).toEqual([
       { path: "docs/defects/DEF-0015-b.md", reason: "id DEF-0015 repetido, ya usado por docs/defects/DEF-0015-a.md" },
     ]);
+  });
+});
+
+describe("regression test for a gate", () => {
+  it("flags a gate defect with no regression test", () => {
+    const content = [
+      "---",
+      "id: DEF-0018",
+      "date: 2026-09-06",
+      "found_in: revisión",
+      "prevented_by: gate",
+      "gate: scripts/architecture/check-env-completeness.ts",
+      "---",
+      "",
+      "Cuerpo.",
+    ].join("\n");
+    const failures = checkDefectRegistry(
+      [{ path: "docs/defects/DEF-0018-x.md", content }],
+      trackedFiles,
+      invokedGates,
+    );
+    expect(failures.some((failure) => failure.reason.includes("falta regression_test"))).toBe(true);
+  });
+
+  it("flags a regression test that does not exist", () => {
+    const content = [
+      "---",
+      "id: DEF-0019",
+      "date: 2026-09-06",
+      "found_in: revisión",
+      "prevented_by: gate",
+      "gate: scripts/architecture/check-env-completeness.ts",
+      "regression_test: scripts/architecture/nope.test.ts",
+      "---",
+      "",
+      "Cuerpo.",
+    ].join("\n");
+    const failures = checkDefectRegistry(
+      [{ path: "docs/defects/DEF-0019-x.md", content }],
+      trackedFiles,
+      invokedGates,
+    );
+    expect(failures.some((failure) => failure.reason.includes("no existe en el disco"))).toBe(true);
   });
 });

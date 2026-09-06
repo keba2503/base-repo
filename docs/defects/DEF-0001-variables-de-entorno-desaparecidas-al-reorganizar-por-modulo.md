@@ -4,6 +4,7 @@ date: 2026-09-06
 found_in: revisión de la reorganización de configuración por módulo (decisión 0023)
 prevented_by: gate
 gate: scripts/architecture/check-env-completeness.ts
+regression_test: scripts/architecture/check-env-completeness.test.ts
 ---
 
 # DEF-0001 Cuatro variables obligatorias desaparecieron al migrar a configuración por módulo

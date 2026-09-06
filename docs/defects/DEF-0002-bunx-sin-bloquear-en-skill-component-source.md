@@ -4,6 +4,7 @@ date: 2026-09-06
 found_in: revisión de seguridad de la skill component-source
 prevented_by: gate
 gate: scripts/agent/pre-bash.ts
+regression_test: scripts/agent/deny-rules.test.ts
 ---
 
 # DEF-0002 `bunx` no estaba en la lista de comandos bloqueados

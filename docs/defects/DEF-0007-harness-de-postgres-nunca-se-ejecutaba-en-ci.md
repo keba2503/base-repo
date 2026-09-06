@@ -4,13 +4,14 @@ date: 2026-09-06
 found_in: fusión de la rama sane/isolation en main (conflicto en packages/infrastructure/test/postgres.test.ts)
 prevented_by: gate
 gate: .github/workflows/ci.yml
+regression_test: packages/infrastructure/test/postgres.test.ts
 ---
 
 # DEF-0007 El harness de pruebas de Postgres quedó imposible de ejecutar al juntar dos ramas, y hasta entonces el aislamiento por fila nunca se había ejercido de verdad
 
 ## Qué pasó
 
-Al fusionar `sane/isolation` en `main` hubo conflicto en `packages/infrastructure/test/postgres.test.ts`. Resolver ese conflicto a mano fue el primer momento en el que alguien realmente intentó ejecutar la suite de contrato contra una Postgres real desde que existía: hasta entonces, la seguridad a nivel de fila (decisión 0007) descansaba en código escrito y revisado, pero nunca ejercido por una ejecución real de esa suite.
+Al fusionar `sane/isolation` en `main` hubo conflicto en `packages/infrastructure/test/postgres.test.ts`. Resolver ese conflicto a mano fue el primer momento en el que alguien intentó ejecutar la suite de contrato contra una Postgres real. El hueco era de cobertura: la suite existía y nada la ejecutaba de forma automática.
 
 ## Por qué ninguna puerta existente lo vio
 
@@ -18,7 +19,7 @@ Al fusionar `sane/isolation` en `main` hubo conflicto en `packages/infrastructur
 
 ## Qué cambió: de no medible a medible
 
-La primera versión de este registro dejaba este defecto en `none`, con el razonamiento de que un trabajo de CI con Postgres real era una decisión de infraestructura que no correspondía tomar dentro de ese encargo. Esa decisión se tomó después, precisamente porque este es el más grave de los siete defectos del lote: la seguridad a nivel de fila es la segunda barrera del aislamiento entre clientes en este repositorio, y una barrera que solo se comprueba cuando alguien se acuerda de levantar una base de datos a mano no es una barrera comprobada.
+La primera versión de este registro dejaba este defecto en `none`, con el razonamiento de que un trabajo de CI con Postgres real era una decisión de infraestructura que no correspondía tomar dentro de ese encargo. Esa decisión se tomó después, porque este es el defecto de mayor alcance del lote: una suite que nadie ejecuta de forma automática no aporta la garantía que su existencia sugiere.
 
 Se añadió el trabajo `postgres` a `.github/workflows/ci.yml`, como trabajo propio, con su propio arranque, siguiendo el mismo patrón que ya usaba el trabajo `ui` para la puerta visual (una preparación que no corre en cada guardado local, pero sí en cada pull request y cada push a `main`, y que hace fallar la integración continua si falla, sin `continue-on-error`):
 
