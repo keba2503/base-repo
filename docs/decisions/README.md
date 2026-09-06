@@ -21,6 +21,8 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0010 | Idempotency and rate limit stores start in memory | accepted |
 | 0011 | Provider failures are unavailable domain errors | accepted |
 | 0012 | Configuration is validated at runtime, not at build | accepted |
+| 0013 | The remote address trusts the platform header first | accepted |
+| 0014 | The development actor requires its own flag, not just NODE_ENV | accepted |
 
 ## Template
 

@@ -50,5 +50,5 @@ export function developmentActor(): Actor {
 export async function resolveActorOrDevelopmentFallback(request: ActorRequest = {}): Promise<Actor | undefined> {
   const actor = await resolveActor(request);
   if (isOk(actor)) return actor.value;
-  return isDevelopment ? developmentActor() : undefined;
+  return isDevelopment && env.allowInsecureDevActor ? developmentActor() : undefined;
 }
