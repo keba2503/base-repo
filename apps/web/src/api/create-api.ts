@@ -17,10 +17,11 @@ export const docsPath = "/docs";
 export type Api = Hono<ApiEnvironment>;
 
 export function defaultRoutes(dependencies: ApiDependencies): readonly RouteDefinition[] {
+  const documents = dependencies.controllers.documents;
   return [
     ...tenantRoutes(dependencies.controllers),
     ...identityRoutes(dependencies.controllers),
-    ...documentRoutes(dependencies.controllers),
+    ...(documents ? documentRoutes(documents) : []),
   ];
 }
 

@@ -1,5 +1,6 @@
 import type { Actor as ApplicationActor } from "@base/application";
 import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Credential } from "@/api";
+import { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { env } from "./env";
 import {
   confirmDocumentUploadOperation,
@@ -42,7 +43,7 @@ function apiActorResolver(): ActorResolver {
   };
 }
 
-function buildApiDependencies(): ApiDependencies {
+export function buildApiDependencies(modules: ModuleActivation = defaultModuleActivation): ApiDependencies {
   const parts = sharedContainer();
 
   return {
@@ -51,10 +52,16 @@ function buildApiDependencies(): ApiDependencies {
       getTenantBySlug: getTenantBySlugOperation(),
       createApiKey: createApiKeyOperation(),
       revokeApiKey: revokeApiKeyOperation(),
-      createDocumentUpload: createDocumentUploadOperation(),
-      confirmDocumentUpload: confirmDocumentUploadOperation(),
-      getDocument: getDocumentOperation(),
-      listDocuments: listDocumentsOperation(),
+      ...(isModuleActive("documents", modules)
+        ? {
+            documents: {
+              createDocumentUpload: createDocumentUploadOperation(),
+              confirmDocumentUpload: confirmDocumentUploadOperation(),
+              getDocument: getDocumentOperation(),
+              listDocuments: listDocumentsOperation(),
+            },
+          }
+        : {}),
     },
     resolveActor: apiActorResolver(),
     logger: parts.logger,

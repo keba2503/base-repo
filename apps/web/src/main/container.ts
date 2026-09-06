@@ -106,6 +106,7 @@ import {
   type RedactionPolicy,
 } from "@base/infrastructure";
 import { createClient } from "@supabase/supabase-js";
+import { isModuleActive } from "../../../../architecture/modules";
 import type { Environment } from "./env";
 
 export type Container = {
@@ -218,6 +219,7 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
 
 function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
   if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
+  if (environment.databaseUrl === undefined) return new InMemoryFieldCipher();
   if (environment.fieldEncryptionKeys === undefined) {
     if (!environment.allowEphemeralFieldEncryptionKey) {
       throw new Error(
@@ -343,10 +345,14 @@ function analyticsFor(environment: Environment, logger: Logger): Analytics {
   });
 }
 
-function mailerFor(environment: Environment): Mailer {
+function mailerFor(environment: Environment, logger: Logger): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
+  if (!isModuleActive("notifications")) return new ConsoleMailer();
   if (environment.nodeEnv === "development") return new ConsoleMailer();
-  if (environment.resendApiKey === undefined) throw new Error("RESEND_API_KEY is required in production");
+  if (environment.resendApiKey === undefined) {
+    logger.warn("RESEND_API_KEY is not configured: outgoing mail is only logged to the console, never delivered");
+    return new ConsoleMailer();
+  }
   return new ResendMailer({
     client: createResendClient({ apiKey: environment.resendApiKey }),
     from: environment.mailFrom,
@@ -384,7 +390,7 @@ export function createContainer(environment: Environment): Container {
     humanVerifier: humanVerifierFor(environment),
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock: parts.clock }),
-    mailer: mailerFor(environment),
+    mailer: mailerFor(environment, parts.logger),
     analytics: analyticsFor(environment, parts.logger),
     close: async () => {
       await client?.close();

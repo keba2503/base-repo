@@ -20,15 +20,19 @@ export type Credential =
 
 export type ActorResolver = (credential: Credential) => Promise<Actor | undefined>;
 
+export type DocumentControllers = {
+  readonly createDocumentUpload: CreateDocumentUploadController;
+  readonly confirmDocumentUpload: ConfirmDocumentUploadController;
+  readonly getDocument: GetDocumentController;
+  readonly listDocuments: ListDocumentsController;
+};
+
 export type ApiControllers = {
   readonly createTenant: CreateTenantController;
   readonly getTenantBySlug: GetTenantBySlugController;
   readonly createApiKey: CreateApiKeyController;
   readonly revokeApiKey: RevokeApiKeyController;
-  readonly createDocumentUpload: CreateDocumentUploadController;
-  readonly confirmDocumentUpload: ConfirmDocumentUploadController;
-  readonly getDocument: GetDocumentController;
-  readonly listDocuments: ListDocumentsController;
+  readonly documents?: DocumentControllers;
 };
 
 export type RateLimitPolicy = {

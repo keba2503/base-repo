@@ -1,6 +1,7 @@
 import "server-only";
 import { isErr, type ConsentCategory } from "@base/domain";
 import { headers } from "next/headers";
+import { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { visitorActorFor } from "./actor";
 import { grantConsentOperation, hasActiveConsentOperation, withdrawConsentOperation } from "./use-cases";
 
@@ -18,9 +19,12 @@ export type ConsentStatusResult = {
   readonly known: boolean;
 };
 
-export async function readConsentStatus(visitorId: string | undefined): Promise<ConsentStatusResult> {
-  if (visitorId === undefined) {
-    return { visitorId: visitorActorFor(undefined).visitorId, status: unknownStatus, known: false };
+export async function readConsentStatus(
+  visitorId: string | undefined,
+  modules: ModuleActivation = defaultModuleActivation,
+): Promise<ConsentStatusResult> {
+  if (visitorId === undefined || !isModuleActive("privacy", modules)) {
+    return { visitorId: visitorActorFor(visitorId).visitorId, status: unknownStatus, known: false };
   }
   const { actor, visitorId: resolvedVisitorId } = visitorActorFor(visitorId);
   const check = hasActiveConsentOperation();
@@ -50,8 +54,10 @@ async function requestSource(): Promise<{ ipAddress: string; userAgent: string }
 export async function recordConsentDecision(
   visitorId: string | undefined,
   decision: ConsentDecision,
+  modules: ModuleActivation = defaultModuleActivation,
 ): Promise<string> {
   const { actor, visitorId: resolvedVisitorId } = visitorActorFor(visitorId);
+  if (!isModuleActive("privacy", modules)) return resolvedVisitorId;
   const grant = grantConsentOperation();
   const withdraw = withdrawConsentOperation();
   const source = await requestSource();

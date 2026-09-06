@@ -8,11 +8,11 @@ import {
   type DocumentOutput,
   type ListDocumentsOutput,
 } from "@base/contracts";
-import type { ApiControllers } from "../dependencies";
+import type { DocumentControllers } from "../dependencies";
 import type { RouteDefinition } from "../route-definition";
 
-type DocumentResponse = Extract<Awaited<ReturnType<ApiControllers["getDocument"]>>, { kind: "ok" }>["value"];
-type ListDocumentsResponse = Extract<Awaited<ReturnType<ApiControllers["listDocuments"]>>, { kind: "ok" }>["value"];
+type DocumentResponse = Extract<Awaited<ReturnType<DocumentControllers["getDocument"]>>, { kind: "ok" }>["value"];
+type ListDocumentsResponse = Extract<Awaited<ReturnType<DocumentControllers["listDocuments"]>>, { kind: "ok" }>["value"];
 
 function toDocumentOutput(response: DocumentResponse): DocumentOutput {
   return {
@@ -43,7 +43,7 @@ function listSerialised(outcome: Outcome<ListDocumentsResponse>): Outcome<ListDo
   return { kind: "ok", value: toListDocumentsOutput(outcome.value) };
 }
 
-export function documentRoutes(controllers: ApiControllers): readonly RouteDefinition[] {
+export function documentRoutes(controllers: DocumentControllers): readonly RouteDefinition[] {
   return [
     {
       operationId: "createDocumentUploadUrl",

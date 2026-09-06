@@ -167,10 +167,12 @@ export function harnessFactory(options: HarnessOptions = {}): Harness {
       getTenantBySlug: getTenantBySlugController(options.getTenantBySlug ?? succeedingGet),
       createApiKey: createApiKeyController(options.createApiKey ?? succeedingCreateApiKey),
       revokeApiKey: revokeApiKeyController(options.revokeApiKey ?? succeedingRevokeApiKey),
-      createDocumentUpload: createDocumentUploadController(options.createDocumentUpload ?? succeedingCreateDocumentUpload),
-      confirmDocumentUpload: confirmDocumentUploadController(options.confirmDocumentUpload ?? succeedingConfirmDocumentUpload),
-      getDocument: getDocumentController(options.getDocument ?? succeedingGetDocument),
-      listDocuments: listDocumentsController(options.listDocuments ?? succeedingListDocuments),
+      documents: {
+        createDocumentUpload: createDocumentUploadController(options.createDocumentUpload ?? succeedingCreateDocumentUpload),
+        confirmDocumentUpload: confirmDocumentUploadController(options.confirmDocumentUpload ?? succeedingConfirmDocumentUpload),
+        getDocument: getDocumentController(options.getDocument ?? succeedingGetDocument),
+        listDocuments: listDocumentsController(options.listDocuments ?? succeedingListDocuments),
+      },
     },
     resolveActor: (credential) => {
       if (credential.kind === "apiKey" && credential.secret === apiKeySecret) return Promise.resolve(actor);
