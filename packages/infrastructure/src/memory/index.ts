@@ -12,6 +12,7 @@ export {
   type LogSink,
   type RedactionPolicy,
 } from "./logger";
+export { ConsoleMailer, InMemoryMailer, malformedRecipient, type ConsoleMailerOptions } from "./mailer";
 export { InMemoryOutbox } from "./outbox";
 export { AllowAllPermissions, DenyAllPermissions, ScopedPermissions } from "./permissions";
 export { SlidingWindowRateLimiter, type SlidingWindowRateLimiterOptions } from "./rate-limiter";

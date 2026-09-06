@@ -1,7 +1,23 @@
-import { isOk, parseEntityId, type DomainEvent, type EntityId, type Tenant, type TenantId } from "@base/domain";
+import {
+  err,
+  isOk,
+  ok,
+  parseEntityId,
+  unavailable,
+  type DomainError,
+  type DomainEvent,
+  type EntityId,
+  type Result,
+  type Tenant,
+  type TenantId,
+} from "@base/domain";
 import type {
   Clock,
   IdGenerator,
+  LogFields,
+  Logger,
+  Mailer,
+  MailMessage,
   Outbox,
   PermissionRequest,
   StoredEvent,
@@ -58,26 +74,53 @@ export class StubUnitOfWork implements UnitOfWork {
   }
 }
 
+type StoredRow = { readonly id: string; readonly event: DomainEvent; attempts: number; isPublished: boolean };
+
 export class StubOutbox implements Outbox {
-  readonly events: DomainEvent[] = [];
+  readonly #rows: StoredRow[] = [];
+  readonly published: string[] = [];
+  readonly failed: string[] = [];
 
   enqueue(events: readonly DomainEvent[]): Promise<void> {
-    this.events.push(...events);
+    for (const event of events) {
+      this.#rows.push({ id: String(this.#rows.length + 1), event, attempts: 0, isPublished: false });
+    }
     return Promise.resolve();
+  }
+
+  seed(event: DomainEvent, attempts = 0): string {
+    const id = String(this.#rows.length + 1);
+    this.#rows.push({ id, event, attempts, isPublished: false });
+    return id;
   }
 
   pullUnpublished(limit: number): Promise<readonly StoredEvent[]> {
     return Promise.resolve(
-      this.events.slice(0, limit).map((event, index) => ({ id: String(index + 1), event, attempts: 0 })),
+      this.#rows
+        .filter((row) => !row.isPublished)
+        .slice(0, limit)
+        .map(({ id, event, attempts }) => ({ id, event, attempts })),
     );
   }
 
-  markPublished(): Promise<void> {
+  markPublished(ids: readonly string[]): Promise<void> {
+    for (const row of this.#rows) {
+      if (ids.includes(row.id)) row.isPublished = true;
+    }
+    this.published.push(...ids);
     return Promise.resolve();
   }
 
-  markFailed(): Promise<void> {
+  markFailed(ids: readonly string[]): Promise<void> {
+    for (const row of this.#rows) {
+      if (ids.includes(row.id)) row.attempts += 1;
+    }
+    this.failed.push(...ids);
     return Promise.resolve();
+  }
+
+  get events(): readonly DomainEvent[] {
+    return this.#rows.map((row) => row.event);
   }
 }
 
@@ -106,5 +149,46 @@ export class StubTenantRepository implements TenantRepository {
 
   get saved(): readonly Tenant[] {
     return [...this.#tenants.values()];
+  }
+}
+
+export class StubMailer implements Mailer {
+  readonly sent: MailMessage[] = [];
+  #failure: DomainError | undefined;
+
+  failWith(failure: DomainError): void {
+    this.#failure = failure;
+  }
+
+  send(message: MailMessage): Promise<Result<void, DomainError>> {
+    if (this.#failure) return Promise.resolve(err(this.#failure));
+    this.sent.push(message);
+    return Promise.resolve(ok(undefined));
+  }
+}
+
+export function providerOutage(): DomainError {
+  return unavailable("mail.provider.unavailable", "The mail provider timed out");
+}
+
+export type LogLine = { readonly level: "info" | "warn" | "error"; readonly message: string; readonly fields: LogFields };
+
+export class StubLogger implements Logger {
+  readonly lines: LogLine[] = [];
+
+  info(message: string, fields: LogFields = {}): void {
+    this.lines.push({ level: "info", message, fields });
+  }
+
+  warn(message: string, fields: LogFields = {}): void {
+    this.lines.push({ level: "warn", message, fields });
+  }
+
+  error(message: string, fields: LogFields = {}): void {
+    this.lines.push({ level: "error", message, fields });
+  }
+
+  messagesAt(level: LogLine["level"]): readonly string[] {
+    return this.lines.filter((line) => line.level === level).map((line) => line.message);
   }
 }

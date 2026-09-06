@@ -28,3 +28,9 @@ Lives in `apps/web`. A Server Component or Client Component that moves data from
 ## Email and documents are views
 
 An email template and a PDF template are views. They receive a view model from a presenter and render it. No formatting logic inside templates.
+
+## Email as a view
+
+An email is sent by an event handler in `packages/application`, but the handler never formats it. It loads what it needs through ports, builds a response model and hands that model to a function it received as a dependency: `(response) => MailMessage`. The function is composed in main from the presenter and the renderer that live in `packages/adapters`: `presentTenantWelcomeEmail` turns the response model into an `EmailViewModel` of plain strings for a locale, and `renderEmail` turns the view model into the `html` and `text` parts with inline styles and escaping. Main adds the recipient and hands the resulting `MailMessage` to the `Mailer` port.
+
+The dependency direction holds because the application only knows the shape of the function, never the presenter. The subject line, the copy, the date format and the link are decided in the presenter; the handler decides when to send and to whom; the mailer decides nothing.

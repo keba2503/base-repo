@@ -10,6 +10,7 @@ export {
   type IssuedSession,
 } from "./identity-provider.contract";
 export { describeLoggerContract } from "./logger.contract";
+export { describeMailerContract, type MailerHarness } from "./mailer.contract";
 export {
   describeMembershipRepositoryContract,
   type MembershipRepositoryHarness,

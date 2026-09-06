@@ -1,6 +1,6 @@
 import type { ContractIssue } from "@base/contracts";
 
-export type ErrorStatus = 401 | 403 | 404 | 409 | 422 | 429 | 500;
+export type ErrorStatus = 401 | 403 | 404 | 409 | 422 | 429 | 500 | 503;
 
 export type ApiFailure = {
   readonly status: ErrorStatus;

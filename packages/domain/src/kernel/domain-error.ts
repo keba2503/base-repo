@@ -1,4 +1,4 @@
-export type DomainErrorKind = "invariantViolation" | "notFound" | "conflict" | "forbidden";
+export type DomainErrorKind = "invariantViolation" | "notFound" | "conflict" | "forbidden" | "unavailable";
 
 export type DomainError = {
   readonly kind: DomainErrorKind;
@@ -20,4 +20,8 @@ export function conflict(code: string, message: string): DomainError {
 
 export function forbidden(code: string, message: string): DomainError {
   return { kind: "forbidden", code, message };
+}
+
+export function unavailable(code: string, message: string): DomainError {
+  return { kind: "unavailable", code, message };
 }

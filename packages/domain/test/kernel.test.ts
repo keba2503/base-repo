@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { classify, fieldsClassifiedAs } from "../src/kernel/classification";
-import { conflict, forbidden, invariantViolation, notFound } from "../src/kernel/domain-error";
+import { conflict, forbidden, invariantViolation, notFound, unavailable } from "../src/kernel/domain-error";
 import { entityIdOf, parseEntityId, parseTenantId, tenantIdOf } from "../src/kernel/identifiers";
 import { andThen, err, isErr, isOk, map, ok } from "../src/kernel/result";
 import { isDeleted } from "../src/kernel/soft-deletable";
@@ -43,7 +43,8 @@ describe("domain error", () => {
       notFound("b", "b").kind,
       conflict("c", "c").kind,
       forbidden("d", "d").kind,
-    ]).toEqual(["invariantViolation", "notFound", "conflict", "forbidden"]);
+      unavailable("e", "e").kind,
+    ]).toEqual(["invariantViolation", "notFound", "conflict", "forbidden", "unavailable"]);
   });
 });
 

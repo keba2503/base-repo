@@ -3,10 +3,11 @@ import { envelopeOf, type ApiFailure, type ErrorStatus } from "./failure";
 import type { IdempotentReply } from "./ports";
 import type { SuccessStatus } from "./route-definition";
 
-const statusByFailureKind: Readonly<Record<"forbidden" | "conflict" | "notFound", ErrorStatus>> = {
+const statusByFailureKind: Readonly<Record<"forbidden" | "conflict" | "notFound" | "unavailable", ErrorStatus>> = {
   forbidden: 403,
   conflict: 409,
   notFound: 404,
+  unavailable: 503,
 };
 
 function failureOf(outcome: Exclude<Outcome<unknown>, { kind: "ok" }>): ApiFailure {
