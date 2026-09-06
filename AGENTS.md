@@ -14,6 +14,7 @@ This repository is a base. Projects derive from it. It follows Clean Architectur
 8. Every port ships with interface, contract suite, memory implementation, real implementation and wiring.
 9. Every aggregate is tenant scoped. Every use case authorizes before acting.
 10. Views decide nothing; presenters decide everything visible; use cases decide everything else.
+11. Adding or removing a directory updates `ESTRUCTURA.md` in the same change. `bun run structure` enforces it.
 
 ## Map
 
@@ -39,6 +40,7 @@ This repository is a base. Projects derive from it. It follows Clean Architectur
 | anything a user can send, secrets, providers | docs/standards/security.md |
 | personal data, consent, deletion, tenants | docs/standards/data-and-gdpr.md |
 | why is it like this | docs/decisions/README.md |
+| what a directory is for | ESTRUCTURA.md |
 
 ## Workflow
 

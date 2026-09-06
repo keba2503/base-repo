@@ -109,6 +109,10 @@ Recommended branch protection on `main` (GitHub repository settings):
 - `process.env` access is restricted by the architecture checker to `apps/*/src/main`; `apps/web/src/main/env.ts` is the one place that reads `NODE_ENV` to decide the CSP's dev/prod behavior.
 - Report a vulnerability by following `SECURITY.md` (email `keba2503@gmail.com`).
 
+## Structure
+
+`ESTRUCTURA.md` describes, in Spanish, every directory of the tree and the role it plays, plus where the pieces that do not exist yet will live. It is verified by `bun run structure`, which is part of `bun run check`: a directory that is not described there fails the gate.
+
 ## Agentic workflow
 
 See `AGENTS.md`.

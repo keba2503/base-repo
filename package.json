@@ -12,9 +12,10 @@
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
     "arch": "bun scripts/architecture/check.ts",
+    "structure": "bun scripts/architecture/structure.ts",
     "depcruise": "depcruise --config .dependency-cruiser.mjs apps packages scripts",
     "test": "bun test --conditions react-server",
-    "check": "bun run lint && bun run typecheck && bun run depcruise && bun run arch && bun run test",
+    "check": "bun run lint && bun run typecheck && bun run depcruise && bun run arch && bun run structure && bun run test",
     "prepare": "lefthook install"
   },
   "devDependencies": {
