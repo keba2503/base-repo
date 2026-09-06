@@ -1,52 +1,69 @@
 import { describe, expect, it } from "bun:test";
 import {
   compareEnvExample,
+  declaredVariablesFrom,
   documentedEnvVariables,
   envFilePattern,
-  requiredVariablesFrom,
 } from "./check-env-example";
 
-describe("requiredVariablesFrom", () => {
-  it("reads every variable name out of the requiredInProduction tuples", () => {
+describe("declaredVariablesFrom", () => {
+  it("reads every variable name out of the moduleEnvVariables groups", () => {
     const source = `
-      const requiredInProduction = [
-        ["databaseUrl", "DATABASE_URL"],
-        ["resendApiKey", "RESEND_API_KEY"],
-      ] as const;
+      const moduleEnvVariables = {
+        persistence: [
+          ["databaseUrl", "DATABASE_URL"],
+          ["resendApiKey", "RESEND_API_KEY"],
+        ],
+      } as const;
     `;
-    expect(requiredVariablesFrom("apps/web/src/main/env.ts", source).map((entry) => entry.variable)).toEqual([
+    expect(declaredVariablesFrom("apps/web/src/main/env.ts", source).map((entry) => entry.variable)).toEqual([
       "DATABASE_URL",
       "RESEND_API_KEY",
     ]);
   });
 
+  it("reads variables from every module group, not just the first", () => {
+    const source = `
+      const moduleEnvVariables = {
+        identity: [["supabaseUrl", "SUPABASE_URL"]],
+        documents: [["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"]],
+      } as const;
+    `;
+    expect(declaredVariablesFrom("apps/web/src/main/env.ts", source).map((entry) => entry.variable)).toEqual([
+      "SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]);
+  });
+
   it("does not depend on the order the tuples are written in", () => {
     const reordered = `
-      const requiredInProduction = [
-        ["resendApiKey", "RESEND_API_KEY"],
-        ["databaseUrl", "DATABASE_URL"],
-      ] as const;
+      const moduleEnvVariables = {
+        persistence: [
+          ["resendApiKey", "RESEND_API_KEY"],
+          ["databaseUrl", "DATABASE_URL"],
+        ],
+      } as const;
     `;
-    expect(requiredVariablesFrom("apps/web/src/main/env.ts", reordered).map((entry) => entry.variable)).toEqual([
+    expect(declaredVariablesFrom("apps/web/src/main/env.ts", reordered).map((entry) => entry.variable)).toEqual([
       "RESEND_API_KEY",
       "DATABASE_URL",
     ]);
   });
 
   it("survives reformatting onto a single line", () => {
-    const oneLine = `const requiredInProduction = [["databaseUrl", "DATABASE_URL"]] as const;`;
-    expect(requiredVariablesFrom("apps/web/src/main/env.ts", oneLine).map((entry) => entry.variable)).toEqual([
+    const oneLine = `const moduleEnvVariables = { persistence: [["databaseUrl", "DATABASE_URL"]] } as const;`;
+    expect(declaredVariablesFrom("apps/web/src/main/env.ts", oneLine).map((entry) => entry.variable)).toEqual([
       "DATABASE_URL",
     ]);
   });
 
-  it("finds nothing when there is no requiredInProduction list", () => {
-    expect(requiredVariablesFrom("apps/web/src/main/env.ts", "export const env = {};")).toEqual([]);
+  it("finds nothing when there is no moduleEnvVariables declaration", () => {
+    expect(declaredVariablesFrom("apps/web/src/main/env.ts", "export const env = {};")).toEqual([]);
   });
 
   it("tags every entry with the file it came from", () => {
-    const source = `const requiredInProduction = [["databaseUrl", "DATABASE_URL"]] as const;`;
-    expect(requiredVariablesFrom("apps/worker/src/main/env.ts", source)).toEqual([
+    const source = `const moduleEnvVariables = { persistence: [["databaseUrl", "DATABASE_URL"]] } as const;`;
+    expect(declaredVariablesFrom("apps/worker/src/main/env.ts", source)).toEqual([
       { file: "apps/worker/src/main/env.ts", variable: "DATABASE_URL" },
     ]);
   });
@@ -66,14 +83,14 @@ describe("documentedEnvVariables", () => {
 });
 
 describe("compareEnvExample", () => {
-  it("reports a variable required in production but absent from the example file", () => {
-    const required = [{ file: "apps/web/src/main/env.ts", variable: "FIELD_ENCRYPTION_KEYS" }];
-    expect(compareEnvExample(required, new Set(["DATABASE_URL"]))).toEqual(required);
+  it("reports a variable declared by a module but absent from the example file", () => {
+    const declared = [{ file: "apps/web/src/main/env.ts", variable: "FIELD_ENCRYPTION_KEYS" }];
+    expect(compareEnvExample(declared, new Set(["DATABASE_URL"]))).toEqual(declared);
   });
 
-  it("passes once every required variable is documented", () => {
-    const required = [{ file: "apps/web/src/main/env.ts", variable: "DATABASE_URL" }];
-    expect(compareEnvExample(required, new Set(["DATABASE_URL", "SUPABASE_TEST_EMAIL"]))).toEqual([]);
+  it("passes once every declared variable is documented", () => {
+    const declared = [{ file: "apps/web/src/main/env.ts", variable: "DATABASE_URL" }];
+    expect(compareEnvExample(declared, new Set(["DATABASE_URL", "SUPABASE_TEST_EMAIL"]))).toEqual([]);
   });
 });
 

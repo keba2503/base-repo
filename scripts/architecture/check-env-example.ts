@@ -1,10 +1,10 @@
 import * as ts from "typescript";
 
 export const envExampleDocument = ".env.example";
-export const requiredListName = "requiredInProduction";
+export const declarationListName = "moduleEnvVariables";
 export const envFilePattern = /^apps\/[^/]+\/src\/main\/env\.ts$/;
 
-export type RequiredEnvVariable = {
+export type DeclaredEnvVariable = {
   readonly file: string;
   readonly variable: string;
 };
@@ -24,21 +24,32 @@ function tupleSecondStringLiteral(element: ts.Expression): string | undefined {
   return second && ts.isStringLiteralLike(second) ? second.text : undefined;
 }
 
-export function requiredVariablesInSource(source: ts.SourceFile): readonly string[] {
+function variablesInModuleArray(moduleArray: ts.Expression): readonly string[] {
+  if (!ts.isArrayLiteralExpression(moduleArray)) return [];
+  const variables: string[] = [];
+  for (const element of moduleArray.elements) {
+    const variable = tupleSecondStringLiteral(element);
+    if (variable !== undefined) variables.push(variable);
+  }
+  return variables;
+}
+
+export function declaredVariablesInSource(source: ts.SourceFile): readonly string[] {
   const variables: string[] = [];
 
   const visit = (node: ts.Node): void => {
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
-      node.name.text === requiredListName &&
+      node.name.text === declarationListName &&
       node.initializer
     ) {
       const initializer = unwrapAsConst(node.initializer);
-      if (ts.isArrayLiteralExpression(initializer)) {
-        for (const element of initializer.elements) {
-          const variable = tupleSecondStringLiteral(element);
-          if (variable !== undefined) variables.push(variable);
+      if (ts.isObjectLiteralExpression(initializer)) {
+        for (const property of initializer.properties) {
+          if (ts.isPropertyAssignment(property)) {
+            variables.push(...variablesInModuleArray(unwrapAsConst(property.initializer)));
+          }
         }
       }
     }
@@ -49,9 +60,9 @@ export function requiredVariablesInSource(source: ts.SourceFile): readonly strin
   return variables;
 }
 
-export function requiredVariablesFrom(file: string, text: string): readonly RequiredEnvVariable[] {
+export function declaredVariablesFrom(file: string, text: string): readonly DeclaredEnvVariable[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  return requiredVariablesInSource(source).map((variable) => ({ file, variable }));
+  return declaredVariablesInSource(source).map((variable) => ({ file, variable }));
 }
 
 export function documentedEnvVariables(document: string): ReadonlySet<string> {
@@ -67,8 +78,8 @@ export function documentedEnvVariables(document: string): ReadonlySet<string> {
 }
 
 export function compareEnvExample(
-  required: readonly RequiredEnvVariable[],
+  declared: readonly DeclaredEnvVariable[],
   documented: ReadonlySet<string>,
 ): readonly EnvExampleFailure[] {
-  return required.filter((entry) => !documented.has(entry.variable));
+  return declared.filter((entry) => !documented.has(entry.variable));
 }

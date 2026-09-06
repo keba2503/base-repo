@@ -1,16 +1,17 @@
 import { z } from "zod";
+import { assertModuleGraphIsValid, isModuleActive } from "../../../../architecture/modules";
 
-const requiredInProduction = [
-  ["databaseUrl", "DATABASE_URL"],
-  ["supabaseUrl", "SUPABASE_URL"],
-  ["supabaseAnonKey", "SUPABASE_ANON_KEY"],
-  ["apiKeyPepper", "API_KEY_PEPPER"],
-  ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
-  ["resendApiKey", "RESEND_API_KEY"],
-  ["turnstileSecret", "TURNSTILE_SECRET"],
-  ["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"],
-  ["sentryDsn", "SENTRY_DSN"],
-] as const;
+export const moduleEnvVariables = {
+  identity: [
+    ["supabaseUrl", "SUPABASE_URL"],
+    ["supabaseAnonKey", "SUPABASE_ANON_KEY"],
+  ],
+  documents: [["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"]],
+  persistence: [
+    ["databaseUrl", "DATABASE_URL"],
+    ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
+  ],
+} as const;
 
 const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
@@ -58,15 +59,53 @@ const environmentSchema = z
         message: "ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY must never be set in production",
       });
     }
-    if (value.nodeEnv !== "production") return;
-    for (const [name, variable] of requiredInProduction) {
-      if (value[name] === undefined) {
-        context.addIssue({ code: "custom", path: [name], message: `${variable} is required in production` });
+
+    if (value.nodeEnv === "test") return;
+
+    const supabaseUrlSet = value.supabaseUrl !== undefined;
+    const supabaseAnonKeySet = value.supabaseAnonKey !== undefined;
+    if (supabaseUrlSet !== supabaseAnonKeySet) {
+      const missing = supabaseUrlSet ? "supabaseAnonKey" : "supabaseUrl";
+      const missingVariable = supabaseUrlSet ? "SUPABASE_ANON_KEY" : "SUPABASE_URL";
+      const presentVariable = supabaseUrlSet ? "SUPABASE_URL" : "SUPABASE_ANON_KEY";
+      context.addIssue({
+        code: "custom",
+        path: [missing],
+        message: `${missingVariable} is required once ${presentVariable} is set: the identity module needs both to talk to Supabase`,
+      });
+    }
+
+    if (isModuleActive("documents")) {
+      const supabaseServiceRoleKeySet = value.supabaseServiceRoleKey !== undefined;
+      if (supabaseUrlSet !== supabaseServiceRoleKeySet) {
+        const missing = supabaseUrlSet ? "supabaseServiceRoleKey" : "supabaseUrl";
+        const missingVariable = supabaseUrlSet ? "SUPABASE_SERVICE_ROLE_KEY" : "SUPABASE_URL";
+        const presentVariable = supabaseUrlSet ? "SUPABASE_URL" : "SUPABASE_SERVICE_ROLE_KEY";
+        context.addIssue({
+          code: "custom",
+          path: [missing],
+          message: `${missingVariable} is required once ${presentVariable} is set: the documents module needs both to store files in Supabase`,
+        });
       }
+    }
+
+    if (
+      value.databaseUrl !== undefined &&
+      value.fieldEncryptionKeys === undefined &&
+      !value.allowEphemeralFieldEncryptionKey
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["fieldEncryptionKeys"],
+        message:
+          "FIELD_ENCRYPTION_KEYS is required once DATABASE_URL is set: sensitive fields must never be written unencrypted to a real database. Set ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY=true only for disposable local development against a real database",
+      });
     }
   });
 
 export type Environment = z.infer<typeof environmentSchema>;
+
+assertModuleGraphIsValid();
 
 export const env: Environment = environmentSchema.parse({
   nodeEnv: process.env.NODE_ENV,
