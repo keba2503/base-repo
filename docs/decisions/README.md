@@ -16,6 +16,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0005 | No comments in code | accepted |
 | 0006 | Multi-tenant from the first entity | accepted |
 | 0007 | Row level security keyed on a transaction local setting | accepted |
+| 0008 | Identity resolution and api keys | accepted |
 
 ## Template
 

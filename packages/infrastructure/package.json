@@ -16,6 +16,7 @@
   "dependencies": {
     "@base/application": "workspace:*",
     "@base/domain": "workspace:*",
+    "@supabase/supabase-js": "^2.115.0",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
     "server-only": "^0.0.1"
