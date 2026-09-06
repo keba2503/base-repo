@@ -1,3 +1,4 @@
+import { isPermissionAction, resourceOfAction } from "@base/domain";
 import type { Permissions } from "@base/application";
 
 export class AllowAllPermissions implements Permissions {
@@ -13,7 +14,10 @@ export class DenyAllPermissions implements Permissions {
 }
 
 export class ScopedPermissions implements Permissions {
-  can(request: { actor: { scopes: readonly string[] }; action: string }): Promise<boolean> {
+  can(request: { actor: { scopes: readonly string[] }; action: string; resource: string }): Promise<boolean> {
+    if (isPermissionAction(request.action) && resourceOfAction(request.action) !== request.resource) {
+      return Promise.resolve(false);
+    }
     return Promise.resolve(request.actor.scopes.includes(request.action));
   }
 }

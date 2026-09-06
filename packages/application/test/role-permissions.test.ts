@@ -40,6 +40,11 @@ describe("role permissions for a user", () => {
     expect(await permissions.can({ actor, action: "apikeys:manage", resource: "apiKey" })).toBe(false);
   });
 
+  it("denies an action asked against the wrong resource", async () => {
+    const permissions = permissionsWith(membershipFactory({ userId, tenantId, role: "owner" }));
+    expect(await permissions.can({ actor: userActor(), action: "apikeys:manage", resource: "member" })).toBe(false);
+  });
+
   it("reserves tenant creation for an owner", async () => {
     const owner = permissionsWith(membershipFactory({ userId, tenantId, role: "owner" }));
     const admin = permissionsWith(membershipFactory({ userId, tenantId, role: "admin" }));
@@ -59,6 +64,11 @@ describe("role permissions for a machine actor", () => {
   it("denies an api key actor missing the scope", async () => {
     const actor = actorFactory({ kind: "apiKey", scopes: ["tenants:read"] });
     expect(await permissionsWith().can({ actor, action: "apikeys:manage", resource: "apiKey" })).toBe(false);
+  });
+
+  it("denies an api key actor asking against the wrong resource, even holding the scope", async () => {
+    const actor = actorFactory({ kind: "apiKey", scopes: ["apikeys:manage"] });
+    expect(await permissionsWith().can({ actor, action: "apikeys:manage", resource: "member" })).toBe(false);
   });
 
   it("decides a system actor by its scopes", async () => {

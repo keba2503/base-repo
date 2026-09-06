@@ -1,7 +1,15 @@
 import type { Actor as ApplicationActor } from "@base/application";
 import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Credential } from "@/api";
 import { env } from "./env";
-import { createTenantOperation, getTenantBySlugOperation, resolveActorFromApiKeyOperation, resolveActorFromSessionOperation, sharedContainer } from "./use-cases";
+import {
+  createApiKeyOperation,
+  createTenantOperation,
+  getTenantBySlugOperation,
+  resolveActorFromApiKeyOperation,
+  resolveActorFromSessionOperation,
+  revokeApiKeyOperation,
+  sharedContainer,
+} from "./use-cases";
 import { isOk } from "@base/domain";
 
 function sessionTokenFromCookieHeader(cookieHeader: string): string | undefined {
@@ -37,6 +45,8 @@ function buildApiDependencies(): ApiDependencies {
     controllers: {
       createTenant: createTenantOperation(),
       getTenantBySlug: getTenantBySlugOperation(),
+      createApiKey: createApiKeyOperation(),
+      revokeApiKey: revokeApiKeyOperation(),
     },
     resolveActor: apiActorResolver(),
     logger: parts.logger,

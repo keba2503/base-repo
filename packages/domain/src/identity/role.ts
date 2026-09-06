@@ -29,6 +29,22 @@ export function roleAllows(request: { readonly role: Role; readonly action: stri
   return permissionMatrix[request.role].some((allowed) => allowed === request.action);
 }
 
+export const permissionResources = ["tenant", "apiKey", "member"] as const;
+
+export type PermissionResource = (typeof permissionResources)[number];
+
+export function resourceOfAction(action: PermissionAction): PermissionResource {
+  switch (action) {
+    case "tenants:create":
+    case "tenants:read":
+      return "tenant";
+    case "apikeys:manage":
+      return "apiKey";
+    case "members:manage":
+      return "member";
+  }
+}
+
 export function actionsOf(role: Role): readonly PermissionAction[] {
   return permissionMatrix[role];
 }

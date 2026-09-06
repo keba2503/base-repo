@@ -5,8 +5,22 @@ export {
   type PostgresDatabase,
   type PostgresSchema,
 } from "./client";
+export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRepository } from "./identity/index";
 export { PostgresOutbox, outboxRowToEvent } from "./outbox";
-export { outbox, tenantScopedColumns, tenants, type OutboxRow, type TenantRow, type TenantScopedColumns } from "./schema/index";
+export {
+  apiKeys,
+  memberships,
+  outbox,
+  tenantScopedColumns,
+  tenants,
+  users,
+  type ApiKeyRow,
+  type MembershipRow,
+  type OutboxRow,
+  type TenantRow,
+  type TenantScopedColumns,
+  type UserRow,
+} from "./schema/index";
 export { PostgresTenantRepository } from "./tenants/index";
 export {
   applyTenantScope,
