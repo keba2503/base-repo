@@ -24,6 +24,9 @@ async function payloadOf(route: RouteDefinition, context: Context<ApiEnvironment
   if (route.inputLocation === "path") {
     return { kind: "parsed", payload: context.req.param(), rawBody: "" };
   }
+  if (route.inputLocation === "query") {
+    return { kind: "parsed", payload: context.req.query(), rawBody: "" };
+  }
   const rawBody = await context.req.text();
   if (rawBody.trim().length === 0) return { kind: "parsed", payload: undefined, rawBody };
   try {

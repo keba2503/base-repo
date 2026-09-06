@@ -9,7 +9,7 @@ export type JsonSchema = Readonly<Record<string, unknown>>;
 
 export type OpenApiParameter = {
   readonly name: string;
-  readonly in: "path" | "header";
+  readonly in: "path" | "query" | "header";
   readonly required: boolean;
   readonly description: string;
   readonly schema: JsonSchema;
@@ -138,6 +138,16 @@ function parametersOf(route: RouteDefinition, inputSchema: JsonSchema): readonly
           schema,
         }))
       : [];
+  const queryParameters: OpenApiParameter[] =
+    route.inputLocation === "query"
+      ? Object.entries(propertiesOf(inputSchema)).map(([name, schema]) => ({
+          name,
+          in: "query",
+          required: false,
+          description: `Filters or shapes the ${name} of the result`,
+          schema,
+        }))
+      : [];
   const headers: OpenApiParameter[] = [
     headerParameter(requestIdHeader, false, "Correlation id echoed back; generated when absent"),
   ];
@@ -153,7 +163,7 @@ function parametersOf(route: RouteDefinition, inputSchema: JsonSchema): readonly
       ),
     );
   }
-  return [...pathParameters, ...headers];
+  return [...pathParameters, ...queryParameters, ...headers];
 }
 
 function errorStatusesOf(route: RouteDefinition): readonly number[] {

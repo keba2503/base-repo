@@ -114,6 +114,7 @@ packages/contracts                           Anillo 3: esquemas de entrada y sal
 packages/contracts/src                       Contratos y sus metadatos de autenticación, captcha, idempotencia y límite de tasa
 packages/contracts/src/kernel                Piezas compartidas de los contratos
 packages/contracts/src/v1                    Contratos de la versión 1 de la API
+packages/contracts/src/v1/documents           Contratos de subir, leer y listar documentos
 packages/contracts/src/v1/identity           Contratos de claves de API
 packages/contracts/src/v1/tenants            Contratos de tenants
 packages/contracts/test                      Tests de validación y de forma del documento OpenAPI

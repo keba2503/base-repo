@@ -6,7 +6,7 @@ export type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
 
 export type SuccessStatus = 200 | 201;
 
-export type InputLocation = "body" | "path";
+export type InputLocation = "body" | "path" | "query";
 
 export type OperationCall = {
   readonly actor: Actor;
