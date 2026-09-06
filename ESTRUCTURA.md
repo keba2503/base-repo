@@ -69,6 +69,7 @@ apps/web/src/api/v1                          Definición de rutas de la versión
 apps/web/src/app                             Rutas y páginas del App Router. Las vistas no deciden nada
 apps/web/src/app/api                         Punto de montaje de la API dentro del App Router
 apps/web/src/app/api/[[...route]]            Ruta atrapatodo que entrega las peticiones a Hono
+apps/web/src/app/cookie-consent              Banner de consentimiento de cookies por categoría y su Server Action
 apps/web/src/app/tenants                     Pantallas de tenants
 apps/web/src/app/tenants/[slug]              Ficha de un tenant
 apps/web/src/app/tenants/new                 Alta de tenant
@@ -106,6 +107,9 @@ packages/application/src/kernel              Autorización, ámbito de tenant y 
 packages/application/src/kernel/ports        Permisos, reloj, unidad de trabajo, outbox, cola de trabajos, logger, idempotencia, límite de tasa
 packages/application/src/notifications       Despacho del outbox y envío de correo
 packages/application/src/notifications/ports Puerto de correo y registro de manejadores de eventos
+packages/application/src/privacy             Consentimiento y derechos del interesado: acceso, portabilidad, supresión y retención
+packages/application/src/privacy/jobs        Ejecutores diferidos de exportación, supresión y barrido de retención
+packages/application/src/privacy/ports       Puertos de privacidad: repositorio de consentimiento, fuentes de datos y de anonimización
 packages/application/src/tenants             Crear tenant y leerlo por slug
 packages/application/src/tenants/ports       Repositorio de tenants
 packages/application/test                    Tests de casos de uso contra puertos en memoria
@@ -121,6 +125,7 @@ packages/contracts/src/v1/tenants            Contratos de tenants
 packages/contracts/test                      Tests de validación y de forma del documento OpenAPI
 packages/domain                              Anillo 1: las reglas de negocio
 packages/domain/src                          Agregados, objetos de valor y piezas compartidas
+packages/domain/src/consent                  El agregado Consent: qué se consintió, bajo qué versión de política, y su retirada sin borrado
 packages/domain/src/documents                 El agregado Document: máquina de estados pendiente, procesando, procesado o fallido
 packages/domain/src/identity                 Usuario, membresía, clave de API y matriz de roles
 packages/domain/src/kernel                   Result, identificadores, eventos, errores y clasificación de datos personales
@@ -136,11 +141,13 @@ packages/infrastructure/src/documents        El punto de enchufe del procesado r
 packages/infrastructure/src/memory           Implementación en memoria de cada puerto, completa, no un esbozo
 packages/infrastructure/src/memory/documents Repositorio de documentos, almacenamiento de ficheros y procesador en memoria
 packages/infrastructure/src/memory/identity  Repositorios de identidad en memoria
+packages/infrastructure/src/memory/privacy   Repositorio de consentimiento en memoria
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
 packages/infrastructure/src/postgres/documents Repositorio de documentos sobre Postgres
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
 packages/infrastructure/src/postgres/jobs    Cola de trabajos diferidos sobre Postgres, con reintento y espera creciente
+packages/infrastructure/src/postgres/privacy Repositorio de consentimiento sobre Postgres
 packages/infrastructure/src/postgres/schema  Definición de tablas en Drizzle
 packages/infrastructure/src/postgres/tenants Repositorio de tenants sobre Postgres
 packages/infrastructure/src/resend           Envío de correo
@@ -170,7 +177,6 @@ El esqueleto está pensado para que estas piezas entren sin mover las anteriores
 | Pieza | Dónde irá |
 | --- | --- |
 | Documentos y su procesado por OCR o modelo | Agregado en `packages/domain/src/documents`, puerto de almacenamiento y puerto de procesado en `packages/application`, Supabase Storage en `packages/infrastructure/src/supabase` |
-| Consentimiento, derechos RGPD y cifrado por clasificación | `packages/domain/src/consent`, casos de uso de acceso, portabilidad y borrado en `packages/application/src/privacy`, cifrado en `packages/infrastructure/src/crypto` |
 | Observabilidad, trazas y métricas | Puerto de telemetría en `packages/application/src/kernel/ports`, exportador en `packages/infrastructure/src/otel`, analítica en `apps/web` tras el consentimiento |
 | Pagos, con Stripe intercambiable por Redsys | Ciclo de facturación propio en `packages/domain/src/billing`, un proveedor por carpeta en `packages/infrastructure` y un solo adaptador que cambiar |
 | Caché, banderas de funcionalidad, webhooks, búsqueda, importación y exportación | Un puerto cada uno en `packages/application`, su implementación en memoria y su proveedor real en `packages/infrastructure` |
