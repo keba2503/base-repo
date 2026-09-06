@@ -11,7 +11,7 @@ Four gates, fastest first. Each one runs the same checks; the later ones only ex
 | --- | --- | --- | --- |
 | Agent hooks | before every file write, every shell command, and before an agent stops | architecture check on the content about to be written; command deny list; full `bun run check` on stop when the tree is dirty | none |
 | lefthook | pre-commit, commit-msg, pre-push | eslint and architecture check on staged files, typecheck, conventional commit message, full check before push | `--no-verify`, forbidden by the agent hook |
-| GitHub Actions | pull request and push to main | install with frozen lockfile, `bun run check`, build, secret scan, CodeQL, dependency audit | none, required checks |
+| GitHub Actions | pull request and push to main | install with frozen lockfile, `bun run check`, build, `bun run ui` (its own job), secret scan, CodeQL, dependency audit | none, required checks |
 | Vercel | every deployment | production build | none |
 
 ## `bun run check`
@@ -25,6 +25,14 @@ The `check` script in `package.json` is the one source of truth for which gates 
 - **test**: the whole suite, `bun test`.
 
 Each gate stops the chain at its first failure.
+
+## `bun run ui`
+
+`scripts/ui/viewport.ts` boots the web app, visits every static route, and fails on horizontal overflow, a tap target under 44px, form field text under 16px, or a label overlapping the field it labels — see `docs/layers/web.md` for exactly what it measures and what it cannot.
+
+It is not part of `bun run check`, on purpose, and it is not one of the checks the agent hooks or lefthook run either. It needs a Chromium binary Playwright has downloaded, and that download does not exist yet on a fresh clone, in a derived project's first `bun install`, or in most local shells. A gate that fails on every clean checkout because of a few hundred megabytes nobody asked to download is not a gate anyone trusts; it gets skipped or disabled instead of fixed, which is worse than not having it. If the browser is missing, the script says so and names the exact command to fix it (`bunx playwright install chromium`) rather than failing with a stack trace.
+
+It still runs on every pull request and push to main, as its own job in `.github/workflows/ci.yml`, with its own browser-install step — a real, required gate, just one that does not have to run on every local save. This is the same reasoning already applied to the contract suites against real providers in `packages/infrastructure/test`: not every check that matters has to run on every commit, only on every commit that reaches CI.
 
 ## When a gate blocks you
 
