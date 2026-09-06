@@ -6,6 +6,7 @@ const requiredInProduction = [
   ["resendApiKey", "RESEND_API_KEY"],
   ["supabaseUrl", "SUPABASE_URL"],
   ["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"],
+  ["sentryDsn", "SENTRY_DSN"],
 ] as const;
 
 const environmentSchema = z
