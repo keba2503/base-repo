@@ -29,74 +29,6 @@ El grafo de quién puede importar a quién vive en un único fichero, `architect
 | 4 | `apps/web` | Cómo se entrega por HTTP y por pantalla |
 | 4 | `apps/worker` | Cómo se procesa fuera de la petición |
 
-## Los módulos, explicados
-
-La aplicación está dividida por módulos de negocio. Cada módulo es una carpeta con el mismo nombre que se repite en cada capa: lo que decide, lo que orquesta, lo que valida y lo que habla con el exterior. Si vas a trabajar en documentos, todo lo de documentos está en carpetas llamadas `documents`.
-
-Esto es lo que hace cada uno.
-
-## Módulos núcleo y módulos opcionales
-
-No todos los módulos pesan igual. `tenants`, `identity` y `audit` son **núcleo**: no se pueden desactivar porque casos de uso centrales dependen de ellos en firme, no a través de un mecanismo que tolera su ausencia. Crear un tenant escribe una entrada de auditoría en la misma transacción, no se la envía a un manejador que puede faltar; revocar una clave de API hace lo mismo. Si `audit` faltara, esas dos operaciones no podrían compilar ni ejecutarse. `tenants` e `identity` son la base sobre la que todo lo demás se apoya: casi cualquier caso de uso necesita un tenant y un actor resuelto.
-
-`jobs`, `documents`, `notifications` y `privacy` son **opcionales**. Se activan o desactivan en `architecture/modules.json`, el mismo tipo de fichero que `architecture/layers.json`: una única fuente de verdad, sin condicionales repartidos por el código. Cada módulo declara `core`, `active` y `dependsOn`. Las raíces de composición (`apps/web/src/main` y `apps/worker/src/main`) leen ese fichero a través de `architecture/modules.ts` y montan casos de uso, rutas HTTP, ejecutores de trabajos y manejadores de eventos solo si el módulo está activo. Si no se monta, su código nunca corre, así que no hace falta preguntar `isEnabled()` en ningún sitio: la pregunta ya la resolvió quién construyó el grafo de objetos.
-
-La dependencia entre módulos opcionales es real, no decorativa: `documents` depende de `jobs` porque confirmar una subida encola un trabajo de procesado sin mecanismo de resguardo; `privacy` depende de `jobs` y de `documents` porque exportar los datos de una persona escribe el resultado en el mismo almacén de ficheros que usa `documents`. Activar un módulo cuya dependencia está inactiva es un error que se detecta al arrancar (`assertModuleGraphIsValid`), no un fallo a medio camino de una petición. `notifications` no tiene esa clase de dependencia: si está inactivo, un evento como `tenant.created` se queda sin manejador y el despachador del outbox ya lo trataba como un caso normal, marcándolo publicado sin reintentarlo para siempre.
-
-El consentimiento de cookies (`apps/web/src/app/cookie-consent`) usa el módulo `privacy` para registrar cada decisión. Si `privacy` está desactivado, el banner se sigue mostrando pero las decisiones no se persisten y la analítica se trata como no consentida por defecto: es una consecuencia real de apagar el módulo, no un error.
-
-### `tenants` — Organizaciones
-
-Cada cliente que usa tu aplicación es un tenant. Una clínica, una empresa, un colegio. Todo dato pertenece a uno y nunca se mezcla con el de otro.
-
-Está montado desde el principio aunque tu proyecto vaya a tener una sola organización. La razón es práctica: añadirlo después obliga a revisar cada consulta a la base de datos y cada permiso, uno por uno.
-
-Un tenant es la organización entera y es la frontera de seguridad: todo dato y todo permiso se comprueban contra su identificador. Una sucursal o sede es una subdivisión **dentro** de un tenant, nunca un tenant aparte. Modelarla como un tenant propio rompe el caso más común: alguien que trabaja en dos sedes de la misma organización necesitaría dos cuentas, y nadie podría ver la organización completa de una vez. Las sucursales no existen todavía en este repositorio y no se deben construir por adelantado, pero cuando se añadan, cambia la forma de los permisos: hoy un rol autoriza "puede ver X"; con sucursales, autoriza "puede ver X de su sede", y esa comprobación se añade en el mismo lugar donde hoy se comprueba el tenant, nunca sustituyéndola.
-
-### `identity` — Quién entra y qué puede hacer
-
-Los usuarios, a qué organización pertenece cada uno, y qué rol tiene dentro de ella. El rol decide qué operaciones puede realizar.
-
-Incluye también las claves de API, que sirven para que otro programa se conecte a tu aplicación sin ser una persona sentada delante de una pantalla.
-
-### `documents` — Ficheros que suben los usuarios
-
-Guarda los ficheros y lleva la cuenta de en qué estado está cada uno: subido, procesándose, procesado o fallido.
-
-Deja preparado el sitio donde mañana conectas un OCR o un modelo de lenguaje que lea su contenido. Hoy ese hueco está vacío a propósito y no rompe nada.
-
-### `consent` — Qué ha aceptado cada persona
-
-Registra qué consintió alguien, para qué, y bajo qué versión de tu política de privacidad. Cuando cambias la política, el consentimiento anterior deja de valer automáticamente.
-
-Es la base del banner de cookies y de que la analítica no se cargue mientras nadie haya dicho que sí.
-
-### `privacy` — Los derechos que la ley da sobre los datos
-
-Pedir una copia de todo lo que tienes sobre una persona, llevárselo a otro sitio, o que lo borres.
-
-Aquí borrar significa anonimizar, no eliminar filas: hay datos que deben sobrevivir a la persona, como una factura o la prueba de que consintió algo. También vive aquí la retención, que es cuánto tiempo se guarda cada cosa antes de anonimizarla sola.
-
-### `notifications` — Correo y reacciones a lo que ocurre
-
-El envío de correo, y el mecanismo general para reaccionar cuando algo pasa. Alguien crea una organización, y eso dispara un correo de bienvenida sin que quien creó la organización tenga que saber nada del correo.
-
-### `audit` — Quién hizo qué y cuándo
-
-El registro de las acciones importantes: quién las hizo, sobre qué, en qué momento.
-
-No se puede modificar ni borrar, ni siquiera con acceso directo a la base de datos. Es lo que consultas el día que alguien pregunta quién cambió algo, y es distinto de los logs, que se rotan y se pierden.
-
-### `jobs` — Trabajo que no se hace mientras el usuario espera
-
-Procesar un documento, enviar un correo, limpiar datos antiguos. Todo eso se encola y lo ejecuta un proceso aparte, para que la persona que pulsó el botón reciba su respuesta al instante.
-
-Si algo falla, se reintenta solo, esperando cada vez un poco más, y se rinde después de unos cuantos intentos.
-
-### `kernel` — Las piezas compartidas
-
-Aparece dentro de varias capas. No es un módulo de negocio: son las herramientas que todos los demás usan. El resultado de una operación, los identificadores, los errores, la autorización, el reloj, y la clasificación de qué campos contienen datos personales.
-
 ## Cómo circula una petición
 
 ```
@@ -112,6 +44,43 @@ petición HTTP
 ```
 
 Los eventos encolados los recoge después `apps/worker`, fuera de la petición.
+
+## Anatomía de un módulo
+
+Un módulo no es una carpeta: son varias, con el mismo nombre, repartidas por capas. Esta tabla sigue una petición real de principio a fin, con el módulo `tenants` como ejemplo: alguien crea la organización "Clínica Sol".
+
+| Pieza | Ruta de ejemplo | Qué hace |
+| --- | --- | --- |
+| Contrato | `packages/contracts/src/v1/tenants/create-tenant.ts` | Llega un JSON de fuera. Comprueba que trae nombre, que es texto y que mide entre 2 y 80 letras. Si no, lo rechaza aquí y no pasa de la puerta. También declara que la operación exige estar autenticado y tiene límite de peticiones |
+| Traductor de entrada | `packages/adapters/src/tenants/create-tenant-controller.ts` | El JSON ya es válido, pero sigue siendo JSON. Lo convierte en lo que el caso de uso entiende: el nombre y quién lo está pidiendo. No decide nada |
+| Caso de uso | `packages/application/src/tenants/create-tenant.ts` | El que manda, y en este orden: ¿este actor puede crear organizaciones? ¿ya existe ese identificador? crea la entidad, la guarda y anota que ocurrió |
+| Entidad | `packages/domain/src/tenants/tenant.ts` | Las reglas puras. "Clínica Sol" vale, una cadena vacía no. No sabe que existe una base de datos ni internet |
+| Puerto | `packages/application/src/tenants/ports/tenant-repository.ts` | El caso de uso necesita guardar, pero no debe saber dónde. Aquí se escribe la necesidad: alguien tiene que saber guardar y buscar organizaciones. Es la necesidad sin la solución |
+| Quien cumple el puerto, de verdad | `packages/infrastructure/src/postgres/tenants/tenant-repository.ts` | Cumple esa necesidad con SQL contra Postgres |
+| Quien cumple el puerto, en memoria | `packages/infrastructure/src/memory/tenants/tenant-repository.ts` | Cumple la misma necesidad sin base de datos. El caso de uso no nota la diferencia, y por eso el repositorio arranca sin configurar nada |
+| Traductor de salida | `packages/adapters/src/tenants/present-tenant.ts` | El caso de uso devuelve datos crudos: una fecha, un identificador. Aquí se decide qué ve la persona: la fecha en formato español, los textos traducidos, qué campos se ocultan |
+| Ruta | `apps/web/src/api/v1/tenants.ts` | Dice que todo lo anterior vive en `POST /api/v1/tenants` |
+
+La idea de fondo, en una línea: el caso de uso **pide**, el puerto **describe la necesidad**, y la infraestructura **la cumple**. Por eso cambiar Postgres por otra cosa no toca ni una regla de negocio.
+
+No todos los módulos tienen todas las piezas. `jobs` no tiene entidad porque un trabajo no tiene reglas de negocio propias. `consent` no tiene ruta HTTP porque se usa desde el banner de cookies, no desde la API. Cuando falta una pieza, es porque ese módulo no la necesita, no porque esté sin terminar.
+
+## Los módulos, explicados
+
+La aplicación está dividida por módulos de negocio. Cada módulo es una carpeta con el mismo nombre que se repite en cada capa: lo que decide, lo que orquesta, lo que valida y lo que habla con el exterior. Si vas a trabajar en documentos, todo lo de documentos está en carpetas llamadas `documents`. `kernel` es la excepción: no es un módulo de negocio, son las piezas compartidas que usan todos los demás.
+
+| Módulo | Qué hace | Dónde vive | Tipo |
+| --- | --- | --- | --- |
+| `tenants` | Cada cliente que usa tu aplicación es un tenant. Una clínica, una empresa, un colegio. Todo dato pertenece a uno y nunca se mezcla con el de otro. Está montado desde el principio aunque tu proyecto vaya a tener una sola organización: añadirlo después obliga a revisar cada consulta a la base de datos y cada permiso, uno por uno. Un tenant es la organización entera y es la frontera de seguridad: todo dato y todo permiso se comprueban contra su identificador. Una sucursal o sede es una subdivisión **dentro** de un tenant, nunca un tenant aparte — modelarla como un tenant propio rompe el caso más común: alguien que trabaja en dos sedes de la misma organización necesitaría dos cuentas, y nadie podría ver la organización completa de una vez. Las sucursales no existen todavía en este repositorio y no se deben construir por adelantado, pero cuando se añadan, cambia la forma de los permisos: hoy un rol autoriza "puede ver X"; con sucursales, autoriza "puede ver X de su sede", y esa comprobación se añade en el mismo lugar donde hoy se comprueba el tenant, nunca sustituyéndola | `packages/domain/src/tenants`, `packages/application/src/tenants`, `packages/contracts/src/v1/tenants`, `packages/adapters/src/tenants`, `packages/infrastructure/src/postgres/tenants`, `packages/infrastructure/src/memory/tenants`, `apps/web/src/api/v1/tenants.ts`, `apps/web/src/app/tenants` | Núcleo |
+| `identity` | Los usuarios, a qué organización pertenece cada uno, y qué rol tiene dentro de ella. El rol decide qué operaciones puede realizar. Incluye también las claves de API, que sirven para que otro programa se conecte a tu aplicación sin ser una persona sentada delante de una pantalla | `packages/domain/src/identity`, `packages/application/src/identity`, `packages/contracts/src/v1/identity`, `packages/adapters/src/identity`, `packages/infrastructure/src/postgres/identity`, `packages/infrastructure/src/memory/identity`, `apps/web/src/api/v1/identity.ts` | Núcleo |
+| `audit` | El registro de las acciones importantes: quién las hizo, sobre qué, en qué momento. No se puede modificar ni borrar, ni siquiera con acceso directo a la base de datos. Es lo que consultas el día que alguien pregunta quién cambió algo, y es distinto de los logs, que se rotan y se pierden | `packages/application/src/audit`, `packages/infrastructure/src/postgres/audit-trail.ts`, `packages/infrastructure/src/memory/audit-trail.ts` | Núcleo |
+| `documents` | Guarda los ficheros que suben los usuarios y lleva la cuenta de en qué estado está cada uno: subido, procesándose, procesado o fallido. Deja preparado el sitio donde mañana conectas un OCR o un modelo de lenguaje que lea su contenido — hoy ese hueco está vacío a propósito y no rompe nada | `packages/domain/src/documents`, `packages/application/src/documents`, `packages/contracts/src/v1/documents`, `packages/adapters/src/documents`, `packages/infrastructure/src/documents`, `packages/infrastructure/src/postgres/documents`, `packages/infrastructure/src/memory/documents`, `apps/web/src/api/v1/documents.ts` | Opcional (depende de `jobs`) |
+| `privacy` | Cubre dos cosas: el consentimiento (qué aceptó cada persona, para qué, y bajo qué versión de tu política; cuando cambias la política, el consentimiento anterior deja de valer automáticamente — es la base del banner de cookies y de que la analítica no se cargue mientras nadie haya dicho que sí) y los derechos que la ley da sobre los datos (pedir una copia de todo lo que tienes sobre una persona, llevárselo a otro sitio, o que lo borres). Aquí borrar significa anonimizar, no eliminar filas: hay datos que deben sobrevivir a la persona, como una factura o la prueba de que consintió algo. También vive aquí la retención, que es cuánto tiempo se guarda cada cosa antes de anonimizarla sola | `packages/domain/src/consent`, `packages/application/src/privacy`, `packages/infrastructure/src/postgres/privacy`, `packages/infrastructure/src/memory/privacy`, `apps/web/src/main/privacy.ts`, `apps/web/src/app/cookie-consent` | Opcional (depende de `jobs` y `documents`) |
+| `notifications` | El envío de correo, y el mecanismo general para reaccionar cuando algo pasa. Alguien crea una organización, y eso dispara un correo de bienvenida sin que quien creó la organización tenga que saber nada del correo | `packages/application/src/notifications`, `packages/adapters/src/email`, `packages/infrastructure/src/resend`, `packages/infrastructure/src/memory/mailer.ts` | Opcional |
+| `jobs` | Procesar un documento, enviar un correo, limpiar datos antiguos. Todo eso se encola y lo ejecuta un proceso aparte, para que la persona que pulsó el botón reciba su respuesta al instante. Si algo falla, se reintenta solo, esperando cada vez un poco más, y se rinde después de unos cuantos intentos | `packages/application/src/jobs`, `packages/infrastructure/src/postgres/jobs`, `packages/infrastructure/src/memory/job-queue.ts` | Opcional |
+| `kernel` | No es un módulo de negocio: son las herramientas que todos los demás usan. El resultado de una operación, los identificadores, los errores, la autorización, el reloj, y la clasificación de qué campos contienen datos personales | `packages/domain/src/kernel`, `packages/application/src/kernel`, `packages/contracts/src/kernel`, `packages/adapters/src/kernel` | Compartido, no es un módulo de negocio |
+
+`tenants`, `identity` y `audit` no se pueden desactivar: casos de uso centrales dependen de ellos en firme, no a través de un mecanismo que tolera su ausencia (crear un tenant escribe una entrada de auditoría en la misma transacción, no se la envía a un manejador que puede faltar; revocar una clave de API hace lo mismo). Un módulo opcional se activa o desactiva editando `architecture/modules.json`, el mismo tipo de fichero que `architecture/layers.json`: una única fuente de verdad, sin condicionales repartidos por el código. Cada módulo declara `core`, `active` y `dependsOn`; activar uno cuya dependencia está inactiva (`documents` sin `jobs`, `privacy` sin `jobs` o sin `documents`) es un error que se detecta al arrancar (`assertModuleGraphIsValid`), no un fallo a medio camino de una petición. Las raíces de composición (`apps/web/src/main` y `apps/worker/src/main`) leen ese fichero a través de `architecture/modules.ts` y montan casos de uso, rutas HTTP, ejecutores de trabajos y manejadores de eventos solo si el módulo está activo: si no se monta, su código nunca corre, así que no hace falta preguntar `isEnabled()` en ningún sitio.
 
 ## El árbol completo
 
