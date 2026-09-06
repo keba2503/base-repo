@@ -88,6 +88,7 @@ docs/workflow                                Cómo añadir funcionalidad, cómo 
 packages                                     Los anillos 1 a 4 que no son mecanismo de entrega
 packages/adapters                            Anillo 3: traductores puros, sin efectos
 packages/adapters/src                        Controladores y presentadores
+packages/adapters/src/documents               Controladores de subir, leer y listar documentos
 packages/adapters/src/email                  Presentación del correo como una vista más
 packages/adapters/src/identity               Controladores de claves de API
 packages/adapters/src/kernel                 Piezas compartidas de traducción
