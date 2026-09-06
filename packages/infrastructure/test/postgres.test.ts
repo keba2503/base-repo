@@ -28,35 +28,47 @@ import {
 import { tenantIdFactory } from "./factories/tenant";
 
 const databaseUrlVariable = "DATABASE_URL";
+const databaseAdminUrlVariable = "DATABASE_ADMIN_URL";
 const databaseUrl = process.env[databaseUrlVariable];
+const databaseAdminUrl = process.env[databaseAdminUrlVariable];
 const migrationTimeoutMilliseconds = 60_000;
 
-if (!databaseUrl) {
-  console.warn(`Skipping the Postgres contract suites: set ${databaseUrlVariable} to run them`);
+const missingVariables = [
+  ...(databaseUrl ? [] : [databaseUrlVariable]),
+  ...(databaseAdminUrl ? [] : [databaseAdminUrlVariable]),
+];
+
+if (!databaseUrl || !databaseAdminUrl) {
+  console.warn(
+    `Skipping the Postgres contract suites: set ${missingVariables.join(" and ")} to run them (${databaseUrlVariable} is the app_user connection the repositories under test use, ${databaseAdminUrlVariable} is a privileged connection used only to migrate and truncate between tests)`,
+  );
   describe.skip("Postgres contract suites", () => {
-    it(`run when ${databaseUrlVariable} is set`, () => undefined);
+    it(`run when ${databaseUrlVariable} and ${databaseAdminUrlVariable} are set`, () => undefined);
   });
 } else {
-  describePostgresSuites(databaseUrl);
+  describePostgresSuites(databaseUrl, databaseAdminUrl);
 }
 
-function describePostgresSuites(connectionString: string): void {
+function describePostgresSuites(connectionString: string, adminConnectionString: string): void {
   describe("Postgres", () => {
     let client: PostgresClient;
+    let adminClient: PostgresClient;
 
     beforeAll(async () => {
       client = createPostgresClient({ connectionString, maxConnections: 4 });
-      await migrateDatabase(client.db);
+      adminClient = createPostgresClient({ connectionString: adminConnectionString, maxConnections: 2 });
+      await migrateDatabase(adminClient.db);
     }, migrationTimeoutMilliseconds);
 
     beforeEach(async () => {
-      await client.db.execute(
+      await adminClient.db.execute(
         sql`truncate table ${outbox}, ${tenants}, ${users}, ${memberships}, ${apiKeys}`,
       );
     });
 
     afterAll(async () => {
       await client.close();
+      await adminClient.close();
     });
 
     describeUnitOfWorkContract("PostgresUnitOfWork", () => new PostgresUnitOfWork(client.db));
