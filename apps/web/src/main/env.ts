@@ -6,6 +6,7 @@ const requiredInProduction = [
   ["supabaseAnonKey", "SUPABASE_ANON_KEY"],
   ["apiKeyPepper", "API_KEY_PEPPER"],
   ["resendApiKey", "RESEND_API_KEY"],
+  ["turnstileSecret", "TURNSTILE_SECRET"],
 ] as const;
 
 const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
@@ -28,9 +29,18 @@ const environmentSchema = z
     mailWelcomeTo: z.email().default("owner@example.com"),
     resendApiKey: z.string().min(1).optional(),
     resendTimeoutMs: z.coerce.number().int().positive().default(10_000),
+    allowInsecureDevActor: z.stringbool().default(false),
   })
   .superRefine((value, context) => {
-    if (value.nodeEnv !== "production" || isNextBuildPhase) return;
+    if (isNextBuildPhase) return;
+    if (value.nodeEnv === "production" && value.allowInsecureDevActor) {
+      context.addIssue({
+        code: "custom",
+        path: ["allowInsecureDevActor"],
+        message: "ALLOW_INSECURE_DEV_ACTOR must never be set in production",
+      });
+    }
+    if (value.nodeEnv !== "production") return;
     for (const [name, variable] of requiredInProduction) {
       if (value[name] === undefined) {
         context.addIssue({ code: "custom", path: [name], message: `${variable} is required in production` });
@@ -57,6 +67,7 @@ export const env: Environment = environmentSchema.parse({
   mailWelcomeTo: process.env.MAIL_WELCOME_TO,
   resendApiKey: process.env.RESEND_API_KEY,
   resendTimeoutMs: process.env.RESEND_TIMEOUT_MS,
+  allowInsecureDevActor: process.env.ALLOW_INSECURE_DEV_ACTOR,
 });
 
 export const isDevelopment = env.nodeEnv === "development";

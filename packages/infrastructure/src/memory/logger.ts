@@ -13,12 +13,57 @@ export type LogSink = {
 
 export const redactedMarker = "[redacted]";
 
-export function redact(policy: RedactionPolicy, fields: LogFields): LogFields {
+const classificationRank: Readonly<Record<FieldClassification, number>> = {
+  none: 0,
+  personal: 1,
+  sensitive: 2,
+};
+
+function mostRestrictive(a: FieldClassification, b: FieldClassification): FieldClassification {
+  return classificationRank[a] >= classificationRank[b] ? a : b;
+}
+
+export function redactionPolicyFrom(
+  ...classifications: readonly Readonly<Record<string, FieldClassification>>[]
+): RedactionPolicy {
+  const merged: Record<string, FieldClassification> = {};
+  for (const classification of classifications) {
+    for (const [field, level] of Object.entries(classification)) {
+      const existing = merged[field];
+      merged[field] = existing === undefined ? level : mostRestrictive(existing, level);
+    }
+  }
+  return merged;
+}
+
+function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function redactAny(policy: RedactionPolicy, value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item: unknown) => redactAny(policy, item));
+  if (isPlainObject(value)) return redactDeep(policy, value);
+  return value;
+}
+
+function redactValue(policy: RedactionPolicy, name: string, value: unknown): unknown {
+  const classification = policy[name];
+  if (classification !== undefined && classification !== "none") return redactedMarker;
+  return redactAny(policy, value);
+}
+
+function redactDeep(policy: RedactionPolicy, fields: LogFields): LogFields {
   const redacted: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(fields)) {
-    redacted[name] = policy[name] === undefined || policy[name] === "none" ? value : redactedMarker;
+    redacted[name] = redactValue(policy, name, value);
   }
   return redacted;
+}
+
+export function redact(policy: RedactionPolicy, fields: LogFields): LogFields {
+  return redactDeep(policy, fields);
 }
 
 const consoleSink: LogSink = {

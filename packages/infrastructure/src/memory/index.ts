@@ -6,6 +6,7 @@ export {
   ConsoleLogger,
   redact,
   redactedMarker,
+  redactionPolicyFrom,
   SilentLogger,
   type ConsoleLoggerOptions,
   type LogLevel,

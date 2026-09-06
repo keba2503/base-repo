@@ -59,7 +59,7 @@ export function createTenant(dependencies: CreateTenantDependencies): CreateTena
     if (isErr(created)) return created;
 
     const tenant = created.value;
-    await unitOfWork.run(async () => {
+    await unitOfWork.run({ kind: "registry" }, async () => {
       await tenants.save(tenant);
       await outbox.enqueue(tenant.pullEvents());
     });

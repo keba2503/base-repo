@@ -23,6 +23,7 @@ import type {
   StoredEvent,
   Permissions,
   TenantRepository,
+  TenantScope,
   UnitOfWork,
 } from "../../src/index";
 
@@ -67,9 +68,11 @@ export class StubPermissions implements Permissions {
 
 export class StubUnitOfWork implements UnitOfWork {
   runs = 0;
+  scopes: TenantScope[] = [];
 
-  async run<Value>(work: () => Promise<Value>): Promise<Value> {
+  async run<Value>(scope: TenantScope, work: () => Promise<Value>): Promise<Value> {
     this.runs += 1;
+    this.scopes.push(scope);
     return await work();
   }
 }
@@ -124,31 +127,49 @@ export class StubOutbox implements Outbox {
   }
 }
 
+export class StubTenantStore {
+  readonly tenants = new Map<string, Tenant>();
+}
+
 export class StubTenantRepository implements TenantRepository {
-  readonly #tenants = new Map<string, Tenant>();
+  readonly #store: StubTenantStore;
+  readonly #scope: TenantScope;
+
+  constructor(store: StubTenantStore = new StubTenantStore(), scope: TenantScope = { kind: "registry" }) {
+    this.#store = store;
+    this.#scope = scope;
+  }
+
+  #isVisible(tenant: Tenant): boolean {
+    return this.#scope.kind === "registry" || this.#scope.tenantId === tenant.id;
+  }
 
   seed(tenant: Tenant): void {
-    this.#tenants.set(tenant.id, tenant);
+    this.#store.tenants.set(tenant.id, tenant);
   }
 
   findById(id: TenantId): Promise<Tenant | undefined> {
-    return Promise.resolve(this.#tenants.get(id));
+    const tenant = this.#store.tenants.get(id);
+    return Promise.resolve(tenant && this.#isVisible(tenant) ? tenant : undefined);
   }
 
   findBySlug(slug: string): Promise<Tenant | undefined> {
-    for (const tenant of this.#tenants.values()) {
-      if (tenant.slug === slug) return Promise.resolve(tenant);
+    for (const tenant of this.#store.tenants.values()) {
+      if (tenant.slug === slug && this.#isVisible(tenant)) return Promise.resolve(tenant);
     }
     return Promise.resolve(undefined);
   }
 
   save(tenant: Tenant): Promise<void> {
-    this.#tenants.set(tenant.id, tenant);
+    if (!this.#isVisible(tenant)) {
+      throw new Error("A tenant scoped repository may not write outside its own tenant");
+    }
+    this.#store.tenants.set(tenant.id, tenant);
     return Promise.resolve();
   }
 
   get saved(): readonly Tenant[] {
-    return [...this.#tenants.values()];
+    return [...this.#store.tenants.values()];
   }
 }
 
