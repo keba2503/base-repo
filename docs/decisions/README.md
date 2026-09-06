@@ -31,6 +31,8 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0020 | Telemetry traces one span per HTTP request and one per job execution, never per database query | accepted |
 | 0021 | The audit trail is a cross-cutting application port, append only at the database level, and it survives anonymization | accepted |
 | 0022 | Analytics loads under the existing strict-dynamic policy, and server events never let the browser talk to the provider | accepted |
+| 0023 | Module activation is a static file next to the layer graph, never a runtime flag checked with if | accepted |
+| 0024 | Field encryption keys become mandatory the moment real persistence is configured, independent of any module | accepted |
 
 ## Template
 
