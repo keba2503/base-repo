@@ -90,10 +90,12 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 .claude/rules                                Reglas por ruta, se cargan solas al abrir un fichero de esa capa
 .claude/skills                               Comandos de trabajo invocables con barra
 .claude/skills/adr                           Escribir un registro de decisión
+.claude/skills/design-direction              Forzar la decisión de dirección de diseño antes de escribir una interfaz
 .claude/skills/gate                          Ejecutar todas las puertas y explicar cada fallo
 .claude/skills/new-component                 Crear un componente de negocio en todos los anillos que necesite
 .claude/skills/new-feature                   Añadir funcionalidad en el orden obligatorio de anillos
 .claude/skills/new-port                      Crear un puerto con sus cinco piezas obligatorias
+.claude/skills/new-view                      Añadir una pantalla reutilizando plantilla y primitivas de ui/
 .github                                      Configuración del repositorio en GitHub
 .github/ISSUE_TEMPLATE                       Plantillas de incidencia
 .github/workflows                            Integración continua, CodeQL y escaneo de secretos
@@ -111,7 +113,9 @@ apps/web/src/app/cookie-consent              Banner de consentimiento de cookies
 apps/web/src/app/tenants                     Pantallas de tenants
 apps/web/src/app/tenants/[slug]              Ficha de un tenant
 apps/web/src/app/tenants/new                 Alta de tenant
+apps/web/src/layouts                         Estructuras de página compartidas entre vistas del mismo tipo: cómo se reparte el viewport, no cómo se ve. Vacío hasta que una segunda vista de un tipo lo necesite
 apps/web/src/main                            Raíz de composición: el único sitio que lee configuración y construye el grafo de objetos
+apps/web/src/ui                              Primitivas de interfaz reutilizables (Button, Input...). Toda vista las usa en vez de escribir button, input, select o textarea a mano; docs/layers/web.md manda
 apps/web/test                                Tests de la web
 apps/web/test/api                            Tests de las rutas HTTP contra la aplicación Hono real
 apps/web/test/main                           Tests de la raíz de composición: módulos activos y desactivados
@@ -206,6 +210,7 @@ scripts/agent                                Hooks de Claude Code: revisan lo qu
 scripts/architecture                         El comprobador propio de capas, comentarios, any y process.env
 scripts/db                                   Configuración de Drizzle y aplicación de migraciones
 scripts/load                                 Guiones de carga con k6 contra la API, umbrales incluidos
+scripts/ui                                   La puerta visual: arranca la web, visita cada ruta estática y mide con un navegador de verdad
 ```
 
 ## Las filas nunca salen, la configuración nunca entra
