@@ -146,5 +146,109 @@ export function describeJobQueueContract(name: string, createHarness: () => JobQ
       );
       expect(caught).toBeInstanceOf(Error);
     });
+
+    it("defaults a new job to background priority", async () => {
+      const harness = createHarness();
+      await harness.registry.enqueue({ tenantId: ownTenant, name: "reports.generate", payload: {}, runAt: past() });
+      const [job] = await harness.registry.claimDue(10, epoch);
+      expect(job?.priority).toBe("background");
+    });
+
+    it("honours an explicit interactive priority", async () => {
+      const harness = createHarness();
+      await harness.registry.enqueue({
+        tenantId: ownTenant,
+        name: "reports.generate",
+        payload: {},
+        runAt: past(),
+        priority: "interactive",
+      });
+      const [job] = await harness.registry.claimDue(10, epoch);
+      expect(job?.priority).toBe("interactive");
+    });
+
+    it("shares a batch across tenants by turn, so a busy tenant does not starve a quiet one", async () => {
+      const harness = createHarness();
+      const busyTenant = ownTenant;
+      const quietTenant = otherTenant;
+      for (let i = 0; i < 5; i += 1) {
+        await harness.registry.enqueue({ tenantId: busyTenant, name: `busy.${String(i)}`, payload: {}, runAt: past() });
+      }
+      await harness.registry.enqueue({ tenantId: quietTenant, name: "quiet.0", payload: {}, runAt: past() });
+
+      const firstBatch = await harness.registry.claimDue(2, epoch);
+      const tenantsClaimed = firstBatch.map((job) => job.tenantId);
+      expect(tenantsClaimed).toContain(busyTenant);
+      expect(tenantsClaimed).toContain(quietTenant);
+    });
+
+    it("gives every tenant with pending work a turn before any tenant gets a second job", async () => {
+      const harness = createHarness();
+      for (let i = 0; i < 4; i += 1) {
+        await harness.registry.enqueue({ tenantId: ownTenant, name: `own.${String(i)}`, payload: {}, runAt: past() });
+      }
+      await harness.registry.enqueue({ tenantId: otherTenant, name: "other.0", payload: {}, runAt: past() });
+
+      const claimed = await harness.registry.claimDue(2, epoch);
+      const secondJobForOwnTenant = claimed.filter((job) => job.tenantId === ownTenant);
+      expect(secondJobForOwnTenant).toHaveLength(1);
+      expect(claimed.some((job) => job.tenantId === otherTenant)).toBe(true);
+    });
+
+    it("drains the interactive lane before background across every tenant, keeping fairness within each lane", async () => {
+      const harness = createHarness();
+      await harness.registry.enqueue({ tenantId: ownTenant, name: "background.own", payload: {}, runAt: past(4_000) });
+      await harness.registry.enqueue({
+        tenantId: otherTenant,
+        name: "background.other",
+        payload: {},
+        runAt: past(3_000),
+      });
+      await harness.registry.enqueue({
+        tenantId: ownTenant,
+        name: "interactive.own",
+        payload: {},
+        runAt: past(2_000),
+        priority: "interactive",
+      });
+      await harness.registry.enqueue({
+        tenantId: otherTenant,
+        name: "interactive.other",
+        payload: {},
+        runAt: past(1_000),
+        priority: "interactive",
+      });
+
+      const claimed = await harness.registry.claimDue(10, epoch);
+      const names = claimed.map((job) => job.name);
+      const positionOf = (name: string): number => names.indexOf(name);
+
+      expect(positionOf("interactive.own")).toBeLessThan(positionOf("background.own"));
+      expect(positionOf("interactive.other")).toBeLessThan(positionOf("background.other"));
+      expect(names.slice(0, 2).sort()).toEqual(["interactive.other", "interactive.own"]);
+    });
+
+    it("does not let one tenant's flood of interactive jobs starve another tenant's interactive job", async () => {
+      const harness = createHarness();
+      for (let i = 0; i < 5; i += 1) {
+        await harness.registry.enqueue({
+          tenantId: ownTenant,
+          name: `interactive.busy.${String(i)}`,
+          payload: {},
+          runAt: past(),
+          priority: "interactive",
+        });
+      }
+      await harness.registry.enqueue({
+        tenantId: otherTenant,
+        name: "interactive.quiet",
+        payload: {},
+        runAt: past(),
+        priority: "interactive",
+      });
+
+      const firstBatch = await harness.registry.claimDue(2, epoch);
+      expect(firstBatch.map((job) => job.tenantId)).toContain(otherTenant);
+    });
   });
 }

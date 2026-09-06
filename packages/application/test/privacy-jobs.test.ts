@@ -16,7 +16,7 @@ const tenantId = tenantIdFactory(1);
 const subjectId = entityIdOf(tenantIdFactory(700));
 
 function jobFor(name: string, payload: unknown): StoredJob {
-  return { id: "1", tenantId, name, payload, attempts: 0, maxAttempts: 5 };
+  return { id: "1", tenantId, name, payload, attempts: 0, maxAttempts: 5, priority: "background" };
 }
 
 describe("composing a subject data export from classified sources", () => {

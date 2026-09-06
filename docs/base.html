@@ -1,0 +1,691 @@
+<title>Anatomía de base-repo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #eef1f2;
+    --surface: #ffffff;
+    --ink: #16232c;
+    --muted: #5d6f7a;
+    --line: #d3dbdf;
+    --line-soft: #e4eaec;
+    --accent: #0d6068;
+    --accent-soft: #dceaea;
+    --mark: #94531d;
+    --mark-soft: #f2e6d8;
+    --serif: "IBM Plex Serif", Georgia, serif;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1418;
+      --surface: #151d22;
+      --ink: #e3eaed;
+      --muted: #94a4ad;
+      --line: #26323a;
+      --line-soft: #1d262c;
+      --accent: #5cb8bd;
+      --accent-soft: #16302f;
+      --mark: #d79355;
+      --mark-soft: #2c2118;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1418;
+    --surface: #151d22;
+    --ink: #e3eaed;
+    --muted: #94a4ad;
+    --line: #26323a;
+    --line-soft: #1d262c;
+    --accent: #5cb8bd;
+    --accent-soft: #16302f;
+    --mark: #d79355;
+    --mark-soft: #2c2118;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  @media (min-width: 1000px) {
+    .shell { grid-template-columns: 210px 1fr; gap: 56px; }
+    .rail { display: block; }
+  }
+
+  .rail { display: none; }
+
+  .rail nav {
+    position: sticky;
+    top: 32px;
+    padding-top: 148px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .rail a {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 5px 0 5px 12px;
+    border-left: 2px solid var(--line);
+  }
+
+  .rail a:hover, .rail a:focus-visible { color: var(--accent); border-left-color: var(--accent); }
+
+  main { min-width: 0; }
+
+  header.masthead { padding: 96px 0 56px; border-bottom: 1px solid var(--line); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(38px, 6vw, 62px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin-bottom: 22px;
+  }
+
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 62ch;
+  }
+
+  section { padding-top: 72px; scroll-margin-top: 24px; }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin-bottom: 8px;
+  }
+
+  h2 .num {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 36px 0 6px;
+  }
+
+  p { max-width: 68ch; margin-bottom: 16px; }
+
+  .lede { color: var(--muted); max-width: 66ch; margin-bottom: 28px; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--line-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  figure {
+    margin: 40px 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 28px 24px 20px;
+    overflow-x: auto;
+  }
+
+  figure svg { display: block; width: 100%; max-width: 100%; height: auto; color: var(--ink); }
+
+  figcaption {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+    max-width: 74ch;
+  }
+
+  figcaption b { color: var(--ink); font-weight: 500; }
+
+  table { width: 100%; border-collapse: collapse; margin: 28px 0; font-size: 15px; }
+
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+    padding: 0 14px 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  td { padding: 13px 14px 13px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+
+  td:first-child { white-space: nowrap; }
+
+  td code { background: none; padding: 0; color: var(--accent); }
+
+  .scroller { overflow-x: auto; }
+
+  .rule-list { list-style: none; counter-reset: r; margin: 24px 0; }
+
+  .rule-list li {
+    counter-increment: r;
+    position: relative;
+    padding: 11px 0 11px 44px;
+    border-bottom: 1px solid var(--line-soft);
+    max-width: 72ch;
+  }
+
+  .rule-list li::before {
+    content: counter(r, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 13px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .note {
+    border-left: 3px solid var(--mark);
+    background: var(--mark-soft);
+    padding: 18px 22px;
+    margin: 32px 0;
+    max-width: 70ch;
+  }
+
+  .note p { margin: 0; }
+
+  .note .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mark);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .stages { display: grid; gap: 18px; margin: 32px 0; }
+
+  @media (min-width: 720px) { .stages { grid-template-columns: repeat(3, 1fr); } }
+
+  .stage { background: var(--surface); border: 1px solid var(--line); padding: 22px; }
+
+  .stage .when {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .stage h4 { font-family: var(--serif); font-size: 20px; font-weight: 600; margin-bottom: 10px; }
+
+  .stage p { font-size: 14.5px; color: var(--muted); margin: 0 0 12px; }
+
+  .stage dl { font-size: 13.5px; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; }
+
+  .stage dt { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+
+  .stage dd { color: var(--ink); }
+
+  footer {
+    margin-top: 88px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  a { color: var(--accent); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+  <div class="rail">
+    <nav>
+      <a href="#capas">01 Las capas</a>
+      <a href="#modulos">02 Los módulos</a>
+      <a href="#peticion">03 Una petición</a>
+      <a href="#agentico">04 Ecosistema agéntico</a>
+      <a href="#puertas">05 Las puertas</a>
+      <a href="#despliegue">06 Despliegue</a>
+      <a href="#crecer">07 Cómo crece</a>
+    </nav>
+  </div>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Repositorio base</div>
+      <h1>Anatomía de base&#8209;repo</h1>
+      <p class="standfirst">Un esqueleto de Next.js del que se derivan proyectos. Multi&#8209;tenant desde la primera línea, con las reglas de arquitectura convertidas en programas que fallan, no en documentos que se leen.</p>
+    </header>
+
+    <section id="capas">
+      <h2><span class="num">01</span>Las capas</h2>
+      <p class="lede">Cuatro anillos. Las dependencias apuntan siempre hacia dentro. El anillo interior no sabe que existe el exterior, y por eso cambiar la base de datos o el framework no toca una sola regla de negocio.</p>
+
+      <figure>
+        <svg viewBox="0 0 720 330" role="img" aria-label="Cuatro anillos concéntricos, del más exterior al más interior: infraestructura y aplicaciones, contratos y adaptadores, aplicación, dominio. Una flecha en la base apunta hacia el centro.">
+          <rect x="16" y="16" width="688" height="252" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+          <rect x="104" y="52" width="512" height="180" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+          <rect x="200" y="88" width="320" height="108" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+          <rect x="284" y="116" width="152" height="52" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+
+          <text x="32" y="38" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 4</text>
+          <text x="120" y="74" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 3</text>
+          <text x="216" y="110" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.6">ANILLO 2</text>
+
+          <text x="360" y="140" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ANILLO 1</text>
+          <text x="360" y="158" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="var(--accent)">domain</text>
+
+          <text x="360" y="185" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">application</text>
+          <text x="360" y="221" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">contracts · adapters</text>
+          <text x="360" y="257" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">infrastructure · web · worker</text>
+
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <line x1="640" y1="300" x2="380" y2="300" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#ar)"/>
+          <text x="648" y="304" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">importa</text>
+        </svg>
+        <figcaption><b>Figura 1.</b> Un anillo solo puede importar hacia dentro. El dominio no importa nada, ni siquiera una librería. El grafo de quién puede importar a quién vive en un único fichero, <code>architecture/layers.json</code>, y de ahí lo leen el comprobador de arquitectura, dependency&#8209;cruiser y ESLint.</figcaption>
+      </figure>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Anillo</th><th>Paquete</th><th>Qué decide</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>packages/domain</code></td><td>Las reglas de negocio. No importa nada.</td></tr>
+            <tr><td>2</td><td><code>packages/application</code></td><td>Qué operaciones existen, quién puede hacerlas y en qué orden.</td></tr>
+            <tr><td>3</td><td><code>packages/contracts</code></td><td>Qué entra y qué sale por la API, y con qué exigencias.</td></tr>
+            <tr><td>3</td><td><code>packages/adapters</code></td><td>Traducción entre el mundo y los casos de uso, sin efectos.</td></tr>
+            <tr><td>4</td><td><code>packages/infrastructure</code></td><td>Postgres, Supabase, Resend, Turnstile. Lo que habla de verdad.</td></tr>
+            <tr><td>4</td><td><code>apps/web</code></td><td>Entrega por HTTP y por pantalla.</td></tr>
+            <tr><td>4</td><td><code>apps/worker</code></td><td>Proceso fuera de la petición.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="modulos">
+      <h2><span class="num">02</span>Los módulos</h2>
+      <p class="lede">La aplicación se divide por componente de negocio, no por tipo de fichero. Cada módulo es una carpeta con el mismo nombre repetida en cada capa. Todo lo de documentos vive en carpetas llamadas <code>documents</code>.</p>
+
+      <p>Tres módulos son núcleo y no se pueden apagar: el resto de la aplicación depende de ellos. Los demás se activan o se desactivan desde un único fichero, <code>architecture/modules.json</code>. Un módulo apagado no se monta, así que su código no se ejecuta y su configuración no se pide. No hay condicionales repartidos preguntando si algo está activo.</p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Módulo</th><th>Qué hace</th><th>Tipo</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>tenants</code></td><td>Las organizaciones. Cada cliente que usa la aplicación es un tenant, y todo dato pertenece a uno.</td><td>Núcleo</td></tr>
+            <tr><td><code>identity</code></td><td>Quién entra, a qué organización pertenece y qué puede hacer. Incluye las claves de API.</td><td>Núcleo</td></tr>
+            <tr><td><code>audit</code></td><td>Quién hizo qué y cuándo. No se puede modificar ni borrar, ni con acceso directo a la base.</td><td>Núcleo</td></tr>
+            <tr><td><code>jobs</code></td><td>Trabajo que no se hace mientras el usuario espera. Se encola y lo ejecuta otro proceso.</td><td>Opcional</td></tr>
+            <tr><td><code>documents</code></td><td>Ficheros que suben los usuarios, con su máquina de estados y el hueco para el procesado.</td><td>Opcional</td></tr>
+            <tr><td><code>notifications</code></td><td>Correo, y el mecanismo para reaccionar a lo que ocurre.</td><td>Opcional</td></tr>
+            <tr><td><code>privacy</code></td><td>Consentimiento y los derechos que la ley da sobre los datos.</td><td>Opcional</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Un módulo por dentro</h3>
+      <p>Un módulo no es una carpeta, son varias. Cada una responde a una pregunta distinta, y no todos los módulos tienen todas las piezas: <code>jobs</code> no tiene entidad porque un trabajo no tiene reglas de negocio propias.</p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Pieza</th><th>Dónde vive</th><th>Qué hace</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Contrato</td><td><code>packages/contracts</code></td><td>Comprueba lo que llega de fuera y declara si la operación exige autenticación, captcha o límite de peticiones.</td></tr>
+            <tr><td>Traductor</td><td><code>packages/adapters</code></td><td>Convierte la petición en lo que el caso de uso entiende, y la respuesta en lo que la pantalla muestra.</td></tr>
+            <tr><td>Caso de uso</td><td><code>packages/application</code></td><td>Autoriza, orquesta, persiste. El que manda.</td></tr>
+            <tr><td>Entidad</td><td><code>packages/domain</code></td><td>Las reglas puras. No sabe que existe una base de datos.</td></tr>
+            <tr><td>Puerto</td><td><code>packages/application</code></td><td>La necesidad escrita sin la solución: alguien tiene que saber guardar esto.</td></tr>
+            <tr><td>Implementación</td><td><code>packages/infrastructure</code></td><td>Dos por puerto: una real y otra en memoria. Por eso el repositorio arranca sin configurar nada.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="peticion">
+      <h2><span class="num">03</span>Una petición, de principio a fin</h2>
+      <p class="lede">Alguien crea la organización Clínica Sol. Esto es lo que pasa, y en qué orden.</p>
+
+      <figure>
+        <svg viewBox="0 0 720 470" role="img" aria-label="Recorrido de una petición en forma de U. Baja por la izquierda desde el contrato hasta la entidad, pasa por la base de datos en el centro inferior, y sube por la derecha hasta la vista. Una rama lateral lleva los eventos al outbox y al worker.">
+          <defs>
+            <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+            </marker>
+            <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="var(--mark)"/>
+            </marker>
+          </defs>
+
+          <rect x="24" y="24" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="38" y="44" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Contrato</text>
+          <text x="38" y="60" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">valida lo que llega</text>
+
+          <rect x="24" y="110" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="38" y="130" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Controlador</text>
+          <text x="38" y="146" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">traduce, no decide</text>
+
+          <rect x="24" y="196" width="216" height="46" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="38" y="216" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--accent)">Caso de uso</text>
+          <text x="38" y="232" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--accent)">autoriza y ordena</text>
+
+          <rect x="24" y="282" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="38" y="302" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Entidad</text>
+          <text x="38" y="318" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">aplica las reglas</text>
+
+          <rect x="252" y="380" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="266" y="400" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Repositorio</text>
+          <text x="266" y="416" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">escribe con el tenant fijado</text>
+
+          <rect x="480" y="196" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="494" y="216" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Presentador</text>
+          <text x="494" y="232" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">decide qué se ve</text>
+
+          <rect x="480" y="110" width="216" height="46" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="494" y="130" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Vista</text>
+          <text x="494" y="146" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7">muestra, no decide</text>
+
+          <rect x="480" y="380" width="216" height="46" fill="var(--mark-soft)" stroke="var(--mark)" stroke-width="1"/>
+          <text x="494" y="400" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--mark)">Outbox y worker</text>
+          <text x="494" y="416" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--mark)">fuera de la petición</text>
+
+          <line x1="132" y1="70" x2="132" y2="106" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+          <line x1="132" y1="156" x2="132" y2="192" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+          <line x1="132" y1="242" x2="132" y2="278" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+          <polyline points="132,328 132,403 248,403" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+          <polyline points="468,403 588,403 588,246" fill="none" stroke="var(--mark)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+          <polyline points="240,219 476,219" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+          <line x1="588" y1="196" x2="588" y2="160" stroke="currentColor" stroke-width="1.2" marker-end="url(#a2)"/>
+
+          <text x="258" y="212" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.65">devuelve el resultado</text>
+          <text x="600" y="330" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">encola eventos</text>
+        </svg>
+        <figcaption><b>Figura 2.</b> El caso de uso pide, el puerto describe la necesidad y la infraestructura la cumple. La línea discontinua es lo que ocurre después: los eventos de dominio se guardan en la misma transacción que el dato, y el worker los recoge más tarde. Si esa transacción falla, no se publica nada.</figcaption>
+      </figure>
+    </section>
+
+    <section id="agentico">
+      <h2><span class="num">04</span>El ecosistema agéntico</h2>
+      <p class="lede">El repositorio está pensado para que lo escriban modelos de lenguaje sin que puedan romperlo. La diferencia entre una regla y una puerta es que la regla se puede ignorar.</p>
+
+      <figure>
+        <svg viewBox="0 0 720 300" role="img" aria-label="Un agente intenta escribir un fichero. Un hook lo intercepta antes de que se guarde: si viola una regla lo rechaza y devuelve el motivo; si no, el fichero se guarda y pasa por las puertas del commit, de la subida y de la integración continua.">
+          <defs>
+            <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+            </marker>
+            <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="var(--mark)"/>
+            </marker>
+          </defs>
+
+          <rect x="16" y="96" width="128" height="52" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="80" y="121" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Agente</text>
+          <text x="80" y="137" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity="0.7">va a escribir</text>
+
+          <rect x="196" y="96" width="140" height="52" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="266" y="121" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--accent)">Hook</text>
+          <text x="266" y="137" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--accent)">antes de guardar</text>
+
+          <rect x="388" y="96" width="120" height="52" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="448" y="127" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="currentColor">Fichero</text>
+
+          <rect x="560" y="40" width="144" height="42" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="632" y="66" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Puerta de commit</text>
+
+          <rect x="560" y="100" width="144" height="42" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="632" y="126" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Puerta de subida</text>
+
+          <rect x="560" y="160" width="144" height="42" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="632" y="186" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Integración continua</text>
+
+          <line x1="144" y1="122" x2="192" y2="122" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4)"/>
+          <line x1="336" y1="122" x2="384" y2="122" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4)"/>
+          <polyline points="508,122 534,122 534,61 556,61" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4)"/>
+          <polyline points="508,122 556,122" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4)"/>
+          <polyline points="508,122 534,122 534,181 556,181" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#a4)"/>
+
+          <polyline points="266,148 266,232 80,232 80,152" fill="none" stroke="var(--mark)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a5)"/>
+          <text x="173" y="252" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--mark)">rechazado, con el motivo</text>
+
+          <text x="410" y="88" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.65">si cumple</text>
+        </svg>
+        <figcaption><b>Figura 3.</b> Un comentario, un <code>any</code> o una importación prohibida no llegan a guardarse: el hook devuelve el motivo y el agente corrige. Las tres puertas de la derecha ejecutan lo mismo en momentos distintos, de la más rápida a la más completa. Un cuarto hook impide dar una tarea por terminada mientras la puerta esté en rojo.</figcaption>
+      </figure>
+
+      <h3>Qué carga un agente al entrar</h3>
+      <p>El contexto se reparte en un grafo, no en un documento. La entrada es <code>AGENTS.md</code>, con trece reglas duras y una tabla que dice qué leer según la tarea. Las reglas de cada capa se cargan solas al abrir un fichero de esa capa. Todo junto suma poco más de cien líneas.</p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Pieza</th><th>Dónde vive</th><th>Cuándo se carga</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Mapa y reglas</td><td><code>AGENTS.md</code></td><td>Siempre. Es la entrada.</td></tr>
+            <tr><td>Reglas por capa</td><td><code>.claude/rules</code></td><td>Al abrir un fichero de esa capa.</td></tr>
+            <tr><td>Documentación</td><td><code>docs/</code></td><td>Solo el nodo que la tarea necesita.</td></tr>
+            <tr><td>Decisiones</td><td><code>docs/decisions</code></td><td>Cuando alguien pregunta por qué algo es así.</td></tr>
+            <tr><td>Agentes</td><td><code>.claude/agents</code></td><td>Al delegar: arquitecto, implementador, guardián de capas, revisor de seguridad, escritor de tests.</td></tr>
+            <tr><td>Procedimientos</td><td><code>.claude/skills</code></td><td>Al invocarlos: nueva funcionalidad, nuevo puerto, nueva vista, dirección de diseño, origen de componentes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="tag">Regla 13</span>
+        <p>Ningún trabajo se cierra hasta que el guardián de capas y el revisor de seguridad han leído el diff en contexto limpio, sin conocer el razonamiento de quien lo escribió. Quien escribe el código no lo revisa. En su estreno, esa revisión encontró que cuatro controles de seguridad se habían caído en silencio mientras todas las puertas seguían en verde.</p>
+      </div>
+    </section>
+
+    <section id="puertas">
+      <h2><span class="num">05</span>Las puertas</h2>
+      <p class="lede">Programas que revisan el código y fallan. Todo lo que se puede medir es una puerta; solo lo que necesita criterio se queda como regla escrita.</p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Puerta</th><th>Qué rechaza</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>arch</code></td><td>Comentarios de cualquier sintaxis, <code>any</code>, configuración leída fuera del sitio permitido, importaciones entre capas, elementos interactivos escritos a mano fuera de las primitivas.</td></tr>
+            <tr><td><code>depcruise</code></td><td>Cualquier arista del grafo de dependencias que no esté permitida, incluidas las que solo son de tipos.</td></tr>
+            <tr><td><code>structure</code></td><td>Un directorio que existe y no está descrito, o descrito y ya no existe. También una pieza anunciada como futura que ya ha llegado.</td></tr>
+            <tr><td><code>env-example</code></td><td>Una variable obligatoria en producción que falta del fichero de ejemplo, o una variable opcional sin ninguna regla que la gobierne.</td></tr>
+            <tr><td><code>ui</code></td><td>Desbordamiento horizontal, zonas pulsables por debajo de 44 píxeles, texto de formulario por debajo de 16, etiquetas solapadas. En cuatro anchos, con un navegador real.</td></tr>
+            <tr><td><code>test</code></td><td>Ochocientos ochenta y cinco tests, con las suites de contrato de cada puerto ejecutadas contra sus dos implementaciones.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Lo que el aislamiento entre clientes garantiza</h3>
+      <p>Un repositorio no se construye con el ámbito de tenant como parámetro opcional: lo exige en el constructor. No se puede crear uno sin decir de quién son los datos. Y por debajo, la base de datos aplica la misma restricción con seguridad a nivel de fila, forzada incluso para el propietario de la tabla.</p>
+      <p>Al arrancar, la aplicación comprueba que el rol con el que se conecta no puede saltarse esa seguridad. Si alguien apunta la cadena de conexión a un superusuario, el proceso no arranca.</p>
+
+      <ul class="rule-list">
+        <li>El rol de aplicación tiene lectura, inserción y actualización. No tiene borrado ni vaciado de tablas.</li>
+        <li>La auditoría no tiene ni actualización, y un disparador rechaza cualquier intento sin importar los permisos.</li>
+        <li>Las filas de la base de datos no salen del paquete de infraestructura. Los tipos de proveedor tampoco.</li>
+        <li>La configuración se lee en un único directorio por aplicación. Una puerta rechaza cualquier lectura fuera de ahí.</li>
+        <li>Cada campo declara si contiene datos personales, y de esa declaración salen solas la redacción de los registros, el cifrado y la exportación de datos.</li>
+      </ul>
+    </section>
+
+    <section id="despliegue">
+      <h2><span class="num">06</span>Dónde se despliega</h2>
+      <p class="lede">La misma base recorre tres etapas sin reescribirse. Lo que cambia entre ellas es quién ejecuta el trabajo de fondo y quién opera la infraestructura.</p>
+
+      <figure>
+        <svg viewBox="0 0 720 350" role="img" aria-label="Tres etapas de despliegue en columnas. En la primera, la web va en Vercel, la base de datos en Supabase y el trabajo de fondo lo dispara un cron. En la segunda, todo vive en contenedores en un servidor propio con un worker permanente. En la tercera, los servicios se separan en máquinas distintas con varios workers.">
+          <defs>
+            <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <polygon points="0,0 10,5 0,10" fill="var(--mark)"/>
+            </marker>
+          </defs>
+
+          <text x="16" y="20" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 1</text>
+          <text x="264" y="20" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 2</text>
+          <text x="512" y="20" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">ETAPA 3</text>
+
+          <rect x="16" y="34" width="192" height="230" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <rect x="264" y="34" width="192" height="230" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <rect x="512" y="34" width="192" height="230" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+
+          <rect x="32" y="54" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="112" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Web en Vercel</text>
+          <rect x="32" y="106" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="112" y="130" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Postgres gestionado</text>
+          <rect x="32" y="158" width="160" height="38" fill="var(--mark-soft)" stroke="var(--mark)" stroke-width="1"/>
+          <text x="112" y="177" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--mark)">Cron dispara</text>
+          <text x="112" y="190" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--mark)">un lote</text>
+          <text x="112" y="228" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">latencia de minutos</text>
+          <text x="112" y="246" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">cero operación</text>
+
+          <rect x="280" y="54" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="360" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Web en contenedor</text>
+          <rect x="280" y="106" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="360" y="130" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Postgres y Redis</text>
+          <rect x="280" y="158" width="160" height="38" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="360" y="177" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--accent)">Worker permanente</text>
+          <text x="360" y="190" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--accent)">en el mismo servidor</text>
+          <text x="360" y="228" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">latencia de segundos</text>
+          <text x="360" y="246" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">operas tú</text>
+
+          <rect x="528" y="54" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="608" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Varias webs</text>
+          <rect x="528" y="106" width="160" height="38" fill="var(--surface)" stroke="currentColor" stroke-width="1"/>
+          <text x="608" y="130" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">Base de datos aparte</text>
+          <rect x="528" y="158" width="160" height="38" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="608" y="177" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--accent)">Varios workers</text>
+          <text x="608" y="190" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--accent)">en máquinas propias</text>
+          <text x="608" y="228" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">escala por partes</text>
+          <text x="608" y="246" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.6">operación dedicada</text>
+
+          <line x1="212" y1="149" x2="258" y2="149" stroke="var(--mark)" stroke-width="1.3" marker-end="url(#a6)"/>
+          <line x1="460" y1="149" x2="506" y2="149" stroke="var(--mark)" stroke-width="1.3" marker-end="url(#a6)"/>
+
+          <text x="360" y="300" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">salta cuando el trabajo de fondo no cabe en una función</text>
+          <text x="360" y="318" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--mark)">salta cuando un servicio compite por los recursos de otro</text>
+        </svg>
+        <figcaption><b>Figura 4.</b> El código es el mismo en las tres. Lo único que cambia es quién llama al despacho de trabajo: un cron, un proceso permanente, o varios procesos a la vez. La cola usa bloqueo con salto de filas ocupadas, así que varios trabajadores conviven sin pisarse desde la primera etapa.</figcaption>
+      </figure>
+
+      <div class="stages">
+        <div class="stage">
+          <div class="when">Empezar aquí</div>
+          <h4>Vercel y Postgres gestionado</h4>
+          <p>Sin servidores que mantener. El trabajo de fondo lo dispara un cron que procesa un lote y devuelve si quedó pendiente.</p>
+          <dl>
+            <dt>Duele</dt><dd>Latencia de minutos y límite de duración por función.</dd>
+            <dt>Cuesta</dt><dd>Nada al principio.</dd>
+          </dl>
+        </div>
+        <div class="stage">
+          <div class="when">Cuando el fondo aprieta</div>
+          <h4>Contenedores en un servidor</h4>
+          <p>Vuelve el proceso permanente, que recoge trabajo en menos de un segundo y no tiene límite de duración. Redis entra aquí.</p>
+          <dl>
+            <dt>Ganas</dt><dd>Trabajos largos, latencia baja, control.</dd>
+            <dt>Pierdes</dt><dd>Certificados, red de distribución y despliegues por rama pasan a ser tuyos.</dd>
+          </dl>
+        </div>
+        <div class="stage">
+          <div class="when">Cuando compiten</div>
+          <h4>Servicios separados</h4>
+          <p>La base de datos, la web y los trabajadores dejan de compartir máquina. Cada parte escala por su cuenta.</p>
+          <dl>
+            <dt>Señal</dt><dd>Un proceso pesado ralentiza las peticiones de los usuarios.</dd>
+            <dt>Cuesta</dt><dd>Alguien que opere aquello a tiempo completo.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <h3>La configuración nunca vive en el repositorio</h3>
+      <p>El repositorio guarda los nombres de las variables, nunca sus valores. Se inyectan desde fuera: desde el panel del proveedor, desde un secreto del orquestador, desde el gestor de secretos que use la organización. Cambiar una variable no toca el código ni reconstruye nada.</p>
+      <p>Y la configuración se pide por módulo. Un proyecto que no envía correo no configura un proveedor de correo: apaga el módulo y la exigencia desaparece.</p>
+    </section>
+
+    <section id="crecer">
+      <h2><span class="num">07</span>Cómo crece</h2>
+      <p class="lede">Cada capacidad nueva sigue el mismo camino, y ninguna obliga a tocar el dominio.</p>
+
+      <ul class="rule-list">
+        <li>La necesidad se declara como puerto en el anillo de aplicación, sin decir cómo se resuelve.</li>
+        <li>Se escribe una suite de contrato, que es la especificación de lo que cualquier implementación debe cumplir.</li>
+        <li>Se implementa dos veces: en memoria, para que el repositorio arranque sin configurar nada, y contra el proveedor real.</li>
+        <li>Las dos pasan la misma suite. Si difieren, una de las dos está mal.</li>
+        <li>Se conecta en la raíz de composición, que es el único sitio que lee configuración.</li>
+      </ul>
+
+      <p>Ese patrón es lo que permite cambiar Postgres por otra base de datos, o un proveedor de pagos por otro, tocando un solo fichero. También es lo que hace que la promesa sea comprobable: si una implementación nueva pasa la suite del puerto, encaja.</p>
+
+      <div class="note">
+        <span class="tag">Lo que aún no está probado</span>
+        <p>Nadie ha derivado todavía un proyecto de esta base, ninguna suite de contrato se ha ejecutado contra un proveedor real, y las pruebas de carga están escritas sin haberse ejecutado. Hasta entonces, cualquier cifra de capacidad es una estimación y no un dato.</p>
+      </div>
+    </section>
+
+    <footer>
+      Documento vivo. Vive en <code>docs/base.html</code> y se edita como cualquier otro fichero del repositorio.
+    </footer>
+  </main>
+</div>

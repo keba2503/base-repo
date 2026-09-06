@@ -2,7 +2,7 @@ export { apiKeys, type ApiKeyRow } from "./api-keys";
 export { auditLog, type AuditLogRow } from "./audit-log";
 export { consents, type ConsentRow } from "./consents";
 export { documents, type DocumentRow } from "./documents";
-export { jobs, type JobRow } from "./jobs";
+export { backgroundJobPriority, interactiveJobPriority, jobs, type JobRow } from "./jobs";
 export { memberships, type MembershipRow } from "./memberships";
 export { outbox, type OutboxRow } from "./outbox";
 export { tenantScopedColumns, type TenantScopedColumns } from "./tenant-scoped-columns";

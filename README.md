@@ -89,13 +89,15 @@ Nothing here should ever be weakened to make a change pass; if a rule is wrong, 
 
 ## Deployment
 
-Deployment target is always Vercel, connected to this GitHub repository (preview deployments per pull request, production from `main`). There is no root `vercel.json`: a monorepo with a single app does not need one, and the two settings below belong in the Vercel dashboard, not in a committed file.
+Deployment target is always Vercel, connected to this GitHub repository (preview deployments per pull request, production from `main`). `apps/web/vercel.json`, not a repository-root file, declares the Vercel Cron entry that dispatches the outbox and job queue (`docs/decisions/0028`): because **Root Directory** below is `apps/web`, that directory is the effective project root Vercel reads configuration from, and a `vercel.json` at the repository root would be silently ignored by this project.
 
 In the Vercel project dashboard, under **Settings → Build and Deployment**:
 
 - **Root Directory**: `apps/web`
 - **Install Command**: run from the repository root so the workspace lockfile is respected, e.g. `cd .. && bun install --frozen-lockfile`
 - **Framework Preset**: Next.js (auto-detected once Root Directory is set)
+
+In the Vercel project dashboard, under **Settings → Environment Variables**, set `CRON_SECRET` (production): Vercel signs its own cron requests with it automatically once set, matching what `apps/web/src/main/env.ts` requires in production.
 
 Recommended branch protection on `main` (GitHub repository settings):
 

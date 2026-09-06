@@ -56,6 +56,17 @@ export function visitorActorFor(existingVisitorId: string | undefined): { actor:
   return { actor: anonymousVisitorActor(finalParsed.value), visitorId };
 }
 
+export function cronActor(): Actor {
+  const tenantId = parseTenantId(platformTenantId);
+  if (!isOk(tenantId)) throw new Error("The platform tenant identifier is malformed");
+  return {
+    tenantId: tenantId.value,
+    subjectId: entityIdOf(tenantId.value),
+    kind: "system",
+    scopes: ["outbox:dispatch", "jobQueue:dispatch"],
+  };
+}
+
 export function developmentActor(): Actor {
   const tenantId = parseTenantId(platformTenantId);
   if (!isOk(tenantId)) throw new Error("The platform tenant identifier is malformed");

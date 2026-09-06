@@ -144,6 +144,7 @@ type StoredJobRow = {
   payload: unknown;
   attempts: number;
   maxAttempts: number;
+  priority: StoredJob["priority"];
   runAt: number;
   completed: boolean;
   exhausted: boolean;
@@ -161,6 +162,7 @@ export class StubJobQueue implements JobQueue {
     payload: unknown;
     runAt?: Date;
     maxAttempts?: number;
+    priority?: StoredJob["priority"];
   }): Promise<void> {
     this.#rows.push({
       id: String(this.#rows.length + 1),
@@ -169,6 +171,7 @@ export class StubJobQueue implements JobQueue {
       payload: request.payload,
       attempts: 0,
       maxAttempts: request.maxAttempts ?? 5,
+      priority: request.priority ?? "background",
       runAt: request.runAt?.getTime() ?? 0,
       completed: false,
       exhausted: false,
@@ -185,13 +188,14 @@ export class StubJobQueue implements JobQueue {
     const due = this.#rows
       .filter((row) => !row.completed && !row.exhausted && row.runAt <= now.getTime())
       .slice(0, limit)
-      .map(({ id, tenantId, name, payload, attempts, maxAttempts }) => ({
+      .map(({ id, tenantId, name, payload, attempts, maxAttempts, priority }) => ({
         id,
         tenantId,
         name,
         payload,
         attempts,
         maxAttempts,
+        priority,
       }));
     return Promise.resolve(due);
   }

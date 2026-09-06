@@ -1,0 +1,38 @@
+name: Cron dispatch
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Drain the outbox and job queue
+        env:
+          CRON_DISPATCH_URL: ${{ secrets.CRON_DISPATCH_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_DISPATCH_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_DISPATCH_URL and CRON_SECRET repository secrets are required" >&2
+            exit 1
+          fi
+          for attempt in $(seq 1 10); do
+            response=$(curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              --request POST \
+              "$CRON_DISPATCH_URL")
+            echo "$response"
+            hasMoreWork=$(echo "$response" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{process.stdout.write(String(JSON.parse(s).hasMoreWork))})')
+            if [ "$hasMoreWork" != "true" ]; then
+              break
+            fi
+          done

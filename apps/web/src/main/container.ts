@@ -126,6 +126,7 @@ export type Container = {
   apiKeysScopedTo(tenantId: TenantId): ApiKeyRepository;
   readonly documentRegistry: DocumentRepository;
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
+  readonly jobQueue: JobQueue;
   jobsScopedTo(tenantId: TenantId): JobQueue;
   consentsScopedTo(tenantId: TenantId): ConsentRepository;
   auditScopedTo(tenantId: TenantId): AuditTrail;
@@ -190,7 +191,7 @@ function postgresPersistence(
 
 type DocumentsPersistence = Pick<
   Container,
-  "documentRegistry" | "documentsScopedTo" | "jobsScopedTo" | "consentsScopedTo" | "auditScopedTo"
+  "documentRegistry" | "documentsScopedTo" | "jobQueue" | "jobsScopedTo" | "consentsScopedTo" | "auditScopedTo"
 >;
 
 function memoryDocumentsPersistence(): DocumentsPersistence {
@@ -201,6 +202,7 @@ function memoryDocumentsPersistence(): DocumentsPersistence {
   return {
     documentRegistry: new InMemoryDocumentRepository(documents, { kind: "registry" }),
     documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documents, { kind: "tenant", tenantId }),
+    jobQueue: new InMemoryJobQueue(jobs, { kind: "registry" }),
     jobsScopedTo: (tenantId) => new InMemoryJobQueue(jobs, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new InMemoryConsentRepository(consents, tenantId),
     auditScopedTo: (tenantId) => new InMemoryAuditTrail(audit, tenantId),
@@ -211,6 +213,7 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
   return {
     documentRegistry: new PostgresDocumentRepository(client.db, { kind: "registry" }, cipher),
     documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, cipher),
+    jobQueue: new PostgresJobQueue(client.db, { kind: "registry" }),
     jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new PostgresConsentRepository(client.db, tenantId),
     auditScopedTo: (tenantId) => new PostgresAuditTrail(client.db, tenantId),

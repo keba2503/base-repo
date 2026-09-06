@@ -15,6 +15,7 @@ export const moduleEnvVariables = {
     ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
   ],
   observability: [["sentryDsn", "SENTRY_DSN"]],
+  cron: [["cronSecret", "CRON_SECRET"]],
 } as const;
 
 export const intentionallyOptionalEnvVariables = ["gtmContainerId", "gaMeasurementId", "gaApiSecret"] as const;
@@ -48,6 +49,10 @@ const environmentSchema = z
     gaApiSecret: z.string().min(1).optional(),
     allowInsecureDevActor: z.stringbool().default(false),
     allowEphemeralFieldEncryptionKey: z.stringbool().default(false),
+    cronSecret: z.string().min(32).optional(),
+    cronDispatchOutboxBatchSize: z.coerce.number().int().positive().max(500).default(25),
+    cronDispatchOutboxMaxAttempts: z.coerce.number().int().positive().default(5),
+    cronDispatchJobsBatchSize: z.coerce.number().int().positive().max(500).default(25),
   })
   .superRefine((value, context) => {
     if (isNextBuildPhase) return;
@@ -87,6 +92,14 @@ const environmentSchema = z
         path: ["turnstileSecret"],
         message:
           "TURNSTILE_SECRET is required in production: without it every human-verified operation fails closed, and nothing else signals why",
+      });
+    }
+    if (value.nodeEnv === "production" && value.cronSecret === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["cronSecret"],
+        message:
+          "CRON_SECRET is required in production: without it the /api/cron/dispatch route has no shared secret to check the caller against, and it must fail closed rather than dispatch the outbox and job queue for anyone who finds the URL",
       });
     }
 
@@ -181,6 +194,10 @@ export const env: Environment = environmentSchema.parse({
   gaApiSecret: process.env.GA_API_SECRET,
   allowInsecureDevActor: process.env.ALLOW_INSECURE_DEV_ACTOR,
   allowEphemeralFieldEncryptionKey: process.env.ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY,
+  cronSecret: process.env.CRON_SECRET,
+  cronDispatchOutboxBatchSize: process.env.CRON_DISPATCH_OUTBOX_BATCH_SIZE,
+  cronDispatchOutboxMaxAttempts: process.env.CRON_DISPATCH_OUTBOX_MAX_ATTEMPTS,
+  cronDispatchJobsBatchSize: process.env.CRON_DISPATCH_JOBS_BATCH_SIZE,
 });
 
 export const isDevelopment = env.nodeEnv === "development";

@@ -9,6 +9,7 @@ export function storedJobFactory(overrides: Partial<StoredJob> = {}): StoredJob 
     payload: { reportId: "acme-report" },
     attempts: 0,
     maxAttempts: 5,
+    priority: "background",
     ...overrides,
   };
 }

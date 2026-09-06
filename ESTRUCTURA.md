@@ -99,7 +99,7 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 .claude/skills/new-view                      Añadir una pantalla reutilizando plantilla y primitivas de ui/
 .github                                      Configuración del repositorio en GitHub
 .github/ISSUE_TEMPLATE                       Plantillas de incidencia
-.github/workflows                            Integración continua, CodeQL y escaneo de secretos
+.github/workflows                            Integración continua, CodeQL, escaneo de secretos y el disparador de cron de la demo gratuita (ver decisión 0028)
 apps                                         Mecanismos de entrega, anillo 4
 apps/web                                     Aplicación Next.js: HTTP y pantalla
 apps/web/src                                 Código fuente de la web
@@ -109,6 +109,8 @@ apps/web/src/api/v1                          Definición de rutas de la versión
 apps/web/src/app                             Rutas y páginas del App Router. Las vistas no deciden nada
 apps/web/src/app/api                         Punto de montaje de la API dentro del App Router
 apps/web/src/app/api/[[...route]]            Ruta atrapatodo que entrega las peticiones a Hono
+apps/web/src/app/api/cron                    Rutas que un disparador programado invoca desde fuera del proceso, nunca desde el navegador
+apps/web/src/app/api/cron/dispatch           Despacha un lote del outbox y un lote de la cola de trabajos por HTTP, protegida por secreto compartido; ver decisión 0028
 apps/web/src/app/analytics                   Carga del contenedor GTM tras el consentimiento de analítica
 apps/web/src/app/cookie-consent              Banner de consentimiento de cookies por categoría y su Server Action
 apps/web/src/app/tenants                     Pantallas de tenants

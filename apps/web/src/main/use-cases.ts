@@ -3,25 +3,37 @@ import {
   createApiKey,
   createDocumentUpload,
   createTenant,
+  dispatchJobs,
+  dispatchOutbox,
+  executorRegistry,
   getDocument,
   getTenantBySlug,
   grantConsent,
+  handlerRegistry,
   hasActiveConsent,
   listAuditEntries,
   listDocuments,
+  processDocument,
   registerUser,
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
+  sendTenantWelcome,
   withdrawConsent,
+  type Actor as ApplicationActor,
+  type DispatchJobsResponse,
+  type DispatchOutboxResponse,
   type GrantConsent,
   type HasActiveConsent,
   type ListAuditEntries,
+  type MailMessage,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
+  type TenantResponse,
   type WithdrawConsent,
 } from "@base/application";
+import { isOk } from "@base/domain";
 import { ScopedPermissions } from "@base/infrastructure";
 import {
   confirmDocumentUploadController,
@@ -31,6 +43,8 @@ import {
   getDocumentController,
   getTenantBySlugController,
   listDocumentsController,
+  presentTenantWelcomeEmail,
+  renderEmail,
   revokeApiKeyController,
   type ConfirmDocumentUploadController,
   type CreateApiKeyController,
@@ -41,8 +55,9 @@ import {
   type ListDocumentsController,
   type RevokeApiKeyController,
 } from "@base/adapters";
+import { isModuleActive } from "../../../../architecture/modules";
 import { createContainer, type Container } from "./container";
-import { env } from "./env";
+import { env, type Environment } from "./env";
 
 let shared: Container | undefined;
 
@@ -214,4 +229,87 @@ export function listAuditEntriesOperation(): ListAuditEntries {
     auditScopedTo: parts.auditScopedTo,
     permissions: scopedPermissions,
   });
+}
+
+function presentWelcomeMessage(environment: Environment): (response: TenantResponse) => MailMessage {
+  return (response) => {
+    const viewModel = presentTenantWelcomeEmail({
+      response,
+      locale: environment.defaultLocale,
+      appUrl: environment.appUrl,
+    });
+    const { html, text } = renderEmail(viewModel);
+    return {
+      to: environment.mailWelcomeTo,
+      subject: viewModel.subject,
+      html,
+      text,
+      tags: { category: "tenant-welcome" },
+    };
+  };
+}
+
+export type DispatchBatchOutcome =
+  | { readonly refused: false; readonly counts: DispatchOutboxResponse }
+  | { readonly refused: true; readonly code: string };
+
+export function dispatchOutboxOperation() {
+  const parts = container();
+  const handlers = handlerRegistry(
+    isModuleActive("notifications")
+      ? [
+          sendTenantWelcome({
+            tenants: parts.tenantRegistry,
+            mailer: parts.mailer,
+            presentMessage: presentWelcomeMessage(env),
+          }),
+        ]
+      : [],
+  );
+  const dispatch = dispatchOutbox({
+    outbox: parts.outbox,
+    handlers,
+    permissions: parts.permissions,
+    logger: parts.logger,
+  });
+
+  return async (actor: ApplicationActor, limit: number, maxAttempts: number): Promise<DispatchBatchOutcome> => {
+    const result = await dispatch({ actor, limit, maxAttempts });
+    if (!isOk(result)) return { refused: true, code: result.error.code };
+    return { refused: false, counts: result.value };
+  };
+}
+
+export type DispatchJobsOutcome =
+  | { readonly refused: false; readonly counts: DispatchJobsResponse }
+  | { readonly refused: true; readonly code: string };
+
+export function dispatchJobsOperation() {
+  const parts = container();
+  const dispatch = dispatchJobs({
+    jobs: parts.jobQueue,
+    executors: executorRegistry(
+      isModuleActive("documents")
+        ? [
+            processDocument({
+              documentsScopedTo: (tenantId) => parts.documentsScopedTo(tenantId),
+              fileStore: parts.fileStore,
+              processor: parts.documentProcessor,
+              clock: parts.clock,
+              unitOfWork: parts.unitOfWork,
+            }),
+          ]
+        : [],
+    ),
+    permissions: parts.permissions,
+    logger: parts.logger,
+    clock: parts.clock,
+    telemetry: parts.telemetry,
+  });
+
+  return async (actor: ApplicationActor, limit: number): Promise<DispatchJobsOutcome> => {
+    const result = await dispatch({ actor, limit });
+    if (!isOk(result)) return { refused: true, code: result.error.code };
+    return { refused: false, counts: result.value };
+  };
 }

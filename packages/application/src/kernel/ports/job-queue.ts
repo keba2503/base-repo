@@ -1,5 +1,11 @@
 import type { TenantId } from "@base/domain";
 
+export const jobPriorities = ["interactive", "background"] as const;
+
+export type JobPriority = (typeof jobPriorities)[number];
+
+export const defaultJobPriority: JobPriority = "background";
+
 export type StoredJob = {
   readonly id: string;
   readonly tenantId: TenantId;
@@ -7,6 +13,7 @@ export type StoredJob = {
   readonly payload: unknown;
   readonly attempts: number;
   readonly maxAttempts: number;
+  readonly priority: JobPriority;
 };
 
 export type EnqueueJobRequest = {
@@ -15,6 +22,7 @@ export type EnqueueJobRequest = {
   readonly payload: unknown;
   readonly runAt?: Date;
   readonly maxAttempts?: number;
+  readonly priority?: JobPriority;
 };
 
 export type JobRetry = {

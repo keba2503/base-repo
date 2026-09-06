@@ -7,7 +7,10 @@ export type { HumanVerification, HumanVerificationRequest, HumanVerifier } from 
 export type { IdGenerator } from "./ports/id-generator";
 export {
   defaultJobMaxAttempts,
+  defaultJobPriority,
+  jobPriorities,
   type EnqueueJobRequest,
+  type JobPriority,
   type JobQueue,
   type JobRetry,
   type StoredJob,
