@@ -41,9 +41,12 @@ import {
   InMemoryUnitOfWork,
   InMemoryUserRepository,
   InMemoryUserStore,
+  PostgresApiKeyRepository,
+  PostgresMembershipRepository,
   PostgresOutbox,
   PostgresTenantRepository,
   PostgresUnitOfWork,
+  PostgresUserRepository,
   RandomIdGenerator,
   RandomSecretGenerator,
   ResendMailer,
@@ -128,6 +131,34 @@ function postgresPersistence(
   };
 }
 
+type IdentityPersistence = Pick<
+  Container,
+  "userRegistry" | "membershipRegistry" | "membershipsScopedTo" | "apiKeyRegistry" | "apiKeysScopedTo"
+>;
+
+function memoryIdentityPersistence(): IdentityPersistence {
+  const users = new InMemoryUserStore();
+  const memberships = new InMemoryMembershipStore();
+  const apiKeys = new InMemoryApiKeyStore();
+  return {
+    userRegistry: new InMemoryUserRepository(users, { kind: "registry" }),
+    membershipRegistry: new InMemoryMembershipRepository(memberships, { kind: "registry" }),
+    membershipsScopedTo: (tenantId) => new InMemoryMembershipRepository(memberships, { kind: "tenant", tenantId }),
+    apiKeyRegistry: new InMemoryApiKeyRepository(apiKeys, { kind: "registry" }),
+    apiKeysScopedTo: (tenantId) => new InMemoryApiKeyRepository(apiKeys, { kind: "tenant", tenantId }),
+  };
+}
+
+function postgresIdentityPersistence(client: PostgresClient): IdentityPersistence {
+  return {
+    userRegistry: new PostgresUserRepository(client.db, { kind: "registry" }),
+    membershipRegistry: new PostgresMembershipRepository(client.db, { kind: "registry" }),
+    membershipsScopedTo: (tenantId) => new PostgresMembershipRepository(client.db, { kind: "tenant", tenantId }),
+    apiKeyRegistry: new PostgresApiKeyRepository(client.db, { kind: "registry" }),
+    apiKeysScopedTo: (tenantId) => new PostgresApiKeyRepository(client.db, { kind: "tenant", tenantId }),
+  };
+}
+
 function identityParts(
   environment: Environment,
 ): Pick<Container, "identityProvider" | "apiKeyHasher" | "secretGenerator"> {
@@ -178,21 +209,13 @@ export function createContainer(environment: Environment): Container {
       : undefined;
   const persistence = client !== undefined ? postgresPersistence(client) : memoryPersistence();
 
-  const users = new InMemoryUserStore();
-  const memberships = new InMemoryMembershipStore();
-  const apiKeys = new InMemoryApiKeyStore();
-  const membershipsScopedTo = (tenantId: TenantId) =>
-    new InMemoryMembershipRepository(memberships, { kind: "tenant", tenantId });
+  const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();
 
   return {
     ...parts,
     ...persistence,
-    permissions: new RolePermissions({ membershipsScopedTo }),
-    userRegistry: new InMemoryUserRepository(users, { kind: "registry" }),
-    membershipRegistry: new InMemoryMembershipRepository(memberships, { kind: "registry" }),
-    membershipsScopedTo,
-    apiKeyRegistry: new InMemoryApiKeyRepository(apiKeys, { kind: "registry" }),
-    apiKeysScopedTo: (tenantId) => new InMemoryApiKeyRepository(apiKeys, { kind: "tenant", tenantId }),
+    ...identity,
+    permissions: new RolePermissions({ membershipsScopedTo: identity.membershipsScopedTo }),
     ...identityParts(environment),
     humanVerifier: humanVerifierFor(environment),
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),

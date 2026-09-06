@@ -1,20 +1,29 @@
 import { afterAll, beforeAll, beforeEach, describe, it } from "bun:test";
 import { asc, sql } from "drizzle-orm";
 import {
+  apiKeys,
   createPostgresClient,
+  memberships,
   outbox,
   outboxRowToEvent,
+  PostgresApiKeyRepository,
+  PostgresMembershipRepository,
   PostgresOutbox,
   PostgresTenantRepository,
   PostgresUnitOfWork,
+  PostgresUserRepository,
   tenants,
+  users,
   type PostgresClient,
 } from "@base/infrastructure";
 import { migrateDatabase } from "../src/postgres/migrate";
 import {
+  describeApiKeyRepositoryContract,
+  describeMembershipRepositoryContract,
   describeOutboxContract,
   describeTenantRepositoryContract,
   describeUnitOfWorkContract,
+  describeUserRepositoryContract,
 } from "./contracts/index";
 
 const databaseUrlVariable = "DATABASE_URL";
@@ -40,7 +49,9 @@ function describePostgresSuites(connectionString: string): void {
     }, migrationTimeoutMilliseconds);
 
     beforeEach(async () => {
-      await client.db.execute(sql`truncate table ${outbox}, ${tenants}`);
+      await client.db.execute(
+        sql`truncate table ${outbox}, ${tenants}, ${users}, ${memberships}, ${apiKeys}`,
+      );
     });
 
     afterAll(async () => {
@@ -60,6 +71,21 @@ function describePostgresSuites(connectionString: string): void {
     describeTenantRepositoryContract("PostgresTenantRepository", () => ({
       registry: new PostgresTenantRepository(client.db, { kind: "registry" }),
       scopedTo: (tenantId) => new PostgresTenantRepository(client.db, { kind: "tenant", tenantId }),
+    }));
+
+    describeUserRepositoryContract("PostgresUserRepository", () => ({
+      registry: new PostgresUserRepository(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresUserRepository(client.db, { kind: "tenant", tenantId }),
+    }));
+
+    describeMembershipRepositoryContract("PostgresMembershipRepository", () => ({
+      registry: new PostgresMembershipRepository(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresMembershipRepository(client.db, { kind: "tenant", tenantId }),
+    }));
+
+    describeApiKeyRepositoryContract("PostgresApiKeyRepository", () => ({
+      registry: new PostgresApiKeyRepository(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresApiKeyRepository(client.db, { kind: "tenant", tenantId }),
     }));
   });
 }
