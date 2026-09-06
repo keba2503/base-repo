@@ -91,6 +91,7 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 .claude/skills                               Comandos de trabajo invocables con barra
 .claude/skills/adr                           Escribir un registro de decisión
 .claude/skills/component-source              Traer un componente de una librería de primitivas sin estilo, vía el registro oficial de shadcn, con revisión de lo copiado
+.claude/skills/defect-record                 Escribir un registro de defecto en docs/defects tras un hallazgo de revisión
 .claude/skills/design-direction              Forzar la decisión de dirección de diseño antes de escribir una interfaz
 .claude/skills/gate                          Ejecutar todas las puertas y explicar cada fallo
 .claude/skills/new-component                 Crear un componente de negocio en todos los anillos que necesite
@@ -131,6 +132,7 @@ architecture                                 La única fuente del grafo de depen
 docs                                         Documentación en nodos pequeños, pensada para leerse por partes
 docs/architecture                            Regla de dependencia, capas, puertos, fronteras y raíz de composición
 docs/decisions                               Registros de decisión numerados: por qué las cosas son como son
+docs/defects                                 Un fichero por defecto encontrado en revisión, y cómo se impide que vuelva
 docs/layers                                  Un nodo de reglas por paquete
 docs/standards                               Estilo, tests, seguridad, datos personales y RGPD
 docs/workflow                                Cómo añadir funcionalidad, cómo añadir un puerto, qué hacer si una puerta te para

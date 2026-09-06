@@ -17,3 +17,5 @@ Then review by hand what tools cannot see:
 - Use cases that skip authorization or tenant scoping.
 
 Report as a list: file, line, rule broken, why, the ring it belongs to. Severity: blocking or advisory. No praise, no summary of what is fine.
+
+Every finding you report becomes a defect: it does not close until `docs/defects/` records it, naming the gate or test that now prevents it, or the reason neither exists yet.
