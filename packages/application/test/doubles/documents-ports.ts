@@ -95,6 +95,10 @@ export class StubFileStore implements FileStore {
   get savedKeys(): readonly string[] {
     return [...this.#files.keys()];
   }
+
+  get saved(): readonly StoredFile[] {
+    return [...this.#files.values()];
+  }
 }
 
 export class StubDocumentProcessor implements DocumentProcessor {

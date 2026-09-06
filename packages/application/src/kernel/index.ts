@@ -1,6 +1,7 @@
 export type { Actor, ActorKind } from "./actor";
 export { authorize, type AuthorizationRequest } from "./authorize";
 export type { Clock } from "./ports/clock";
+export type { FieldCipher } from "./ports/field-cipher";
 export type { HumanVerification, HumanVerificationRequest, HumanVerifier } from "./ports/human-verifier";
 export type { IdGenerator } from "./ports/id-generator";
 export {
