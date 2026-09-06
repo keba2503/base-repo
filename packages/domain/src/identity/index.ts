@@ -36,6 +36,8 @@ export {
   userDisplayNameMaximumLength,
   userDisplayNameMinimumLength,
   userFieldClassifications,
+  type UserAnonymized,
+  type UserAnonymizedPayload,
   type UserRegistered,
   type UserRegisteredPayload,
   type UserSnapshot,

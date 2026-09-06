@@ -60,6 +60,44 @@ describe("user restoration", () => {
   });
 });
 
+describe("user anonymization", () => {
+  it("replaces the email and the display name with the given token", () => {
+    const result = User.register(userSnapshotFactory());
+    if (!isOk(result)) throw new Error("Expected the user to be accepted");
+    const user = result.value;
+    user.pullEvents();
+    const anonymized = user.anonymize({ at: new Date("2026-02-01T00:00:00.000Z"), token: "deadbeef" });
+    if (!isOk(anonymized)) throw new Error("Expected the anonymization to succeed");
+    expect(String(user.email)).toBe("deadbeef@erased.invalid");
+    expect(user.displayName).toBe("deadbeef");
+  });
+
+  it("keeps the identity and the tenant unchanged", () => {
+    const result = User.register(userSnapshotFactory());
+    if (!isOk(result)) throw new Error("Expected the user to be accepted");
+    const user = result.value;
+    const before = { id: user.id, tenantId: user.tenantId, createdAt: user.createdAt };
+    user.anonymize({ at: new Date("2026-02-01T00:00:00.000Z"), token: "deadbeef" });
+    expect({ id: user.id, tenantId: user.tenantId, createdAt: user.createdAt }).toEqual(before);
+  });
+
+  it("records an anonymization event", () => {
+    const result = User.register(userSnapshotFactory());
+    if (!isOk(result)) throw new Error("Expected the user to be accepted");
+    const user = result.value;
+    user.pullEvents();
+    user.anonymize({ at: new Date("2026-02-01T00:00:00.000Z"), token: "deadbeef" });
+    expect(user.pullEvents()).toEqual([
+      {
+        name: "user.anonymized",
+        tenantId: user.tenantId,
+        occurredAt: new Date("2026-02-01T00:00:00.000Z"),
+        payload: { userId: user.id, tenantId: user.tenantId },
+      },
+    ]);
+  });
+});
+
 describe("user data classification", () => {
   it("declares the email and the display name as personal data", () => {
     expect([userFieldClassifications.email, userFieldClassifications.displayName]).toEqual([
