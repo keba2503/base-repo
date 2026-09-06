@@ -1,11 +1,14 @@
 import {
   createApiKey,
   createTenant,
+  getDocument,
   getTenantBySlug,
+  listDocuments,
   registerUser,
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
+  uploadDocument,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
@@ -13,12 +16,18 @@ import {
 import {
   createApiKeyController,
   createTenantController,
+  getDocumentController,
   getTenantBySlugController,
+  listDocumentsController,
   revokeApiKeyController,
+  uploadDocumentController,
   type CreateApiKeyController,
   type CreateTenantController,
+  type GetDocumentController,
   type GetTenantBySlugController,
+  type ListDocumentsController,
   type RevokeApiKeyController,
+  type UploadDocumentController,
 } from "@base/adapters";
 import { createContainer, type Container } from "./container";
 import { env } from "./env";
@@ -95,6 +104,36 @@ export function revokeApiKeyOperation(): RevokeApiKeyController {
       unitOfWork: parts.unitOfWork,
       outbox: parts.outbox,
     }),
+  );
+}
+
+export function uploadDocumentOperation(): UploadDocumentController {
+  const parts = container();
+  return uploadDocumentController(
+    uploadDocument({
+      documentsScopedTo: parts.documentsScopedTo,
+      fileStore: parts.fileStore,
+      permissions: parts.permissions,
+      clock: parts.clock,
+      idGenerator: parts.idGenerator,
+      unitOfWork: parts.unitOfWork,
+      outbox: parts.outbox,
+      jobsScopedTo: parts.jobsScopedTo,
+    }),
+  );
+}
+
+export function getDocumentOperation(): GetDocumentController {
+  const parts = container();
+  return getDocumentController(
+    getDocument({ documentsScopedTo: parts.documentsScopedTo, permissions: parts.permissions }),
+  );
+}
+
+export function listDocumentsOperation(): ListDocumentsController {
+  const parts = container();
+  return listDocumentsController(
+    listDocuments({ documentsScopedTo: parts.documentsScopedTo, permissions: parts.permissions }),
   );
 }
 

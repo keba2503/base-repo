@@ -3,6 +3,8 @@ import { z } from "zod";
 const requiredInProduction = [
   ["databaseUrl", "DATABASE_URL"],
   ["resendApiKey", "RESEND_API_KEY"],
+  ["supabaseUrl", "SUPABASE_URL"],
+  ["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"],
 ] as const;
 
 const environmentSchema = z
@@ -12,6 +14,9 @@ const environmentSchema = z
     defaultLocale: z.string().min(2).default("es-ES"),
     appUrl: z.url().default("http://localhost:3000"),
     databaseUrl: z.url().optional(),
+    supabaseUrl: z.url().optional(),
+    supabaseServiceRoleKey: z.string().min(1).optional(),
+    documentsBucket: z.string().min(1).default("documents"),
     mailFrom: z.string().min(3).default("Base <onboarding@resend.dev>"),
     mailWelcomeTo: z.email().default("owner@example.com"),
     resendApiKey: z.string().min(1).optional(),
@@ -41,6 +46,9 @@ export const env: Environment = environmentSchema.parse({
   defaultLocale: process.env.DEFAULT_LOCALE,
   appUrl: process.env.APP_URL,
   databaseUrl: process.env.DATABASE_URL,
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  documentsBucket: process.env.DOCUMENTS_BUCKET,
   mailFrom: process.env.MAIL_FROM,
   mailWelcomeTo: process.env.MAIL_WELCOME_TO,
   resendApiKey: process.env.RESEND_API_KEY,

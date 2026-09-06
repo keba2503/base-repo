@@ -1,5 +1,8 @@
 import type {
   Clock,
+  DocumentProcessor,
+  DocumentRepository,
+  FileStore,
   IdGenerator,
   JobQueue,
   Logger,
@@ -9,12 +12,15 @@ import type {
   TenantRepository,
   UnitOfWork,
 } from "@base/application";
-import { tenantFieldClassifications } from "@base/domain";
+import { documentFieldClassifications, tenantFieldClassifications, type TenantId } from "@base/domain";
 import {
   ConsoleLogger,
   ConsoleMailer,
   createPostgresClient,
   createResendClient,
+  InMemoryDocumentRepository,
+  InMemoryDocumentStore,
+  InMemoryFileStore,
   InMemoryJobQueue,
   InMemoryJobStore,
   InMemoryMailer,
@@ -22,6 +28,8 @@ import {
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  NullDocumentProcessor,
+  PostgresDocumentRepository,
   PostgresJobQueue,
   PostgresOutbox,
   PostgresTenantRepository,
@@ -31,9 +39,11 @@ import {
   ResendMailer,
   ScopedPermissions,
   SilentLogger,
+  SupabaseFileStore,
   SystemClock,
   type PostgresClient,
 } from "@base/infrastructure";
+import { createClient } from "@supabase/supabase-js";
 import type { Environment } from "./env";
 
 export type Container = {
@@ -44,33 +54,55 @@ export type Container = {
   readonly unitOfWork: UnitOfWork;
   readonly outbox: Outbox;
   readonly jobQueue: JobQueue;
+  documentsScopedTo(tenantId: TenantId): DocumentRepository;
+  readonly fileStore: FileStore;
+  readonly documentProcessor: DocumentProcessor;
   readonly logger: Logger;
   readonly mailer: Mailer;
   close(): Promise<void>;
 };
 
-const logRedactionPolicy = redactionPolicyFrom(tenantFieldClassifications);
+const logRedactionPolicy = redactionPolicyFrom(tenantFieldClassifications, documentFieldClassifications);
 
-function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue"> {
+function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue" | "documentsScopedTo"> {
   const store = new InMemoryTenantStore();
   const jobStore = new InMemoryJobStore();
+  const documentStore = new InMemoryDocumentStore();
   return {
     tenantRegistry: new InMemoryTenantRepository(store, { kind: "registry" }),
     unitOfWork: new InMemoryUnitOfWork(),
     outbox: new InMemoryOutbox(),
     jobQueue: new InMemoryJobQueue(jobStore, { kind: "registry" }),
+    documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documentStore, { kind: "tenant", tenantId }),
   };
 }
 
 function postgresPersistence(
   client: PostgresClient,
-): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue"> {
+): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue" | "documentsScopedTo"> {
   return {
     tenantRegistry: new PostgresTenantRepository(client.db, { kind: "registry" }),
     unitOfWork: new PostgresUnitOfWork(client.db),
     outbox: new PostgresOutbox(client.db),
     jobQueue: new PostgresJobQueue(client.db, { kind: "registry" }),
+    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
   };
+}
+
+function fileStoreFor(environment: Environment): FileStore {
+  if (
+    environment.nodeEnv === "test" ||
+    environment.supabaseUrl === undefined ||
+    environment.supabaseServiceRoleKey === undefined
+  ) {
+    return new InMemoryFileStore();
+  }
+  return new SupabaseFileStore({
+    client: createClient(environment.supabaseUrl, environment.supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    }),
+    bucket: environment.documentsBucket,
+  });
 }
 
 function mailerFor(environment: Environment): Mailer {
@@ -96,6 +128,8 @@ export function createContainer(environment: Environment): Container {
     clock: new SystemClock(),
     idGenerator: new RandomIdGenerator(),
     permissions: new ScopedPermissions(),
+    fileStore: fileStoreFor(environment),
+    documentProcessor: new NullDocumentProcessor(),
     mailer: mailerFor(environment),
     logger:
       environment.nodeEnv === "test"

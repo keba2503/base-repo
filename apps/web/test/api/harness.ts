@@ -1,4 +1,12 @@
-import { createApiKeyController, createTenantController, getTenantBySlugController, revokeApiKeyController } from "@base/adapters";
+import {
+  createApiKeyController,
+  createTenantController,
+  getDocumentController,
+  getTenantBySlugController,
+  listDocumentsController,
+  revokeApiKeyController,
+  uploadDocumentController,
+} from "@base/adapters";
 import {
   FixedClock,
   InMemoryHumanVerifier,
@@ -14,6 +22,9 @@ type CreateTenantUseCase = Parameters<typeof createTenantController>[0];
 type GetTenantBySlugUseCase = Parameters<typeof getTenantBySlugController>[0];
 type CreateApiKeyUseCase = Parameters<typeof createApiKeyController>[0];
 type RevokeApiKeyUseCase = Parameters<typeof revokeApiKeyController>[0];
+type UploadDocumentUseCase = Parameters<typeof uploadDocumentController>[0];
+type GetDocumentUseCase = Parameters<typeof getDocumentController>[0];
+type ListDocumentsUseCase = Parameters<typeof listDocumentsController>[0];
 
 export const apiKeySecret = "key-with-scopes";
 export const secondApiKeySecret = "second-key";
@@ -74,11 +85,38 @@ export const apiKeyRevokedOutput = {
 export const validCreateApiKeyPayload = { name: "CI token", scopes: ["tenants:read"] };
 export const validRevokeApiKeyPayload = { apiKeyId: "00000000-0000-4000-8000-000000000030" };
 
+export const documentResponse = {
+  id: "00000000-0000-4000-8000-000000000040",
+  tenantId: "00000000-0000-4000-8000-000000000001",
+  originalFilename: "informe.pdf",
+  contentType: "application/pdf",
+  sizeBytes: 1_024,
+  status: "pending",
+  extractedText: null,
+  failureReason: null,
+  createdAt: new Date("2026-01-15T10:00:00.000Z"),
+  processedAt: null,
+};
+
+export const documentOutput = {
+  ...documentResponse,
+  createdAt: documentResponse.createdAt.toISOString(),
+  processedAt: null,
+};
+
+export const validUploadDocumentPayload = {
+  filename: "informe.pdf",
+  content: Buffer.from("%PDF-1.7 fake pdf body").toString("base64"),
+};
+
 export type HarnessOptions = {
   readonly createTenant?: CreateTenantUseCase;
   readonly getTenantBySlug?: GetTenantBySlugUseCase;
   readonly createApiKey?: CreateApiKeyUseCase;
   readonly revokeApiKey?: RevokeApiKeyUseCase;
+  readonly uploadDocument?: UploadDocumentUseCase;
+  readonly getDocument?: GetDocumentUseCase;
+  readonly listDocuments?: ListDocumentsUseCase;
   readonly routes?: readonly RouteDefinition[];
   readonly rateLimits?: ApiDependencies["rateLimits"];
 };
@@ -103,6 +141,9 @@ const succeedingCreate: CreateTenantUseCase = () => Promise.resolve(ok(tenantRes
 const succeedingGet: GetTenantBySlugUseCase = () => Promise.resolve(ok(tenantResponse));
 const succeedingCreateApiKey: CreateApiKeyUseCase = () => Promise.resolve(ok(apiKeyCreatedResponse));
 const succeedingRevokeApiKey: RevokeApiKeyUseCase = () => Promise.resolve(ok(apiKeyRevokedResponse));
+const succeedingUploadDocument: UploadDocumentUseCase = () => Promise.resolve(ok(documentResponse));
+const succeedingGetDocument: GetDocumentUseCase = () => Promise.resolve(ok(documentResponse));
+const succeedingListDocuments: ListDocumentsUseCase = () => Promise.resolve(ok({ documents: [documentResponse] }));
 
 export function harnessFactory(options: HarnessOptions = {}): Harness {
   const clock = new FixedClock(new Date("2026-01-15T10:00:00.000Z"));
@@ -115,6 +156,9 @@ export function harnessFactory(options: HarnessOptions = {}): Harness {
       getTenantBySlug: getTenantBySlugController(options.getTenantBySlug ?? succeedingGet),
       createApiKey: createApiKeyController(options.createApiKey ?? succeedingCreateApiKey),
       revokeApiKey: revokeApiKeyController(options.revokeApiKey ?? succeedingRevokeApiKey),
+      uploadDocument: uploadDocumentController(options.uploadDocument ?? succeedingUploadDocument),
+      getDocument: getDocumentController(options.getDocument ?? succeedingGetDocument),
+      listDocuments: listDocumentsController(options.listDocuments ?? succeedingListDocuments),
     },
     resolveActor: (credential) => {
       if (credential.kind === "apiKey" && credential.secret === apiKeySecret) return Promise.resolve(actor);
@@ -183,6 +227,36 @@ export function postRevokeApiKey(
       body: typeof payload === "string" ? payload : JSON.stringify(payload),
     }),
   );
+}
+
+export function postDocument(
+  api: Api,
+  payload: unknown,
+  headers: Readonly<Record<string, string>> = { cookie: sessionCookie },
+): Promise<Response> {
+  return Promise.resolve(
+    api.request("/api/v1/documents", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: typeof payload === "string" ? payload : JSON.stringify(payload),
+    }),
+  );
+}
+
+export function getDocumentByPath(
+  api: Api,
+  documentId: string,
+  headers: Readonly<Record<string, string>> = { authorization: `Bearer ${apiKeySecret}` },
+): Promise<Response> {
+  return Promise.resolve(api.request(`/api/v1/documents/${documentId}`, { headers }));
+}
+
+export function getDocuments(
+  api: Api,
+  query = "",
+  headers: Readonly<Record<string, string>> = { authorization: `Bearer ${apiKeySecret}` },
+): Promise<Response> {
+  return Promise.resolve(api.request(`/api/v1/documents${query}`, { headers }));
 }
 
 export async function errorOf(response: Response): Promise<{ code: string; message: string; requestId: string; issues?: unknown }> {

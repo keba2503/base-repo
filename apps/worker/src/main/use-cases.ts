@@ -3,6 +3,7 @@ import {
   dispatchOutbox,
   executorRegistry,
   handlerRegistry,
+  processDocument,
   sendTenantWelcome,
   type DispatchJobsResponse,
   type DispatchOutboxResponse,
@@ -66,7 +67,15 @@ export type DispatchJobsOutcome =
 export function dispatchJobsOperation(container: Container) {
   const dispatch = dispatchJobs({
     jobs: container.jobQueue,
-    executors: executorRegistry([]),
+    executors: executorRegistry([
+      processDocument({
+        documentsScopedTo: (tenantId) => container.documentsScopedTo(tenantId),
+        fileStore: container.fileStore,
+        processor: container.documentProcessor,
+        clock: container.clock,
+        unitOfWork: container.unitOfWork,
+      }),
+    ]),
     permissions: container.permissions,
     logger: container.logger,
     clock: container.clock,

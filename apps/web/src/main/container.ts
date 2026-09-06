@@ -2,10 +2,14 @@ import type {
   ApiKeyHasher,
   ApiKeyRepository,
   Clock,
+  DocumentProcessor,
+  DocumentRepository,
+  FileStore,
   HumanVerifier,
   IdempotencyStore,
   IdGenerator,
   IdentityProvider,
+  JobQueue,
   Logger,
   Mailer,
   MembershipRepository,
@@ -20,6 +24,7 @@ import type {
 import { RolePermissions } from "@base/application";
 import {
   apiKeyFieldClassifications,
+  documentFieldClassifications,
   membershipFieldClassifications,
   tenantFieldClassifications,
   userFieldClassifications,
@@ -35,9 +40,14 @@ import {
   InMemoryApiKeyHasher,
   InMemoryApiKeyRepository,
   InMemoryApiKeyStore,
+  InMemoryDocumentRepository,
+  InMemoryDocumentStore,
+  InMemoryFileStore,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
   InMemoryIdentityProvider,
+  InMemoryJobQueue,
+  InMemoryJobStore,
   InMemoryMailer,
   InMemoryMembershipRepository,
   InMemoryMembershipStore,
@@ -47,7 +57,10 @@ import {
   InMemoryUnitOfWork,
   InMemoryUserRepository,
   InMemoryUserStore,
+  NullDocumentProcessor,
   PostgresApiKeyRepository,
+  PostgresDocumentRepository,
+  PostgresJobQueue,
   PostgresMembershipRepository,
   PostgresOutbox,
   PostgresTenantRepository,
@@ -62,6 +75,7 @@ import {
   Sha256ApiKeyHasher,
   SilentLogger,
   SlidingWindowRateLimiter,
+  SupabaseFileStore,
   SupabaseIdentityProvider,
   SystemClock,
   TurnstileHumanVerifier,
@@ -84,6 +98,11 @@ export type Container = {
   membershipsScopedTo(tenantId: TenantId): MembershipRepository;
   readonly apiKeyRegistry: ApiKeyRepository;
   apiKeysScopedTo(tenantId: TenantId): ApiKeyRepository;
+  readonly documentRegistry: DocumentRepository;
+  documentsScopedTo(tenantId: TenantId): DocumentRepository;
+  jobsScopedTo(tenantId: TenantId): JobQueue;
+  readonly fileStore: FileStore;
+  readonly documentProcessor: DocumentProcessor;
   readonly identityProvider: IdentityProvider;
   readonly apiKeyHasher: ApiKeyHasher;
   readonly secretGenerator: SecretGenerator;
@@ -99,6 +118,7 @@ const logRedactionPolicy = redactionPolicyFrom(
   userFieldClassifications,
   apiKeyFieldClassifications,
   membershipFieldClassifications,
+  documentFieldClassifications,
 );
 
 function deterministicParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
@@ -136,6 +156,44 @@ function postgresPersistence(
     unitOfWork: new PostgresUnitOfWork(client.db),
     outbox: new PostgresOutbox(client.db),
   };
+}
+
+type DocumentsPersistence = Pick<Container, "documentRegistry" | "documentsScopedTo" | "jobsScopedTo">;
+
+function memoryDocumentsPersistence(): DocumentsPersistence {
+  const documents = new InMemoryDocumentStore();
+  const jobs = new InMemoryJobStore();
+  return {
+    documentRegistry: new InMemoryDocumentRepository(documents, { kind: "registry" }),
+    documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documents, { kind: "tenant", tenantId }),
+    jobsScopedTo: (tenantId) => new InMemoryJobQueue(jobs, { kind: "tenant", tenantId }),
+  };
+}
+
+function postgresDocumentsPersistence(client: PostgresClient): DocumentsPersistence {
+  return {
+    documentRegistry: new PostgresDocumentRepository(client.db, { kind: "registry" }),
+    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
+    jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
+  };
+}
+
+function fileStoreFor(environment: Environment): FileStore {
+  const isTest = environment.nodeEnv === "test";
+  if (
+    isTest ||
+    environment.supabaseUrl === undefined ||
+    environment.supabaseServiceRoleKey === undefined ||
+    environment.documentsBucket === undefined
+  ) {
+    return new InMemoryFileStore();
+  }
+  return new SupabaseFileStore({
+    client: createClient(environment.supabaseUrl, environment.supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    }),
+    bucket: environment.documentsBucket,
+  });
 }
 
 type IdentityPersistence = Pick<
@@ -218,12 +276,17 @@ export function createContainer(environment: Environment): Container {
 
   const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();
 
+  const documents = client !== undefined ? postgresDocumentsPersistence(client) : memoryDocumentsPersistence();
+
   return {
     ...parts,
     ...persistence,
     ...identity,
+    ...documents,
     permissions: new RolePermissions({ membershipsScopedTo: identity.membershipsScopedTo }),
     ...identityParts(environment),
+    fileStore: fileStoreFor(environment),
+    documentProcessor: new NullDocumentProcessor(),
     humanVerifier: humanVerifierFor(environment),
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock: parts.clock }),

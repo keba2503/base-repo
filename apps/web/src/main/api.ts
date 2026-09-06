@@ -4,11 +4,14 @@ import { env } from "./env";
 import {
   createApiKeyOperation,
   createTenantOperation,
+  getDocumentOperation,
   getTenantBySlugOperation,
+  listDocumentsOperation,
   resolveActorFromApiKeyOperation,
   resolveActorFromSessionOperation,
   revokeApiKeyOperation,
   sharedContainer,
+  uploadDocumentOperation,
 } from "./use-cases";
 import { isOk } from "@base/domain";
 
@@ -47,6 +50,9 @@ function buildApiDependencies(): ApiDependencies {
       getTenantBySlug: getTenantBySlugOperation(),
       createApiKey: createApiKeyOperation(),
       revokeApiKey: revokeApiKeyOperation(),
+      uploadDocument: uploadDocumentOperation(),
+      getDocument: getDocumentOperation(),
+      listDocuments: listDocumentsOperation(),
     },
     resolveActor: apiActorResolver(),
     logger: parts.logger,

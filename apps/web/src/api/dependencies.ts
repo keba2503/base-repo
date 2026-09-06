@@ -2,8 +2,11 @@ import type {
   CreateApiKeyController,
   CreateTenantCommand,
   CreateTenantController,
+  GetDocumentController,
   GetTenantBySlugController,
+  ListDocumentsController,
   RevokeApiKeyController,
+  UploadDocumentController,
 } from "@base/adapters";
 import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter } from "./ports";
 
@@ -21,6 +24,9 @@ export type ApiControllers = {
   readonly getTenantBySlug: GetTenantBySlugController;
   readonly createApiKey: CreateApiKeyController;
   readonly revokeApiKey: RevokeApiKeyController;
+  readonly uploadDocument: UploadDocumentController;
+  readonly getDocument: GetDocumentController;
+  readonly listDocuments: ListDocumentsController;
 };
 
 export type RateLimitPolicy = {
@@ -57,4 +63,6 @@ export const defaultRateLimits: RateLimitPolicies = {
   "tenants-write": { limit: 10, windowMilliseconds: oneMinute },
   "tenants-read": { limit: 120, windowMilliseconds: oneMinute },
   "apikeys-write": { limit: 10, windowMilliseconds: oneMinute },
+  "documents-write": { limit: 20, windowMilliseconds: oneMinute },
+  "documents-read": { limit: 120, windowMilliseconds: oneMinute },
 };

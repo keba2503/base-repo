@@ -7,6 +7,7 @@ const requiredInProduction = [
   ["apiKeyPepper", "API_KEY_PEPPER"],
   ["resendApiKey", "RESEND_API_KEY"],
   ["turnstileSecret", "TURNSTILE_SECRET"],
+  ["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"],
 ] as const;
 
 const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
@@ -19,6 +20,8 @@ const environmentSchema = z
     databaseUrl: z.url().optional(),
     supabaseUrl: z.url().optional(),
     supabaseAnonKey: z.string().min(1).optional(),
+    supabaseServiceRoleKey: z.string().min(1).optional(),
+    documentsBucket: z.string().min(1).default("documents"),
     apiKeyPepper: z.string().min(32).optional(),
     turnstileSecret: z.string().min(1).optional(),
     apiTitle: z.string().min(1).default("Base API"),
@@ -57,6 +60,8 @@ export const env: Environment = environmentSchema.parse({
   databaseUrl: process.env.DATABASE_URL,
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  documentsBucket: process.env.DOCUMENTS_BUCKET,
   apiKeyPepper: process.env.API_KEY_PEPPER,
   turnstileSecret: process.env.TURNSTILE_SECRET,
   apiTitle: process.env.API_TITLE,
