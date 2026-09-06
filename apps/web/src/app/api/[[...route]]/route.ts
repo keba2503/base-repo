@@ -1,10 +1,17 @@
-import { createRouteHandlers } from "@/api";
+import { createRouteHandlers, type RouteHandlers } from "@/api";
 import { apiDependencies } from "@/main/api";
 
-const handlers = createRouteHandlers(apiDependencies());
+let handlers: RouteHandlers | undefined;
 
-export const GET = handlers.GET;
-export const POST = handlers.POST;
-export const PUT = handlers.PUT;
-export const PATCH = handlers.PATCH;
-export const DELETE = handlers.DELETE;
+function handlerFor(method: keyof RouteHandlers): (request: Request) => Promise<Response> {
+  return (request) => {
+    handlers ??= createRouteHandlers(apiDependencies());
+    return handlers[method](request);
+  };
+}
+
+export const GET = handlerFor("GET");
+export const POST = handlerFor("POST");
+export const PUT = handlerFor("PUT");
+export const PATCH = handlerFor("PATCH");
+export const DELETE = handlerFor("DELETE");

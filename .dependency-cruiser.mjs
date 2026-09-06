@@ -124,7 +124,7 @@ export default {
           "(^|/)[.][^/]+[.](?:js|cjs|mjs|ts|cts|mts|json)$",
           "[.]d[.]ts$",
           "(^|/)tsconfig[.]json$",
-          "(^|/)(?:next|postcss|eslint)[.]config[.](?:js|cjs|mjs|ts)$",
+          "(^|/)(?:next|postcss|eslint|drizzle)[.]config[.](?:js|cjs|mjs|ts)$",
           "(^|/)(?:page|layout|loading|error|not-found|template|default|global-error|route|proxy)[.]tsx?$",
         ],
       },

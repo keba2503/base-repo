@@ -8,6 +8,8 @@ const requiredInProduction = [
   ["resendApiKey", "RESEND_API_KEY"],
 ] as const;
 
+const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
 const environmentSchema = z
   .object({
     nodeEnv: z.enum(["development", "test", "production"]).default("development"),
@@ -28,7 +30,7 @@ const environmentSchema = z
     resendTimeoutMs: z.coerce.number().int().positive().default(10_000),
   })
   .superRefine((value, context) => {
-    if (value.nodeEnv !== "production") return;
+    if (value.nodeEnv !== "production" || isNextBuildPhase) return;
     for (const [name, variable] of requiredInProduction) {
       if (value[name] === undefined) {
         context.addIssue({ code: "custom", path: [name], message: `${variable} is required in production` });

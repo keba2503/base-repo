@@ -13,3 +13,4 @@ coverage
 next-env.d.ts
 .idea
 .vscode
+.claude/worktrees

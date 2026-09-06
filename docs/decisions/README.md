@@ -20,6 +20,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0009 | OpenAPI generated from zod and documentation rendered on the server | accepted |
 | 0010 | Idempotency and rate limit stores start in memory | accepted |
 | 0011 | Provider failures are unavailable domain errors | accepted |
+| 0012 | Configuration is validated at runtime, not at build | accepted |
 
 ## Template
 
