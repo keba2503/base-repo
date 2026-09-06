@@ -16,7 +16,7 @@ This repository is a base. Projects derive from it. It follows Clean Architectur
 10. Views decide nothing; presenters decide everything visible; use cases decide everything else.
 11. Adding or removing a directory updates `ESTRUCTURA.md` in the same change. `bun run structure` enforces it.
 12. A variable added to `moduleEnvVariables` in any `apps/*/src/main/env.ts` is added to `.env.example` in the same change. `bun run env-example` enforces it.
-13. Work closes only after `layer-guardian` and `security-reviewer` have read its diff in a fresh context. Whoever wrote the code never reviews it.
+13. Work closes only after `layer-guardian` and `security-reviewer` have read its diff in a fresh context. Whoever wrote the code never reviews it. Every commit states this in its message, either `Reviewed-by: layer-guardian, security-reviewer` or `Review-exempt: <why>`; the `commit-msg` hook rejects a commit with neither. The trailer records that the step happened, it does not judge the review itself.
 14. Which business modules exist and which are active lives in `architecture/modules.json`, read through `architecture/modules.ts`. Nothing else decides it, and no `if (isModuleActive(...))` is scattered through a use case, a handler or an executor: a module that is off is simply never mounted at the composition root.
 15. A defect found in review does not close until `docs/defects/` records it, naming a gate, a test, or the reason neither exists yet. `bun run defects` enforces it.
 

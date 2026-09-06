@@ -17,6 +17,8 @@ commit-msg:
   commands:
     commitlint:
       run: bunx commitlint --edit {1}
+    review-trailer:
+      run: bun run review-trailer {1}
 
 pre-push:
   commands:
