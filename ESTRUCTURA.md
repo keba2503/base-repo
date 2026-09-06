@@ -256,6 +256,8 @@ Deuda concreta, no capacidades nuevas. Vive aquí para que no se pierda:
 | Sin pantallas de documentos | Solo hay API y worker |
 | Nadie limpia los objetos de almacenamiento cuya subida nunca se confirmó | Crecen sin límite y nadie los reclama |
 | Nadie purga los trabajos completados ni agotados | La tabla crece siempre; el rol de aplicación no puede borrar, así que hace falta mantenimiento con la conexión privilegiada |
+| Reclamar trabajo sin filtrar por tenant recorre el trabajo pendiente de todos | El reparto por turnos no puede apoyarse en el prefijo del índice. Con backlogs grandes, cada despacho lo paga. El siguiente paso está escrito en la decisión 0028: acotar cuántos tenants entran por llamada |
+| Nadie mira si queda trabajo pendiente entre llamadas | El dato ya sale en la traza del despacho. Es la primera señal de que la cola crece más rápido de lo que se drena, y hoy no lo vigila nadie |
 | Ninguna suite de contrato se ha ejecutado contra un proveedor real | Están escritas y se saltan. Es lo único que puede desmentir lo que creemos que funciona |
 
 ## Este documento se actualiza siempre
