@@ -1,4 +1,10 @@
-import type { CreateTenantCommand, CreateTenantController, GetTenantBySlugController } from "@base/adapters";
+import type {
+  CreateApiKeyController,
+  CreateTenantCommand,
+  CreateTenantController,
+  GetTenantBySlugController,
+  RevokeApiKeyController,
+} from "@base/adapters";
 import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter } from "./ports";
 
 export type Actor = CreateTenantCommand["actor"];
@@ -13,6 +19,8 @@ export type ActorResolver = (credential: Credential) => Promise<Actor | undefine
 export type ApiControllers = {
   readonly createTenant: CreateTenantController;
   readonly getTenantBySlug: GetTenantBySlugController;
+  readonly createApiKey: CreateApiKeyController;
+  readonly revokeApiKey: RevokeApiKeyController;
 };
 
 export type RateLimitPolicy = {
@@ -48,4 +56,5 @@ export const defaultRateLimits: RateLimitPolicies = {
   [fallbackRateLimitBucket]: { limit: 60, windowMilliseconds: oneMinute },
   "tenants-write": { limit: 10, windowMilliseconds: oneMinute },
   "tenants-read": { limit: 120, windowMilliseconds: oneMinute },
+  "apikeys-write": { limit: 10, windowMilliseconds: oneMinute },
 };

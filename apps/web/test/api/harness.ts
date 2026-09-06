@@ -1,4 +1,4 @@
-import { createTenantController, getTenantBySlugController } from "@base/adapters";
+import { createApiKeyController, createTenantController, getTenantBySlugController, revokeApiKeyController } from "@base/adapters";
 import {
   FixedClock,
   InMemoryHumanVerifier,
@@ -12,6 +12,8 @@ import { developmentActor } from "@/main/actor";
 
 type CreateTenantUseCase = Parameters<typeof createTenantController>[0];
 type GetTenantBySlugUseCase = Parameters<typeof getTenantBySlugController>[0];
+type CreateApiKeyUseCase = Parameters<typeof createApiKeyController>[0];
+type RevokeApiKeyUseCase = Parameters<typeof revokeApiKeyController>[0];
 
 export const apiKeySecret = "key-with-scopes";
 export const secondApiKeySecret = "second-key";
@@ -30,9 +32,53 @@ export const tenantOutput = { ...tenantResponse, createdAt: tenantResponse.creat
 
 export const validTenantPayload = { name: "Acme Clinic", slug: "acme-clinic" };
 
+export const apiKeyCreatedResponse = {
+  id: "00000000-0000-4000-8000-000000000030",
+  tenantId: "00000000-0000-4000-8000-000000000001",
+  name: "CI token",
+  keyPrefix: "ak_00000000000040008000000000000030",
+  scopes: ["tenants:read"],
+  createdAt: new Date("2026-01-15T10:00:00.000Z"),
+  revokedAt: null,
+  plaintextKey: "ak_00000000000040008000000000000030.secret",
+};
+
+export const apiKeyCreatedOutput = {
+  id: apiKeyCreatedResponse.id,
+  name: apiKeyCreatedResponse.name,
+  keyPrefix: apiKeyCreatedResponse.keyPrefix,
+  scopes: apiKeyCreatedResponse.scopes,
+  createdAt: apiKeyCreatedResponse.createdAt.toISOString(),
+  plaintextKey: apiKeyCreatedResponse.plaintextKey,
+};
+
+export const apiKeyRevokedResponse = {
+  id: "00000000-0000-4000-8000-000000000030",
+  tenantId: "00000000-0000-4000-8000-000000000001",
+  name: "CI token",
+  keyPrefix: "ak_00000000000040008000000000000030",
+  scopes: ["tenants:read"],
+  createdAt: new Date("2026-01-15T10:00:00.000Z"),
+  revokedAt: new Date("2026-02-01T00:00:00.000Z"),
+};
+
+export const apiKeyRevokedOutput = {
+  id: apiKeyRevokedResponse.id,
+  name: apiKeyRevokedResponse.name,
+  keyPrefix: apiKeyRevokedResponse.keyPrefix,
+  scopes: apiKeyRevokedResponse.scopes,
+  createdAt: apiKeyRevokedResponse.createdAt.toISOString(),
+  revokedAt: apiKeyRevokedResponse.revokedAt.toISOString(),
+};
+
+export const validCreateApiKeyPayload = { name: "CI token", scopes: ["tenants:read"] };
+export const validRevokeApiKeyPayload = { apiKeyId: "00000000-0000-4000-8000-000000000030" };
+
 export type HarnessOptions = {
   readonly createTenant?: CreateTenantUseCase;
   readonly getTenantBySlug?: GetTenantBySlugUseCase;
+  readonly createApiKey?: CreateApiKeyUseCase;
+  readonly revokeApiKey?: RevokeApiKeyUseCase;
   readonly routes?: readonly RouteDefinition[];
   readonly rateLimits?: ApiDependencies["rateLimits"];
 };
@@ -55,6 +101,8 @@ export function domainError(kind: "invariantViolation" | "notFound" | "conflict"
 
 const succeedingCreate: CreateTenantUseCase = () => Promise.resolve(ok(tenantResponse));
 const succeedingGet: GetTenantBySlugUseCase = () => Promise.resolve(ok(tenantResponse));
+const succeedingCreateApiKey: CreateApiKeyUseCase = () => Promise.resolve(ok(apiKeyCreatedResponse));
+const succeedingRevokeApiKey: RevokeApiKeyUseCase = () => Promise.resolve(ok(apiKeyRevokedResponse));
 
 export function harnessFactory(options: HarnessOptions = {}): Harness {
   const clock = new FixedClock(new Date("2026-01-15T10:00:00.000Z"));
@@ -65,6 +113,8 @@ export function harnessFactory(options: HarnessOptions = {}): Harness {
     controllers: {
       createTenant: createTenantController(options.createTenant ?? succeedingCreate),
       getTenantBySlug: getTenantBySlugController(options.getTenantBySlug ?? succeedingGet),
+      createApiKey: createApiKeyController(options.createApiKey ?? succeedingCreateApiKey),
+      revokeApiKey: revokeApiKeyController(options.revokeApiKey ?? succeedingRevokeApiKey),
     },
     resolveActor: (credential) => {
       if (credential.kind === "apiKey" && credential.secret === apiKeySecret) return Promise.resolve(actor);
@@ -105,6 +155,34 @@ export function getTenant(
   headers: Readonly<Record<string, string>> = { authorization: `Bearer ${apiKeySecret}` },
 ): Promise<Response> {
   return Promise.resolve(api.request(`/api/v1/tenants/${slug}`, { headers }));
+}
+
+export function postApiKey(
+  api: Api,
+  payload: unknown,
+  headers: Readonly<Record<string, string>> = { cookie: sessionCookie },
+): Promise<Response> {
+  return Promise.resolve(
+    api.request("/api/v1/api-keys", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: typeof payload === "string" ? payload : JSON.stringify(payload),
+    }),
+  );
+}
+
+export function postRevokeApiKey(
+  api: Api,
+  payload: unknown,
+  headers: Readonly<Record<string, string>> = { cookie: sessionCookie },
+): Promise<Response> {
+  return Promise.resolve(
+    api.request("/api/v1/api-keys/revoke", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: typeof payload === "string" ? payload : JSON.stringify(payload),
+    }),
+  );
 }
 
 export async function errorOf(response: Response): Promise<{ code: string; message: string; requestId: string; issues?: unknown }> {

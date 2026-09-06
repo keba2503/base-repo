@@ -6,6 +6,7 @@ import { renderDocsPage } from "./openapi/docs-page";
 import { requestIdHeader, requestIdOf } from "./request-id";
 import { honoPathOf, type RouteDefinition } from "./route-definition";
 import { routeHandler, type ApiEnvironment } from "./route-handler";
+import { identityRoutes } from "./v1/identity";
 import { tenantRoutes } from "./v1/tenants";
 
 export const apiBasePath = "/api";
@@ -15,7 +16,7 @@ export const docsPath = "/docs";
 export type Api = Hono<ApiEnvironment>;
 
 export function defaultRoutes(dependencies: ApiDependencies): readonly RouteDefinition[] {
-  return tenantRoutes(dependencies.controllers);
+  return [...tenantRoutes(dependencies.controllers), ...identityRoutes(dependencies.controllers)];
 }
 
 function docsContentSecurityPolicy(nonce: string): string {
