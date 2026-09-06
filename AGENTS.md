@@ -15,6 +15,7 @@ This repository is a base. Projects derive from it. It follows Clean Architectur
 9. Every aggregate is tenant scoped. Every use case authorizes before acting.
 10. Views decide nothing; presenters decide everything visible; use cases decide everything else.
 11. Adding or removing a directory updates `ESTRUCTURA.md` in the same change. `bun run structure` enforces it.
+12. A variable added to `requiredInProduction` in any `apps/*/src/main/env.ts` is added to `.env.example` in the same change. `bun run env-example` enforces it.
 
 ## Map
 
