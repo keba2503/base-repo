@@ -175,25 +175,77 @@ describe("dispatching exhausted jobs", () => {
 });
 
 describe("dispatching unknown jobs", () => {
-  it("marks a job without an executor as exhausted", async () => {
+  it("retries a job without an executor instead of exhausting it", async () => {
     const harness = harnessFactory([]);
-    const id = harness.jobs.seed(storedJobFactory({ name: "reports.unknown" }));
+    const id = harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 0, maxAttempts: 5 }));
     await harness.useCase(request);
-    expect(harness.jobs.exhausted).toEqual([id]);
+    expect(harness.jobs.failed).toEqual([id]);
+    expect(harness.jobs.exhausted).toEqual([]);
   });
 
-  it("warns about the missing executor", async () => {
+  it("warns about the missing executor while it is still being retried", async () => {
     const harness = harnessFactory([]);
-    harness.jobs.seed(storedJobFactory({ name: "reports.unknown" }));
+    harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 0, maxAttempts: 5 }));
     await harness.useCase(request);
     expect(harness.logger.messagesAt("warn")).toEqual(["job has no executor"]);
   });
 
-  it("counts the unhandled jobs", async () => {
+  it("counts an unknown job as unhandled while it is retried", async () => {
     const harness = harnessFactory([]);
-    harness.jobs.seed(storedJobFactory({ name: "reports.unknown" }));
+    harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 0, maxAttempts: 5 }));
     const response = expectOk(await harness.useCase(request));
-    expect(response.unhandled).toBe(1);
+    expect(response).toEqual({ claimed: 1, completed: 0, failed: 0, unhandled: 1, exhausted: 0 });
+  });
+
+  it("lets a worker that learns the executor later pick the same job back up", async () => {
+    const queue = new StubJobQueue();
+    const permissions = new StubPermissions(["jobQueue:dispatch"]);
+    const startedAt = new Date("2026-01-15T10:00:00.000Z");
+    const id = queue.seed(storedJobFactory({ name: "reports.unknown", attempts: 0, maxAttempts: 5 }));
+
+    const oldWorker = dispatchJobs({
+      jobs: queue,
+      executors: executorRegistry([]),
+      permissions,
+      logger: new StubLogger(),
+      clock: new StubClock(startedAt),
+    });
+    await oldWorker(request);
+    expect(queue.failed).toEqual([id]);
+    expect(queue.completed).toEqual([]);
+
+    const laterClock = new StubClock(new Date(startedAt.getTime() + 5_000));
+    const newWorker = dispatchJobs({
+      jobs: queue,
+      executors: executorRegistry([executorFactory("reports.unknown", "succeeds", executed)]),
+      permissions,
+      logger: new StubLogger(),
+      clock: laterClock,
+    });
+    await newWorker(request);
+    expect(queue.completed).toEqual([id]);
+  });
+
+  it("exhausts a job without an executor once it reaches its own maximum attempts", async () => {
+    const harness = harnessFactory([]);
+    const id = harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 4, maxAttempts: 5 }));
+    await harness.useCase(request);
+    expect(harness.jobs.exhausted).toEqual([id]);
+    expect(harness.jobs.failed).toEqual([]);
+  });
+
+  it("logs the exhaustion of an unknown job as an error", async () => {
+    const harness = harnessFactory([]);
+    harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 4, maxAttempts: 5 }));
+    await harness.useCase(request);
+    expect(harness.logger.messagesAt("error")).toEqual(["job exhausted its attempts"]);
+  });
+
+  it("still counts an exhausted unknown job as unhandled, not exhausted", async () => {
+    const harness = harnessFactory([]);
+    harness.jobs.seed(storedJobFactory({ name: "reports.unknown", attempts: 4, maxAttempts: 5 }));
+    const response = expectOk(await harness.useCase(request));
+    expect(response).toEqual({ claimed: 1, completed: 0, failed: 0, unhandled: 1, exhausted: 0 });
   });
 });
 

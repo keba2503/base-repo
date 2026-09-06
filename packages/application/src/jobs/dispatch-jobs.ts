@@ -51,13 +51,28 @@ async function runExecutor(
 export function dispatchJobs(dependencies: DispatchJobsDependencies): DispatchJobs {
   const { jobs, executors, permissions, logger, clock } = dependencies;
 
+  async function retryOrExhaust(job: StoredJob): Promise<boolean> {
+    const attempts = job.attempts + 1;
+    if (attempts >= job.maxAttempts) {
+      await jobs.markExhausted([job.id]);
+      return true;
+    }
+    const retryAt = new Date(clock.now().getTime() + backoffMilliseconds(attempts));
+    await jobs.markFailed([{ id: job.id, retryAt }]);
+    return false;
+  }
+
   async function settle(job: StoredJob): Promise<Disposition> {
     const fields = { jobId: job.id, jobName: job.name, attempts: job.attempts };
     const outcome = await runExecutor(executors, job);
 
     if (!outcome.found) {
-      logger.warn("job has no executor", fields);
-      await jobs.markExhausted([job.id]);
+      const exhausted = await retryOrExhaust(job);
+      if (exhausted) {
+        logger.error("job exhausted its attempts", fields);
+      } else {
+        logger.warn("job has no executor", fields);
+      }
       return "unhandled";
     }
 
@@ -66,18 +81,10 @@ export function dispatchJobs(dependencies: DispatchJobsDependencies): DispatchJo
       return "completed";
     }
 
-    const attempts = job.attempts + 1;
     const failureFields = { ...fields, code: outcome.failure.code, reason: outcome.failure.message };
-    if (attempts >= job.maxAttempts) {
-      logger.error("job exhausted its attempts", failureFields);
-      await jobs.markExhausted([job.id]);
-      return "exhausted";
-    }
-
-    logger.error("job failed", failureFields);
-    const retryAt = new Date(clock.now().getTime() + backoffMilliseconds(attempts));
-    await jobs.markFailed([{ id: job.id, retryAt }]);
-    return "failed";
+    const exhausted = await retryOrExhaust(job);
+    logger.error(exhausted ? "job exhausted its attempts" : "job failed", failureFields);
+    return exhausted ? "exhausted" : "failed";
   }
 
   return async (request) => {
