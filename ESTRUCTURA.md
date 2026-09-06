@@ -98,8 +98,9 @@ packages/application                         Anillo 2: casos de uso y puertos
 packages/application/src                     Casos de uso agrupados por componente de negocio
 packages/application/src/identity            Resolver actor, registrar usuario, crear y revocar claves de API
 packages/application/src/identity/ports      Puertos de identidad: proveedor, hasher, generador de secretos, repositorios
+packages/application/src/jobs                Registro de ejecutores de trabajos diferidos y despacho de la cola
 packages/application/src/kernel              Autorización, ámbito de tenant y puertos transversales
-packages/application/src/kernel/ports        Permisos, reloj, unidad de trabajo, outbox, logger, idempotencia, límite de tasa
+packages/application/src/kernel/ports        Permisos, reloj, unidad de trabajo, outbox, cola de trabajos, logger, idempotencia, límite de tasa
 packages/application/src/notifications       Despacho del outbox y envío de correo
 packages/application/src/notifications/ports Puerto de correo y registro de manejadores de eventos
 packages/application/src/tenants             Crear tenant y leerlo por slug
@@ -131,6 +132,7 @@ packages/infrastructure/src/memory/identity  Repositorios de identidad en memori
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
+packages/infrastructure/src/postgres/jobs    Cola de trabajos diferidos sobre Postgres, con reintento y espera creciente
 packages/infrastructure/src/postgres/schema  Definición de tablas en Drizzle
 packages/infrastructure/src/postgres/tenants Repositorio de tenants sobre Postgres
 packages/infrastructure/src/resend           Envío de correo
@@ -159,7 +161,6 @@ El esqueleto está pensado para que estas piezas entren sin mover las anteriores
 
 | Pieza | Dónde irá |
 | --- | --- |
-| Cola de trabajos sobre pgmq | Puerto en `packages/application/src/kernel/ports`, proveedor en `packages/infrastructure/src/pgmq`, consumo en `apps/worker` |
 | Documentos y su procesado por OCR o modelo | Agregado en `packages/domain/src/documents`, puerto de almacenamiento y puerto de procesado en `packages/application`, Supabase Storage en `packages/infrastructure/src/supabase` |
 | Consentimiento, derechos RGPD y cifrado por clasificación | `packages/domain/src/consent`, casos de uso de acceso, portabilidad y borrado en `packages/application/src/privacy`, cifrado en `packages/infrastructure/src/crypto` |
 | Observabilidad, trazas y métricas | Puerto de telemetría en `packages/application/src/kernel/ports`, exportador en `packages/infrastructure/src/otel`, analítica en `apps/web` tras el consentimiento |

@@ -4,6 +4,7 @@ export { describeClockContract } from "./clock.contract";
 export { describeHumanVerifierContract, type HumanVerifierHarness } from "./human-verifier.contract";
 export { describeIdGeneratorContract } from "./id-generator.contract";
 export { describeIdempotencyStoreContract, type IdempotencyStoreHarness } from "./idempotency-store.contract";
+export { describeJobQueueContract, type JobQueueHarness } from "./job-queue.contract";
 export {
   describeIdentityProviderContract,
   type IdentityProviderHarness,

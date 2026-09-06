@@ -2,6 +2,7 @@ export { FixedClock, SystemClock } from "./clock";
 export { InMemoryHumanVerifier } from "./human-verifier";
 export { RandomIdGenerator, SequentialIdGenerator } from "./id-generator";
 export { InMemoryIdempotencyStore, type InMemoryIdempotencyStoreOptions } from "./idempotency-store";
+export { InMemoryJobQueue, InMemoryJobStore } from "./job-queue";
 export {
   ConsoleLogger,
   redact,

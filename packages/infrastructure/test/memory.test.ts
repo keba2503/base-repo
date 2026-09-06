@@ -7,6 +7,8 @@ import {
   FixedClock,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
+  InMemoryJobQueue,
+  InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
   InMemoryTenantRepository,
@@ -29,6 +31,7 @@ import {
   describeHumanVerifierContract,
   describeIdempotencyStoreContract,
   describeIdGeneratorContract,
+  describeJobQueueContract,
   describeLoggerContract,
   describeMailerContract,
   describeOutboxContract,
@@ -63,6 +66,14 @@ describeMailerContract("ConsoleMailer", () => ({
   mailer: new ConsoleMailer({ sink: () => undefined }),
   recipient: "owner@example.com",
 }));
+
+describeJobQueueContract("InMemoryJobQueue", () => {
+  const store = new InMemoryJobStore();
+  return {
+    registry: new InMemoryJobQueue(store, { kind: "registry" }),
+    scopedTo: (tenantId) => new InMemoryJobQueue(store, { kind: "tenant", tenantId }),
+  };
+});
 
 describeTenantRepositoryContract("InMemoryTenantRepository", () => {
   const store = new InMemoryTenantStore();
