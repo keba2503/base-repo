@@ -1,13 +1,49 @@
 import { z } from "zod";
 
-const environmentSchema = z.object({
-  nodeEnv: z.enum(["development", "test", "production"]).default("development"),
-  workerName: z.string().min(1).default("base-worker"),
-});
+const requiredInProduction = [
+  ["databaseUrl", "DATABASE_URL"],
+  ["resendApiKey", "RESEND_API_KEY"],
+] as const;
+
+const environmentSchema = z
+  .object({
+    nodeEnv: z.enum(["development", "test", "production"]).default("development"),
+    workerName: z.string().min(1).default("base-worker"),
+    defaultLocale: z.string().min(2).default("es-ES"),
+    appUrl: z.url().default("http://localhost:3000"),
+    databaseUrl: z.url().optional(),
+    mailFrom: z.string().min(3).default("Base <onboarding@resend.dev>"),
+    mailWelcomeTo: z.email().default("owner@example.com"),
+    resendApiKey: z.string().min(1).optional(),
+    resendTimeoutMs: z.coerce.number().int().positive().default(10_000),
+    outboxBatchSize: z.coerce.number().int().positive().max(500).default(50),
+    outboxMaxAttempts: z.coerce.number().int().positive().default(5),
+    outboxPollMs: z.coerce.number().int().positive().default(1_000),
+    outboxMaxBackoffMs: z.coerce.number().int().positive().default(30_000),
+  })
+  .superRefine((value, context) => {
+    if (value.nodeEnv !== "production") return;
+    for (const [name, variable] of requiredInProduction) {
+      if (value[name] === undefined) {
+        context.addIssue({ code: "custom", path: [name], message: `${variable} is required in production` });
+      }
+    }
+  });
 
 export type Environment = z.infer<typeof environmentSchema>;
 
 export const env: Environment = environmentSchema.parse({
   nodeEnv: process.env.NODE_ENV,
   workerName: process.env.WORKER_NAME,
+  defaultLocale: process.env.DEFAULT_LOCALE,
+  appUrl: process.env.APP_URL,
+  databaseUrl: process.env.DATABASE_URL,
+  mailFrom: process.env.MAIL_FROM,
+  mailWelcomeTo: process.env.MAIL_WELCOME_TO,
+  resendApiKey: process.env.RESEND_API_KEY,
+  resendTimeoutMs: process.env.RESEND_TIMEOUT_MS,
+  outboxBatchSize: process.env.OUTBOX_BATCH_SIZE,
+  outboxMaxAttempts: process.env.OUTBOX_MAX_ATTEMPTS,
+  outboxPollMs: process.env.OUTBOX_POLL_MS,
+  outboxMaxBackoffMs: process.env.OUTBOX_MAX_BACKOFF_MS,
 });

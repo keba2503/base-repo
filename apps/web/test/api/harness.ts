@@ -8,7 +8,7 @@ import {
   SlidingWindowRateLimiter,
 } from "@base/infrastructure";
 import { createApi, defaultRateLimits, type Actor, type Api, type ApiDependencies, type RouteDefinition } from "@/api";
-import { currentActor } from "@/main/actor";
+import { developmentActor } from "@/main/actor";
 
 type CreateTenantUseCase = Parameters<typeof createTenantController>[0];
 type GetTenantBySlugUseCase = Parameters<typeof getTenantBySlugController>[0];
@@ -58,7 +58,7 @@ const succeedingGet: GetTenantBySlugUseCase = () => Promise.resolve(ok(tenantRes
 
 export function harnessFactory(options: HarnessOptions = {}): Harness {
   const clock = new FixedClock(new Date("2026-01-15T10:00:00.000Z"));
-  const actor = currentActor();
+  const actor = developmentActor();
   const secondActor: Actor = { ...actor, subjectId: new RandomIdGenerator().next() };
 
   const dependencies: ApiDependencies = {

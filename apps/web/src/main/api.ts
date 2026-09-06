@@ -1,46 +1,54 @@
-import {
-  ConsoleLogger,
-  InMemoryHumanVerifier,
-  InMemoryIdempotencyStore,
-  SilentLogger,
-  SlidingWindowRateLimiter,
-  SystemClock,
-} from "@base/infrastructure";
-import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Logger } from "@/api";
+import type { Actor as ApplicationActor } from "@base/application";
+import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Credential } from "@/api";
 import { env } from "./env";
-import { createTenantOperation, getTenantBySlugOperation } from "./use-cases";
+import { createTenantOperation, getTenantBySlugOperation, resolveActorFromApiKeyOperation, resolveActorFromSessionOperation, sharedContainer } from "./use-cases";
+import { isOk } from "@base/domain";
 
-const idempotencyTimeToLiveMilliseconds = 24 * 60 * 60 * 1000;
+function sessionTokenFromCookieHeader(cookieHeader: string): string | undefined {
+  for (const pair of cookieHeader.split(";")) {
+    const separator = pair.indexOf("=");
+    if (separator === -1) continue;
+    const name = pair.slice(0, separator).trim();
+    if (name === env.sessionCookieName) return decodeURIComponent(pair.slice(separator + 1).trim());
+  }
+  return undefined;
+}
 
-const tenantRedactionPolicy = { name: "personal" } as const;
-
-const unwiredActorResolver: ActorResolver = () => Promise.resolve(undefined);
-
-function apiLogger(): Logger {
-  return env.nodeEnv === "test" ? new SilentLogger() : new ConsoleLogger({ policy: tenantRedactionPolicy });
+function apiActorResolver(): ActorResolver {
+  return async (credential: Credential): Promise<ApplicationActor | undefined> => {
+    if (credential.kind === "apiKey") {
+      const resolved = await resolveActorFromApiKeyOperation()({ key: credential.secret });
+      return isOk(resolved) ? resolved.value : undefined;
+    }
+    if (credential.kind === "session") {
+      const token = sessionTokenFromCookieHeader(credential.cookieHeader);
+      if (token === undefined) return undefined;
+      const resolved = await resolveActorFromSessionOperation()({ token });
+      return isOk(resolved) ? resolved.value : undefined;
+    }
+    return undefined;
+  };
 }
 
 function buildApiDependencies(): ApiDependencies {
-  const clock = new SystemClock();
-  const logger = apiLogger();
-  logger.warn("api actor resolution is not wired yet; every credential is refused with 401");
+  const parts = sharedContainer();
 
   return {
     controllers: {
       createTenant: createTenantOperation(),
       getTenantBySlug: getTenantBySlugOperation(),
     },
-    resolveActor: unwiredActorResolver,
-    logger,
-    humanVerifier: new InMemoryHumanVerifier([]),
-    idempotencyStore: new InMemoryIdempotencyStore({ clock, timeToLiveMilliseconds: idempotencyTimeToLiveMilliseconds }),
-    rateLimiter: new SlidingWindowRateLimiter({ clock }),
+    resolveActor: apiActorResolver(),
+    logger: parts.logger,
+    humanVerifier: parts.humanVerifier,
+    idempotencyStore: parts.idempotencyStore,
+    rateLimiter: parts.rateLimiter,
     rateLimits: defaultRateLimits,
     documentation: {
-      title: "Base API",
-      version: "1.0.0",
-      serverUrl: "/api",
-      sessionCookieName: "session",
+      title: env.apiTitle,
+      version: env.apiVersion,
+      serverUrl: env.apiServerUrl,
+      sessionCookieName: env.sessionCookieName,
     },
   };
 }

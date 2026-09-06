@@ -1,12 +1,15 @@
 import { presentTenant } from "@base/adapters";
-import { notFound } from "next/navigation";
-import { currentActor } from "@/main/actor";
+import { notFound, redirect } from "next/navigation";
+import { resolveActorOrDevelopmentFallback } from "@/main/actor";
 import { env } from "@/main/env";
 import { getTenantBySlugOperation } from "@/main/use-cases";
 
 export default async function TenantPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const outcome = await getTenantBySlugOperation()({ actor: currentActor(), slug });
+  const actor = await resolveActorOrDevelopmentFallback({ tenantSlug: slug });
+  if (actor === undefined) redirect("/login");
+
+  const outcome = await getTenantBySlugOperation()({ actor, slug });
   if (outcome.kind !== "ok") notFound();
 
   const tenant = presentTenant(outcome.value, env.defaultLocale);
