@@ -8,6 +8,7 @@ function defect(frontmatter: string): string {
 const trackedFiles = [
   "scripts/architecture/check-env-completeness.ts",
   "packages/application/test/dispatch-jobs.test.ts",
+  ".github/workflows/ci.yml",
 ];
 
 describe("parseFrontmatter", () => {
@@ -35,6 +36,19 @@ describe("checkDefectRegistry", () => {
       ].join("\n"),
     );
     expect(checkDefectRegistry([{ path: "docs/defects/DEF-0001-x.md", content }], trackedFiles)).toEqual([]);
+  });
+
+  it("passes a defect prevented by a gate that lives in a CI workflow", () => {
+    const content = defect(
+      [
+        "id: DEF-0016",
+        "date: 2026-09-06",
+        "found_in: revisión de la suite de Postgres",
+        "prevented_by: gate",
+        "gate: .github/workflows/ci.yml",
+      ].join("\n"),
+    );
+    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0016-x.md", content }], trackedFiles)).toEqual([]);
   });
 
   it("passes a defect prevented by a test that exists on disk", () => {
@@ -121,17 +135,19 @@ describe("checkDefectRegistry", () => {
     expect(failures).toEqual([
       {
         path: "docs/defects/DEF-0008-x.md",
-        reason: "gate scripts/architecture/does-not-exist.ts no existe entre los scripts del repositorio",
+        reason: "gate scripts/architecture/does-not-exist.ts no existe entre los scripts o los workflows del repositorio",
       },
     ]);
   });
 
-  it("rejects a gate that does not live under scripts/", () => {
+  it("rejects a gate that does not live under scripts/ or .github/workflows/", () => {
     const content = defect(
       ["id: DEF-0009", "date: 2026-09-06", "found_in: x", "prevented_by: gate", "gate: package.json"].join("\n"),
     );
     const failures = checkDefectRegistry([{ path: "docs/defects/DEF-0009-x.md", content }], trackedFiles);
-    expect(failures).toEqual([{ path: "docs/defects/DEF-0009-x.md", reason: "gate package.json no vive bajo scripts/" }]);
+    expect(failures).toEqual([
+      { path: "docs/defects/DEF-0009-x.md", reason: "gate package.json no vive bajo scripts/ ni bajo .github/workflows/" },
+    ]);
   });
 
   it("rejects prevented_by none with no reason written", () => {

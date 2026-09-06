@@ -32,6 +32,33 @@ jobs:
       - run: bun run browsers
       - run: bun run ui
 
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://app_user:ci_only_app_user_password@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter @base/infrastructure db:migrate
+      - run: psql "$DATABASE_ADMIN_URL" -c "ALTER ROLE app_user WITH PASSWORD 'ci_only_app_user_password';"
+      - run: bun test packages/infrastructure/test/postgres.test.ts --conditions react-server
+
   secrets:
     runs-on: ubuntu-latest
     steps:

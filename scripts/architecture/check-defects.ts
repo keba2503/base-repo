@@ -15,6 +15,7 @@ export type DefectFailure = {
 
 export type DefectFrontmatter = Readonly<Record<string, string>>;
 
+const gateDirectories = ["scripts/", ".github/workflows/"] as const;
 const idPattern = /^DEF-\d{4}$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -74,10 +75,10 @@ function checkDefectFile(
     const gate = frontmatter.gate;
     if (gate === undefined || gate.length === 0) {
       failures.push({ path, reason: "prevented_by es gate pero falta el campo gate" });
-    } else if (!gate.startsWith("scripts/")) {
-      failures.push({ path, reason: `gate ${gate} no vive bajo scripts/` });
+    } else if (!gateDirectories.some((directory) => gate.startsWith(directory))) {
+      failures.push({ path, reason: `gate ${gate} no vive bajo scripts/ ni bajo .github/workflows/` });
     } else if (!trackedFiles.has(gate)) {
-      failures.push({ path, reason: `gate ${gate} no existe entre los scripts del repositorio` });
+      failures.push({ path, reason: `gate ${gate} no existe entre los scripts o los workflows del repositorio` });
     }
   }
 
