@@ -90,6 +90,7 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 .claude/rules                                Reglas por ruta, se cargan solas al abrir un fichero de esa capa
 .claude/skills                               Comandos de trabajo invocables con barra
 .claude/skills/adr                           Escribir un registro de decisión
+.claude/skills/component-source              Traer un componente de una librería de primitivas sin estilo, vía el registro oficial de shadcn, con revisión de lo copiado
 .claude/skills/design-direction              Forzar la decisión de dirección de diseño antes de escribir una interfaz
 .claude/skills/gate                          Ejecutar todas las puertas y explicar cada fallo
 .claude/skills/new-component                 Crear un componente de negocio en todos los anillos que necesite
