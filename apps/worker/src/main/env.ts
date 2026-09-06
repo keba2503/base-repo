@@ -10,7 +10,10 @@ export const moduleEnvVariables = {
     ["databaseUrl", "DATABASE_URL"],
     ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
   ],
+  observability: [["sentryDsn", "SENTRY_DSN"]],
 } as const;
+
+export const intentionallyOptionalEnvVariables = ["resendApiKey"] as const;
 
 const environmentSchema = z
   .object({
@@ -43,6 +46,14 @@ const environmentSchema = z
         code: "custom",
         path: ["allowEphemeralFieldEncryptionKey"],
         message: "ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY must never be set in production",
+      });
+    }
+    if (value.nodeEnv === "production" && value.sentryDsn === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["sentryDsn"],
+        message:
+          "SENTRY_DSN is required in production: without it every job keeps answering while nothing is exported, with only a boot warning as the symptom",
       });
     }
 

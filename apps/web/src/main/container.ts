@@ -367,6 +367,11 @@ export function createContainer(environment: Environment): Container {
     environment.nodeEnv !== "test" && environment.databaseUrl !== undefined
       ? createPostgresClient({ connectionString: environment.databaseUrl })
       : undefined;
+  if (environment.nodeEnv === "production" && client === undefined) {
+    parts.logger.warn(
+      "DATABASE_URL is not configured: running production on in-memory persistence, every tenant, user and document is lost on restart",
+    );
+  }
   const persistence = client !== undefined ? postgresPersistence(client) : memoryPersistence();
 
   const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();

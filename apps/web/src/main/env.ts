@@ -5,13 +5,23 @@ export const moduleEnvVariables = {
   identity: [
     ["supabaseUrl", "SUPABASE_URL"],
     ["supabaseAnonKey", "SUPABASE_ANON_KEY"],
+    ["apiKeyPepper", "API_KEY_PEPPER"],
+    ["turnstileSecret", "TURNSTILE_SECRET"],
   ],
   documents: [["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"]],
   persistence: [
     ["databaseUrl", "DATABASE_URL"],
     ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
   ],
+  observability: [["sentryDsn", "SENTRY_DSN"]],
 } as const;
+
+export const intentionallyOptionalEnvVariables = [
+  "resendApiKey",
+  "gtmContainerId",
+  "gaMeasurementId",
+  "gaApiSecret",
+] as const;
 
 const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
@@ -57,6 +67,30 @@ const environmentSchema = z
         code: "custom",
         path: ["allowEphemeralFieldEncryptionKey"],
         message: "ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY must never be set in production",
+      });
+    }
+    if (value.nodeEnv === "production" && value.apiKeyPepper === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["apiKeyPepper"],
+        message:
+          "API_KEY_PEPPER is required in production: without it api keys are hashed with InMemoryApiKeyHasher, a fast unsalted algorithm meant only for tests, and every key issued and stored is reversible by trivial brute force",
+      });
+    }
+    if (value.nodeEnv === "production" && value.sentryDsn === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["sentryDsn"],
+        message:
+          "SENTRY_DSN is required in production: without it every request and job keeps answering while nothing is exported, with only a boot warning as the symptom",
+      });
+    }
+    if (value.nodeEnv === "production" && value.turnstileSecret === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["turnstileSecret"],
+        message:
+          "TURNSTILE_SECRET is required in production: without it every human-verified operation fails closed, and nothing else signals why",
       });
     }
 

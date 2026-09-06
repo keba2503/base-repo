@@ -178,12 +178,17 @@ function mailerFor(environment: Environment, logger: Logger): Mailer {
 }
 
 export function createContainer(environment: Environment): Container {
+  const logger: Logger =
+    environment.nodeEnv === "test" ? new SilentLogger() : new ConsoleLogger({ policy: logRedactionPolicy });
   const client =
     environment.nodeEnv !== "test" && environment.databaseUrl !== undefined
       ? createPostgresClient({ connectionString: environment.databaseUrl })
       : undefined;
-  const logger: Logger =
-    environment.nodeEnv === "test" ? new SilentLogger() : new ConsoleLogger({ policy: logRedactionPolicy });
+  if (environment.nodeEnv === "production" && client === undefined) {
+    logger.warn(
+      "DATABASE_URL is not configured: running production on in-memory persistence, every tenant and document is lost on restart",
+    );
+  }
   const fieldCipher = fieldCipherFor(environment, logger);
   const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
   const { telemetry, otelClient } = telemetryFor(environment, logger, logRedactionPolicy);
