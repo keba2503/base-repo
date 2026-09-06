@@ -15,6 +15,7 @@ import {
   RandomIdGenerator,
   redact,
   redactedMarker,
+  redactionPolicyFrom,
   ScopedPermissions,
   SequentialIdGenerator,
   SilentLogger,
@@ -129,6 +130,37 @@ describe("field redaction", () => {
     expect(redact({ diagnosis: "sensitive" }, { diagnosis: "asthma" })).toEqual({
       diagnosis: redactedMarker,
     });
+  });
+
+  it("hides a classified field nested inside a plain object", () => {
+    expect(
+      redact({ email: "personal" }, { user: { email: "karen@example.com", id: "1" } }),
+    ).toEqual({ user: { email: redactedMarker, id: "1" } });
+  });
+
+  it("hides a classified field nested inside an array of plain objects", () => {
+    expect(
+      redact({ email: "personal" }, { users: [{ email: "a@example.com" }, { email: "b@example.com" }] }),
+    ).toEqual({ users: [{ email: redactedMarker }, { email: redactedMarker }] });
+  });
+
+  it("leaves a date value untouched instead of expanding it", () => {
+    const createdAt = new Date("2026-01-15T10:00:00.000Z");
+    expect(redact({}, { createdAt })).toEqual({ createdAt });
+  });
+});
+
+describe("redactionPolicyFrom", () => {
+  it("merges classifications declared by different entities", () => {
+    expect(
+      redactionPolicyFrom({ email: "personal" }, { keyHash: "sensitive" }),
+    ).toEqual({ email: "personal", keyHash: "sensitive" });
+  });
+
+  it("keeps the most restrictive classification when entities disagree on a field name", () => {
+    expect(
+      redactionPolicyFrom({ name: "none" }, { name: "personal" }),
+    ).toEqual({ name: "personal" });
   });
 });
 

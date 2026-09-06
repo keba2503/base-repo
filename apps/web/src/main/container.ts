@@ -18,7 +18,13 @@ import type {
   UserRepository,
 } from "@base/application";
 import { RolePermissions } from "@base/application";
-import type { TenantId } from "@base/domain";
+import {
+  apiKeyFieldClassifications,
+  membershipFieldClassifications,
+  tenantFieldClassifications,
+  userFieldClassifications,
+  type TenantId,
+} from "@base/domain";
 import {
   ConsoleLogger,
   ConsoleMailer,
@@ -46,6 +52,7 @@ import {
   PostgresUnitOfWork,
   RandomIdGenerator,
   RandomSecretGenerator,
+  redactionPolicyFrom,
   ResendMailer,
   SequentialIdGenerator,
   SequentialSecretGenerator,
@@ -84,12 +91,12 @@ export type Container = {
   close(): Promise<void>;
 };
 
-const tenantRedactionPolicy = {
-  name: "personal",
-  email: "personal",
-  displayName: "personal",
-  keyHash: "sensitive",
-} as const;
+const logRedactionPolicy = redactionPolicyFrom(
+  tenantFieldClassifications,
+  userFieldClassifications,
+  apiKeyFieldClassifications,
+  membershipFieldClassifications,
+);
 
 function deterministicParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
   return {
@@ -103,7 +110,7 @@ function liveParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
   return {
     clock: new SystemClock(),
     idGenerator: new RandomIdGenerator(),
-    logger: new ConsoleLogger({ policy: tenantRedactionPolicy }),
+    logger: new ConsoleLogger({ policy: logRedactionPolicy }),
   };
 }
 

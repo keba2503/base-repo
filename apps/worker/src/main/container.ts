@@ -1,4 +1,5 @@
 import type { Clock, IdGenerator, Logger, Mailer, Outbox, Permissions, TenantRepository, UnitOfWork } from "@base/application";
+import { tenantFieldClassifications } from "@base/domain";
 import {
   ConsoleLogger,
   ConsoleMailer,
@@ -13,6 +14,7 @@ import {
   PostgresTenantRepository,
   PostgresUnitOfWork,
   RandomIdGenerator,
+  redactionPolicyFrom,
   ResendMailer,
   ScopedPermissions,
   SilentLogger,
@@ -33,7 +35,7 @@ export type Container = {
   close(): Promise<void>;
 };
 
-const tenantRedactionPolicy = { name: "personal" } as const;
+const logRedactionPolicy = redactionPolicyFrom(tenantFieldClassifications);
 
 function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox"> {
   const store = new InMemoryTenantStore();
@@ -79,7 +81,7 @@ export function createContainer(environment: Environment): Container {
     logger:
       environment.nodeEnv === "test"
         ? new SilentLogger()
-        : new ConsoleLogger({ policy: tenantRedactionPolicy }),
+        : new ConsoleLogger({ policy: logRedactionPolicy }),
     close: () => client?.close() ?? Promise.resolve(),
   };
 }
