@@ -130,11 +130,13 @@ function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
 }
 
 function fileStoreFor(environment: Environment): FileStore {
-  if (
-    environment.nodeEnv === "test" ||
-    environment.supabaseUrl === undefined ||
-    environment.supabaseServiceRoleKey === undefined
-  ) {
+  if (environment.nodeEnv === "test") return new InMemoryFileStore();
+  if (environment.supabaseUrl === undefined || environment.supabaseServiceRoleKey === undefined) {
+    if (environment.nodeEnv === "production" && isModuleActive("documents")) {
+      throw new Error(
+        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production while the documents module is active",
+      );
+    }
     return new InMemoryFileStore();
   }
   return new SupabaseFileStore({
@@ -162,13 +164,12 @@ function telemetryFor(
   return { telemetry: new OtelTelemetry(otelClient.tracer, { policy }), otelClient };
 }
 
-function mailerFor(environment: Environment, logger: Logger): Mailer {
+function mailerFor(environment: Environment): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
   if (!isModuleActive("notifications")) return new ConsoleMailer();
   if (environment.nodeEnv === "development") return new ConsoleMailer();
   if (environment.resendApiKey === undefined) {
-    logger.warn("RESEND_API_KEY is not configured: outgoing mail is only logged to the console, never delivered");
-    return new ConsoleMailer();
+    throw new Error("RESEND_API_KEY is required in production while the notifications module is active");
   }
   return new ResendMailer({
     client: createResendClient({ apiKey: environment.resendApiKey }),
@@ -200,7 +201,7 @@ export function createContainer(environment: Environment): Container {
     permissions: new ScopedPermissions(),
     fileStore: fileStoreFor(environment),
     documentProcessor: new NullDocumentProcessor(),
-    mailer: mailerFor(environment, logger),
+    mailer: mailerFor(environment),
     logger,
     telemetry,
     close: async () => {

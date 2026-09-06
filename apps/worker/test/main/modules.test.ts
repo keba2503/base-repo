@@ -1,9 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { RandomIdGenerator } from "@base/infrastructure";
-import { defaultModuleActivation, type ModuleActivation } from "../../../../architecture/modules";
 import { createContainer } from "../../src/main/container";
 import { env } from "../../src/main/env";
-import { dispatchJobsOperation, dispatchOutboxOperation } from "../../src/main/use-cases";
+import {
+  defaultModuleActivation,
+  dispatchJobsOperation,
+  dispatchOutboxOperation,
+  type ModuleActivation,
+} from "../../src/main/use-cases";
 import { workerActor } from "../../src/main/actor";
 
 function activationWith(overrides: Partial<ModuleActivation>): ModuleActivation {

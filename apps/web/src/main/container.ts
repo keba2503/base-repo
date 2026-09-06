@@ -245,12 +245,12 @@ function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
 
 function fileStoreFor(environment: Environment): FileStore {
   const isTest = environment.nodeEnv === "test";
-  if (
-    isTest ||
-    environment.supabaseUrl === undefined ||
-    environment.supabaseServiceRoleKey === undefined ||
-    environment.documentsBucket === undefined
-  ) {
+  if (environment.supabaseUrl === undefined || environment.supabaseServiceRoleKey === undefined) {
+    if (!isTest && environment.nodeEnv === "production" && isModuleActive("documents")) {
+      throw new Error(
+        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production while the documents module is active",
+      );
+    }
     return new InMemoryFileStore();
   }
   return new SupabaseFileStore({
@@ -345,13 +345,12 @@ function analyticsFor(environment: Environment, logger: Logger): Analytics {
   });
 }
 
-function mailerFor(environment: Environment, logger: Logger): Mailer {
+function mailerFor(environment: Environment): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
   if (!isModuleActive("notifications")) return new ConsoleMailer();
   if (environment.nodeEnv === "development") return new ConsoleMailer();
   if (environment.resendApiKey === undefined) {
-    logger.warn("RESEND_API_KEY is not configured: outgoing mail is only logged to the console, never delivered");
-    return new ConsoleMailer();
+    throw new Error("RESEND_API_KEY is required in production while the notifications module is active");
   }
   return new ResendMailer({
     client: createResendClient({ apiKey: environment.resendApiKey }),
@@ -395,7 +394,7 @@ export function createContainer(environment: Environment): Container {
     humanVerifier: humanVerifierFor(environment),
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock: parts.clock }),
-    mailer: mailerFor(environment, parts.logger),
+    mailer: mailerFor(environment),
     analytics: analyticsFor(environment, parts.logger),
     close: async () => {
       await client?.close();

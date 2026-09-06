@@ -12,6 +12,7 @@ import {
 } from "@base/application";
 import { presentTenantWelcomeEmail, renderEmail } from "@base/adapters";
 import { isErr } from "@base/domain";
+export { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { workerActor } from "./actor";
 import type { Container } from "./container";

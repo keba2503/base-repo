@@ -1,5 +1,6 @@
 import type { Actor as ApplicationActor } from "@base/application";
 import { defaultRateLimits, type ActorResolver, type ApiDependencies, type Credential } from "@/api";
+export { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { defaultModuleActivation, isModuleActive, type ModuleActivation } from "../../../../architecture/modules";
 import { env } from "./env";
 import {

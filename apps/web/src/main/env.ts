@@ -9,6 +9,7 @@ export const moduleEnvVariables = {
     ["turnstileSecret", "TURNSTILE_SECRET"],
   ],
   documents: [["supabaseServiceRoleKey", "SUPABASE_SERVICE_ROLE_KEY"]],
+  notifications: [["resendApiKey", "RESEND_API_KEY"]],
   persistence: [
     ["databaseUrl", "DATABASE_URL"],
     ["fieldEncryptionKeys", "FIELD_ENCRYPTION_KEYS"],
@@ -16,12 +17,7 @@ export const moduleEnvVariables = {
   observability: [["sentryDsn", "SENTRY_DSN"]],
 } as const;
 
-export const intentionallyOptionalEnvVariables = [
-  "resendApiKey",
-  "gtmContainerId",
-  "gaMeasurementId",
-  "gaApiSecret",
-] as const;
+export const intentionallyOptionalEnvVariables = ["gtmContainerId", "gaMeasurementId", "gaApiSecret"] as const;
 
 const isNextBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
@@ -120,7 +116,25 @@ const environmentSchema = z
           path: [missing],
           message: `${missingVariable} is required once ${presentVariable} is set: the documents module needs both to store files in Supabase`,
         });
+      } else if (!supabaseUrlSet && value.nodeEnv === "production") {
+        const unconfiguredMessage =
+          "is required in production while the documents module is active: without it, uploaded files are stored in memory and lost on every restart. Deactivate documents in architecture/modules.json instead if you do not need file storage";
+        context.addIssue({ code: "custom", path: ["supabaseUrl"], message: `SUPABASE_URL ${unconfiguredMessage}` });
+        context.addIssue({
+          code: "custom",
+          path: ["supabaseServiceRoleKey"],
+          message: `SUPABASE_SERVICE_ROLE_KEY ${unconfiguredMessage}`,
+        });
       }
+    }
+
+    if (isModuleActive("notifications") && value.nodeEnv === "production" && value.resendApiKey === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["resendApiKey"],
+        message:
+          "RESEND_API_KEY is required in production while the notifications module is active: without it, mail is only logged to the console and never delivered. Deactivate notifications in architecture/modules.json instead if you do not need to send mail",
+      });
     }
 
     if (

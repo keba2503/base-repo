@@ -1,6 +1,11 @@
 {
   "scope": "@base",
   "layers": {
+    "architecture": {
+      "path": "architecture",
+      "ring": 0,
+      "mayImport": []
+    },
     "domain": {
       "path": "packages/domain",
       "ring": 1,
@@ -78,6 +83,9 @@
         ],
         "domain": [
           "src/main"
+        ],
+        "architecture": [
+          "src/main"
         ]
       },
       "main": "src/main"
@@ -94,6 +102,9 @@
           "src/main"
         ],
         "domain": [
+          "src/main"
+        ],
+        "architecture": [
           "src/main"
         ]
       },

@@ -34,6 +34,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0023 | Module activation is a static file next to the layer graph, never a runtime flag checked with if | accepted |
 | 0024 | Field encryption keys become mandatory the moment real persistence is configured, independent of any module | accepted |
 | 0025 | A variable that belongs to no module is still required in production if its absence is unsafe, and a gate now proves nothing else falls through | accepted |
+| 0026 | An active optional module requires its real provider in production, with no middle state, and architecture/ is now a layer nothing but src/main may read | accepted |
 
 ## Template
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { defaultModuleActivation, type ModuleActivation } from "../../../../architecture/modules";
 import { defaultRoutes } from "@/api";
-import { buildApiDependencies } from "@/main/api";
+import { buildApiDependencies, defaultModuleActivation, type ModuleActivation } from "@/main/api";
 import { readConsentStatus, recordConsentDecision } from "@/main/privacy";
 
 function activationWith(overrides: Partial<ModuleActivation>): ModuleActivation {
