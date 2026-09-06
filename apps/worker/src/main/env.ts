@@ -30,8 +30,16 @@ const environmentSchema = z
     jobsBatchSize: z.coerce.number().int().positive().max(500).default(50),
     jobsPollMs: z.coerce.number().int().positive().default(1_000),
     jobsMaxBackoffMs: z.coerce.number().int().positive().default(30_000),
+    allowEphemeralFieldEncryptionKey: z.stringbool().default(false),
   })
   .superRefine((value, context) => {
+    if (value.nodeEnv === "production" && value.allowEphemeralFieldEncryptionKey) {
+      context.addIssue({
+        code: "custom",
+        path: ["allowEphemeralFieldEncryptionKey"],
+        message: "ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY must never be set in production",
+      });
+    }
     if (value.nodeEnv !== "production") return;
     for (const [name, variable] of requiredInProduction) {
       if (value[name] === undefined) {
@@ -63,4 +71,5 @@ export const env: Environment = environmentSchema.parse({
   jobsBatchSize: process.env.JOBS_BATCH_SIZE,
   jobsPollMs: process.env.JOBS_POLL_MS,
   jobsMaxBackoffMs: process.env.JOBS_MAX_BACKOFF_MS,
+  allowEphemeralFieldEncryptionKey: process.env.ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY,
 });

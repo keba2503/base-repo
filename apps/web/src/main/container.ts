@@ -192,10 +192,20 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
   };
 }
 
-function fieldCipherFor(environment: Environment): FieldCipher {
+function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
   if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
   if (environment.fieldEncryptionKeys === undefined) {
-    return new AesGcmFieldCipher({ keys: [{ id: "dev", key: crypto.getRandomValues(Buffer.alloc(32)) }] });
+    if (!environment.allowEphemeralFieldEncryptionKey) {
+      throw new Error(
+        "FIELD_ENCRYPTION_KEYS is required to encrypt sensitive fields; set ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY=true only for disposable local development, never in a shared or production environment",
+      );
+    }
+    logger.warn(
+      "using an ephemeral field encryption key generated at boot: everything encrypted with it becomes permanently unreadable once this process restarts",
+    );
+    return new AesGcmFieldCipher({
+      keys: [{ id: "ephemeral-unsafe-dev-key", key: crypto.getRandomValues(Buffer.alloc(32)) }],
+    });
   }
   const keys = environment.fieldEncryptionKeys.split(",").map((entry) => {
     const [id, base64Key] = entry.split(":");
@@ -305,7 +315,7 @@ export function createContainer(environment: Environment): Container {
 
   const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();
 
-  const fieldCipher = fieldCipherFor(environment);
+  const fieldCipher = fieldCipherFor(environment, parts.logger);
   const documents =
     client !== undefined ? postgresDocumentsPersistence(client, fieldCipher) : memoryDocumentsPersistence();
 

@@ -93,10 +93,20 @@ function postgresPersistence(
   };
 }
 
-function fieldCipherFor(environment: Environment): FieldCipher {
+function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
   if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
   if (environment.fieldEncryptionKeys === undefined) {
-    return new AesGcmFieldCipher({ keys: [{ id: "dev", key: crypto.getRandomValues(Buffer.alloc(32)) }] });
+    if (!environment.allowEphemeralFieldEncryptionKey) {
+      throw new Error(
+        "FIELD_ENCRYPTION_KEYS is required to encrypt sensitive fields; set ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY=true only for disposable local development, never in a shared or production environment",
+      );
+    }
+    logger.warn(
+      "using an ephemeral field encryption key generated at boot: everything encrypted with it becomes permanently unreadable once this process restarts",
+    );
+    return new AesGcmFieldCipher({
+      keys: [{ id: "ephemeral-unsafe-dev-key", key: crypto.getRandomValues(Buffer.alloc(32)) }],
+    });
   }
   const keys = environment.fieldEncryptionKeys.split(",").map((entry) => {
     const [id, base64Key] = entry.split(":");
@@ -140,7 +150,9 @@ export function createContainer(environment: Environment): Container {
     environment.nodeEnv !== "test" && environment.databaseUrl !== undefined
       ? createPostgresClient({ connectionString: environment.databaseUrl })
       : undefined;
-  const fieldCipher = fieldCipherFor(environment);
+  const logger: Logger =
+    environment.nodeEnv === "test" ? new SilentLogger() : new ConsoleLogger({ policy: logRedactionPolicy });
+  const fieldCipher = fieldCipherFor(environment, logger);
   const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
 
   return {
@@ -151,10 +163,7 @@ export function createContainer(environment: Environment): Container {
     fileStore: fileStoreFor(environment),
     documentProcessor: new NullDocumentProcessor(),
     mailer: mailerFor(environment),
-    logger:
-      environment.nodeEnv === "test"
-        ? new SilentLogger()
-        : new ConsoleLogger({ policy: logRedactionPolicy }),
+    logger,
     close: () => client?.close() ?? Promise.resolve(),
   };
 }

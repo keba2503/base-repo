@@ -35,6 +35,7 @@ const environmentSchema = z
     resendApiKey: z.string().min(1).optional(),
     resendTimeoutMs: z.coerce.number().int().positive().default(10_000),
     allowInsecureDevActor: z.stringbool().default(false),
+    allowEphemeralFieldEncryptionKey: z.stringbool().default(false),
   })
   .superRefine((value, context) => {
     if (isNextBuildPhase) return;
@@ -43,6 +44,13 @@ const environmentSchema = z
         code: "custom",
         path: ["allowInsecureDevActor"],
         message: "ALLOW_INSECURE_DEV_ACTOR must never be set in production",
+      });
+    }
+    if (value.nodeEnv === "production" && value.allowEphemeralFieldEncryptionKey) {
+      context.addIssue({
+        code: "custom",
+        path: ["allowEphemeralFieldEncryptionKey"],
+        message: "ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY must never be set in production",
       });
     }
     if (value.nodeEnv !== "production") return;
@@ -76,6 +84,7 @@ export const env: Environment = environmentSchema.parse({
   resendApiKey: process.env.RESEND_API_KEY,
   resendTimeoutMs: process.env.RESEND_TIMEOUT_MS,
   allowInsecureDevActor: process.env.ALLOW_INSECURE_DEV_ACTOR,
+  allowEphemeralFieldEncryptionKey: process.env.ALLOW_EPHEMERAL_FIELD_ENCRYPTION_KEY,
 });
 
 export const isDevelopment = env.nodeEnv === "development";
