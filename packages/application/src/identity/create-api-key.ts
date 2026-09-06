@@ -8,6 +8,7 @@ import {
   isErr,
   isPermissionAction,
   ok,
+  resourceOfAction,
   type DomainError,
   type PermissionAction,
   type Result,
@@ -59,7 +60,7 @@ async function authorizeScopes(
   scopes: readonly PermissionAction[],
 ): Promise<Result<void, DomainError>> {
   for (const scope of scopes) {
-    const allowed = await permissions.can({ actor, action: scope, resource: apiKeyResource });
+    const allowed = await permissions.can({ actor, action: scope, resource: resourceOfAction(scope) });
     if (!allowed) {
       return err(
         forbidden("apiKey.scopes.escalation", `The actor may not grant the scope ${scope} it does not hold`),

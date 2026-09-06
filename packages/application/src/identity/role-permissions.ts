@@ -1,4 +1,4 @@
-import { roleAllows, type TenantId } from "@base/domain";
+import { isPermissionAction, resourceOfAction, roleAllows, type TenantId } from "@base/domain";
 import type { PermissionRequest, Permissions } from "../kernel/ports/permissions";
 import type { MembershipRepository } from "./ports/membership-repository";
 
@@ -14,7 +14,8 @@ export class RolePermissions implements Permissions {
   }
 
   async can(request: PermissionRequest): Promise<boolean> {
-    const { actor, action } = request;
+    const { actor, action, resource } = request;
+    if (isPermissionAction(action) && resourceOfAction(action) !== resource) return false;
     if (actor.kind !== "user") return actor.scopes.includes(action);
 
     const memberships = await this.#membershipsScopedTo(actor.tenantId).findByUserId(actor.subjectId);

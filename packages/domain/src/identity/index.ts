@@ -23,9 +23,12 @@ export {
   isRole,
   permissionActions,
   permissionMatrix,
+  permissionResources,
+  resourceOfAction,
   roleAllows,
   roles,
   type PermissionAction,
+  type PermissionResource,
   type Role,
 } from "./role";
 export {

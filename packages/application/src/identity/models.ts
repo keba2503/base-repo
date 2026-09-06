@@ -1,3 +1,4 @@
+import { resourceOfAction } from "@base/domain";
 import type { Actor } from "../kernel/actor";
 
 export type ResolveActorFromSessionRequest = {
@@ -52,7 +53,7 @@ export type UserResponse = {
   readonly createdAt: Date;
 };
 
-export const apiKeyResource = "apiKey";
 export const manageApiKeysAction = "apikeys:manage";
-export const memberResource = "member";
 export const manageMembersAction = "members:manage";
+export const apiKeyResource = resourceOfAction(manageApiKeysAction);
+export const memberResource = resourceOfAction(manageMembersAction);

@@ -5,6 +5,7 @@ import {
   isRole,
   permissionActions,
   permissionMatrix,
+  resourceOfAction,
   roleAllows,
   roles,
 } from "../src/identity/role";
@@ -55,5 +56,19 @@ describe("role and action guards", () => {
 
   it("rejects an unknown action", () => {
     expect(isPermissionAction("apikeys:destroy")).toBe(false);
+  });
+});
+
+describe("resource of an action", () => {
+  it("maps every tenant action to the tenant resource", () => {
+    expect([resourceOfAction("tenants:create"), resourceOfAction("tenants:read")]).toEqual(["tenant", "tenant"]);
+  });
+
+  it("maps the api key action to the api key resource", () => {
+    expect(resourceOfAction("apikeys:manage")).toBe("apiKey");
+  });
+
+  it("maps the member action to the member resource", () => {
+    expect(resourceOfAction("members:manage")).toBe("member");
   });
 });

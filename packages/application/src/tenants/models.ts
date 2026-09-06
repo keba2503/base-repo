@@ -1,3 +1,4 @@
+import { resourceOfAction } from "@base/domain";
 import type { Actor } from "../kernel/actor";
 
 export type CreateTenantRequest = {
@@ -18,6 +19,6 @@ export type TenantResponse = {
   readonly createdAt: Date;
 };
 
-export const tenantResource = "tenant";
 export const createTenantAction = "tenants:create";
 export const readTenantAction = "tenants:read";
+export const tenantResource = resourceOfAction(createTenantAction);

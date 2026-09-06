@@ -93,6 +93,12 @@ describe("creating an api key", () => {
     await harness.useCase(request);
     expect(harness.permissions.requests.map((seen) => seen.action)).toEqual(["apikeys:manage", "tenants:read"]);
   });
+
+  it("asks each scope against its own resource, not the api key being created", async () => {
+    const granting = harnessFactory(["apikeys:manage", "tenants:read", "members:manage"]);
+    await granting.useCase({ ...request, scopes: ["tenants:read", "members:manage"] });
+    expect(granting.permissions.requests.map((seen) => seen.resource)).toEqual(["apiKey", "tenant", "member"]);
+  });
 });
 
 describe("rejecting an api key", () => {
