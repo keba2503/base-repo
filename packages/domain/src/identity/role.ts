@@ -3,6 +3,8 @@ export const permissionActions = [
   "tenants:read",
   "apikeys:manage",
   "members:manage",
+  "documents:upload",
+  "documents:read",
 ] as const;
 
 export type PermissionAction = (typeof permissionActions)[number];
@@ -12,9 +14,9 @@ export const roles = ["owner", "admin", "member"] as const;
 export type Role = (typeof roles)[number];
 
 export const permissionMatrix: Readonly<Record<Role, readonly PermissionAction[]>> = Object.freeze({
-  owner: ["tenants:create", "tenants:read", "apikeys:manage", "members:manage"],
-  admin: ["tenants:read", "apikeys:manage", "members:manage"],
-  member: ["tenants:read"],
+  owner: ["tenants:create", "tenants:read", "apikeys:manage", "members:manage", "documents:upload", "documents:read"],
+  admin: ["tenants:read", "apikeys:manage", "members:manage", "documents:upload", "documents:read"],
+  member: ["tenants:read", "documents:upload", "documents:read"],
 });
 
 export function isRole(value: string): value is Role {
@@ -29,7 +31,7 @@ export function roleAllows(request: { readonly role: Role; readonly action: stri
   return permissionMatrix[request.role].some((allowed) => allowed === request.action);
 }
 
-export const permissionResources = ["tenant", "apiKey", "member"] as const;
+export const permissionResources = ["tenant", "apiKey", "member", "document"] as const;
 
 export type PermissionResource = (typeof permissionResources)[number];
 
@@ -42,6 +44,9 @@ export function resourceOfAction(action: PermissionAction): PermissionResource {
       return "apiKey";
     case "members:manage":
       return "member";
+    case "documents:upload":
+    case "documents:read":
+      return "document";
   }
 }
 

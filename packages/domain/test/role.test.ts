@@ -37,7 +37,7 @@ describe("permission matrix", () => {
   });
 
   it("lists the actions of a role", () => {
-    expect(actionsOf("member")).toEqual(["tenants:read"]);
+    expect(actionsOf("member")).toEqual(["tenants:read", "documents:upload", "documents:read"]);
   });
 });
 
