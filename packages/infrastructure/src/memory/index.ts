@@ -20,6 +20,7 @@ export { AllowAllPermissions, DenyAllPermissions, ScopedPermissions } from "./pe
 export { SlidingWindowRateLimiter, type SlidingWindowRateLimiterOptions } from "./rate-limiter";
 export { InMemoryUnitOfWork } from "./unit-of-work";
 export { InMemoryTenantRepository, InMemoryTenantStore } from "./tenants/index";
+export { InMemoryDocumentProcessor, InMemoryDocumentRepository, InMemoryDocumentStore, InMemoryFileStore } from "./documents/index";
 export {
   InMemoryApiKeyHasher,
   InMemoryApiKeyRepository,

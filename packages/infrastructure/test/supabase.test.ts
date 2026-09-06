@@ -1,7 +1,7 @@
 import { isOk, parseEmail, parseEntityId } from "@base/domain";
-import { SupabaseIdentityProvider } from "@base/infrastructure";
+import { SupabaseFileStore, SupabaseIdentityProvider } from "@base/infrastructure";
 import { createClient } from "@supabase/supabase-js";
-import { describeIdentityProviderContract, type IssuedSession } from "./contracts/index";
+import { describeFileStoreContract, describeIdentityProviderContract, type IssuedSession } from "./contracts/index";
 
 const requiredVariables = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_TEST_EMAIL", "SUPABASE_TEST_PASSWORD"] as const;
 
@@ -34,4 +34,24 @@ if (missing.length > 0) {
     provider: new SupabaseIdentityProvider({ client }),
     issueSession,
   }));
+}
+
+const storageRequiredVariables = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET"] as const;
+
+const missingStorageVariables = storageRequiredVariables.filter((name) => (process.env[name] ?? "").length === 0);
+
+if (missingStorageVariables.length > 0) {
+  console.warn(
+    `Skipping the SupabaseFileStore contract suite: set ${missingStorageVariables.join(", ")} to run it against a real project`,
+  );
+} else {
+  const url = process.env.SUPABASE_URL ?? "";
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "";
+
+  const client = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+
+  describeFileStoreContract("SupabaseFileStore", () => ({ store: new SupabaseFileStore({ client, bucket }) }));
 }

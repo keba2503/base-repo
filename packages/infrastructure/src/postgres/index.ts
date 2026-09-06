@@ -6,10 +6,12 @@ export {
   type PostgresSchema,
 } from "./client";
 export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRepository } from "./identity/index";
+export { PostgresDocumentRepository } from "./documents/index";
 export { PostgresJobQueue } from "./jobs/index";
 export { PostgresOutbox, outboxRowToEvent } from "./outbox";
 export {
   apiKeys,
+  documents,
   jobs,
   memberships,
   outbox,
@@ -17,6 +19,7 @@ export {
   tenants,
   users,
   type ApiKeyRow,
+  type DocumentRow,
   type JobRow,
   type MembershipRow,
   type OutboxRow,

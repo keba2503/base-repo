@@ -1,4 +1,5 @@
 export { apiKeys, type ApiKeyRow } from "./api-keys";
+export { documents, type DocumentRow } from "./documents";
 export { jobs, type JobRow } from "./jobs";
 export { memberships, type MembershipRow } from "./memberships";
 export { outbox, type OutboxRow } from "./outbox";

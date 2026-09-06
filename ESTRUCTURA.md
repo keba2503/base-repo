@@ -96,6 +96,8 @@ packages/adapters/test                       Tests de traductores como funciones
 packages/adapters/test/factories             Constructores de datos para los tests de adaptadores
 packages/application                         Anillo 2: casos de uso y puertos
 packages/application/src                     Casos de uso agrupados por componente de negocio
+packages/application/src/documents           Subir, listar y procesar documentos: el ejecutor de trabajos que hace avanzar la máquina de estados
+packages/application/src/documents/ports     Puertos de documentos: repositorio, almacenamiento de ficheros y procesado
 packages/application/src/identity            Resolver actor, registrar usuario, crear y revocar claves de API
 packages/application/src/identity/ports      Puertos de identidad: proveedor, hasher, generador de secretos, repositorios
 packages/application/src/jobs                Registro de ejecutores de trabajos diferidos y despacho de la cola
@@ -117,6 +119,7 @@ packages/contracts/src/v1/tenants            Contratos de tenants
 packages/contracts/test                      Tests de validación y de forma del documento OpenAPI
 packages/domain                              Anillo 1: las reglas de negocio
 packages/domain/src                          Agregados, objetos de valor y piezas compartidas
+packages/domain/src/documents                 El agregado Document: máquina de estados pendiente, procesando, procesado o fallido
 packages/domain/src/identity                 Usuario, membresía, clave de API y matriz de roles
 packages/domain/src/kernel                   Result, identificadores, eventos, errores y clasificación de datos personales
 packages/domain/src/tenants                  El agregado Tenant
@@ -127,16 +130,19 @@ packages/infrastructure/migrations           SQL versionado: tablas, rol app_use
 packages/infrastructure/migrations/meta      Estado que genera Drizzle para calcular la siguiente migración
 packages/infrastructure/src                  Una carpeta por proveedor, más la implementación en memoria
 packages/infrastructure/src/crypto           Hash de claves de API con pimienta y comparación en tiempo constante
+packages/infrastructure/src/documents        El punto de enchufe del procesado real: NullDocumentProcessor, a sustituir por OCR o modelo
 packages/infrastructure/src/memory           Implementación en memoria de cada puerto, completa, no un esbozo
+packages/infrastructure/src/memory/documents Repositorio de documentos, almacenamiento de ficheros y procesador en memoria
 packages/infrastructure/src/memory/identity  Repositorios de identidad en memoria
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
+packages/infrastructure/src/postgres/documents Repositorio de documentos sobre Postgres
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
 packages/infrastructure/src/postgres/jobs    Cola de trabajos diferidos sobre Postgres, con reintento y espera creciente
 packages/infrastructure/src/postgres/schema  Definición de tablas en Drizzle
 packages/infrastructure/src/postgres/tenants Repositorio de tenants sobre Postgres
 packages/infrastructure/src/resend           Envío de correo
-packages/infrastructure/src/supabase         Proveedor de identidad
+packages/infrastructure/src/supabase         Proveedor de identidad y almacenamiento de ficheros sobre Supabase Storage
 packages/infrastructure/src/turnstile        Verificación de humano
 packages/infrastructure/test                 Tests de infraestructura
 packages/infrastructure/test/contracts       Una suite por puerto, la misma para memoria y para el proveedor real

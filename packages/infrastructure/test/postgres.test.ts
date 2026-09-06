@@ -3,11 +3,13 @@ import { asc, sql } from "drizzle-orm";
 import {
   apiKeys,
   createPostgresClient,
+  documents,
   jobs,
   memberships,
   outbox,
   outboxRowToEvent,
   PostgresApiKeyRepository,
+  PostgresDocumentRepository,
   PostgresJobQueue,
   PostgresMembershipRepository,
   PostgresOutbox,
@@ -22,6 +24,7 @@ import {
 import { migrateDatabase } from "../src/postgres/migrate";
 import {
   describeApiKeyRepositoryContract,
+  describeDocumentRepositoryContract,
   describeJobQueueContract,
   describeMembershipRepositoryContract,
   describeOutboxContract,
@@ -30,6 +33,8 @@ import {
   describeUserRepositoryContract,
 } from "./contracts/index";
 import { tenantIdFactory } from "./factories/tenant";
+import { documentFactory } from "./factories/document";
+import { entityIdFactory } from "./factories/identity";
 
 const databaseUrlVariable = "DATABASE_URL";
 const databaseAdminUrlVariable = "DATABASE_ADMIN_URL";
@@ -66,7 +71,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     beforeEach(async () => {
       await adminClient.db.execute(
-        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}`,
+        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}`,
       );
     });
 
@@ -109,6 +114,12 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
       registry: new PostgresApiKeyRepository(client.db, { kind: "registry" }),
       scopedTo: (tenantId) => new PostgresApiKeyRepository(client.db, { kind: "tenant", tenantId }),
     }));
+
+    describeDocumentRepositoryContract("PostgresDocumentRepository", () => ({
+      registry: new PostgresDocumentRepository(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
+    }));
+
     describe("tenant scoping opens with the transaction, never inherits it", () => {
       it("rejects an event enqueued for another tenant than the transaction scope", async () => {
         const unitOfWork = new PostgresUnitOfWork(client.db);
@@ -171,6 +182,36 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
         const claimed = await registry.claimDue(10, new Date());
         expect(claimed.map((job) => job.tenantId).sort()).toEqual([ownTenant, otherTenant].sort());
+      });
+    });
+
+    describe("PostgresDocumentRepository row level security isolates tenants independently of the application filter", () => {
+      it("hides another tenant's document from a raw, unfiltered select once the connection is scoped", async () => {
+        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.save(documentFactory({ id: entityIdFactory(1), tenantId: ownTenant, storageKey: entityIdFactory(1) }));
+        await registry.save(documentFactory({ id: entityIdFactory(2), tenantId: otherTenant, storageKey: entityIdFactory(2) }));
+
+        const visibleToOwnTenant = await runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.select().from(documents),
+        );
+
+        expect(visibleToOwnTenant).toHaveLength(1);
+        expect(visibleToOwnTenant[0]?.tenantId).toBe(ownTenant);
+      });
+
+      it("lets the registry scope see documents from every tenant", async () => {
+        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.save(documentFactory({ id: entityIdFactory(1), tenantId: ownTenant, storageKey: entityIdFactory(1) }));
+        await registry.save(documentFactory({ id: entityIdFactory(2), tenantId: otherTenant, storageKey: entityIdFactory(2) }));
+
+        const listed = await registry.list({ limit: 10 });
+        expect(listed.map((document) => document.tenantId).sort()).toEqual([ownTenant, otherTenant].sort());
       });
     });
   });

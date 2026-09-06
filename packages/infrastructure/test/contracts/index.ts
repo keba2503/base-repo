@@ -1,6 +1,9 @@
 export { describeApiKeyHasherContract } from "./api-key-hasher.contract";
 export { describeApiKeyRepositoryContract, type ApiKeyRepositoryHarness } from "./api-key-repository.contract";
 export { describeClockContract } from "./clock.contract";
+export { describeDocumentRepositoryContract, type DocumentRepositoryHarness } from "./document-repository.contract";
+export { describeDocumentProcessorContract, type DocumentProcessorHarness } from "./document-processor.contract";
+export { describeFileStoreContract, type FileStoreHarness } from "./file-store.contract";
 export { describeHumanVerifierContract, type HumanVerifierHarness } from "./human-verifier.contract";
 export { describeIdGeneratorContract } from "./id-generator.contract";
 export { describeIdempotencyStoreContract, type IdempotencyStoreHarness } from "./idempotency-store.contract";

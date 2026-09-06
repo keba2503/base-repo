@@ -2,6 +2,7 @@ import "server-only";
 
 export * from "./memory/index";
 export * from "./crypto/index";
+export * from "./documents/index";
 export * from "./postgres/index";
 export * from "./resend/index";
 export * from "./supabase/index";

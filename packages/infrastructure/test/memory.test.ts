@@ -5,6 +5,10 @@ import {
   ConsoleMailer,
   DenyAllPermissions,
   FixedClock,
+  InMemoryDocumentProcessor,
+  InMemoryDocumentRepository,
+  InMemoryDocumentStore,
+  InMemoryFileStore,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
   InMemoryJobQueue,
@@ -14,6 +18,7 @@ import {
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  NullDocumentProcessor,
   RandomIdGenerator,
   redact,
   redactedMarker,
@@ -28,6 +33,9 @@ import {
 import type { LogFields, MailMessage } from "@base/application";
 import {
   describeClockContract,
+  describeDocumentProcessorContract,
+  describeDocumentRepositoryContract,
+  describeFileStoreContract,
   describeHumanVerifierContract,
   describeIdempotencyStoreContract,
   describeIdGeneratorContract,
@@ -82,6 +90,19 @@ describeTenantRepositoryContract("InMemoryTenantRepository", () => {
     scopedTo: (tenantId) => new InMemoryTenantRepository(store, { kind: "tenant", tenantId }),
   };
 });
+
+describeDocumentRepositoryContract("InMemoryDocumentRepository", () => {
+  const store = new InMemoryDocumentStore();
+  return {
+    registry: new InMemoryDocumentRepository(store, { kind: "registry" }),
+    scopedTo: (tenantId) => new InMemoryDocumentRepository(store, { kind: "tenant", tenantId }),
+  };
+});
+
+describeFileStoreContract("InMemoryFileStore", () => ({ store: new InMemoryFileStore() }));
+
+describeDocumentProcessorContract("InMemoryDocumentProcessor", () => ({ processor: new InMemoryDocumentProcessor() }));
+describeDocumentProcessorContract("NullDocumentProcessor", () => ({ processor: new NullDocumentProcessor() }));
 
 describeHumanVerifierContract("InMemoryHumanVerifier", () => ({
   verifier: new InMemoryHumanVerifier(["known-token"]),
