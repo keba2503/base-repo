@@ -111,7 +111,15 @@ describe("checkSource", () => {
     expect(issues.some((issue) => issue.rule === "reuse-ui-primitives")).toBe(false);
   });
 
-  test("does not flag raw elements outside apps/web/src/app", () => {
+  test("flags a raw element in a shared layout", () => {
+    const issues = checkSource(
+      "apps/web/src/layouts/list-page.tsx",
+      'export function ListPage() { return <button type="button">x</button>; }\n',
+    );
+    expect(issues.some((issue) => issue.rule === "reuse-ui-primitives")).toBe(true);
+  });
+
+  test("does not flag raw elements outside apps/web/src", () => {
     const issues = checkSource(
       "packages/adapters/src/tenants/example.tsx",
       'export function Example() { return <button type="button">x</button>; }\n',

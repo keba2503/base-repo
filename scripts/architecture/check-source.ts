@@ -169,7 +169,7 @@ function importIssues(file: string, layer: Layer, source: ts.SourceFile): Issue[
   return issues;
 }
 
-const rawElementDirectory = "apps/web/src/app";
+const rawElementDirectory = "apps/web/src";
 const rawElementFreeDirectory = "apps/web/src/ui";
 const forbiddenRawElements = new Set(["button", "input", "select", "textarea"]);
 
