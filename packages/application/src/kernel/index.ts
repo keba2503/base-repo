@@ -23,7 +23,7 @@ export type {
 } from "./ports/idempotency-store";
 export type { LogFields, Logger } from "./ports/logger";
 export type { PermissionRequest, Permissions } from "./ports/permissions";
-export type { Outbox, StoredEvent } from "./ports/outbox";
+export type { Outbox, OutboxWriter, StoredEvent } from "./ports/outbox";
 export type { RateLimitDecision, RateLimiter, RateLimitRequest } from "./ports/rate-limiter";
 export type { TenantScope } from "./tenant-scope";
 export type { Span, SpanAttributes, SpanStatus, Telemetry } from "./ports/telemetry";

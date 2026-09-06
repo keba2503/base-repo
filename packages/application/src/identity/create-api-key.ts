@@ -18,7 +18,7 @@ import type { Actor } from "../kernel/actor";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { IdGenerator } from "../kernel/ports/id-generator";
-import type { Outbox } from "../kernel/ports/outbox";
+import type { OutboxWriter } from "../kernel/ports/outbox";
 import type { Permissions } from "../kernel/ports/permissions";
 import type { UnitOfWork } from "../kernel/ports/unit-of-work";
 import {
@@ -39,7 +39,7 @@ export type CreateApiKeyDependencies = {
   readonly secretGenerator: SecretGenerator;
   readonly hasher: ApiKeyHasher;
   readonly unitOfWork: UnitOfWork;
-  readonly outbox: Outbox;
+  readonly outbox: OutboxWriter;
 };
 
 export type CreateApiKey = (

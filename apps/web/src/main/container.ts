@@ -18,6 +18,7 @@ import type {
   Mailer,
   MembershipRepository,
   Outbox,
+  OutboxWriter,
   Permissions,
   RateLimiter,
   SecretGenerator,
@@ -116,7 +117,7 @@ export type Container = {
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly unitOfWork: UnitOfWork;
-  readonly outbox: Outbox;
+  readonly outbox: OutboxWriter;
   readonly logger: Logger;
   readonly telemetry: Telemetry;
   readonly userRegistry: UserRepository;
@@ -126,7 +127,6 @@ export type Container = {
   apiKeysScopedTo(tenantId: TenantId): ApiKeyRepository;
   readonly documentRegistry: DocumentRepository;
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
-  readonly jobQueue: JobQueue;
   jobsScopedTo(tenantId: TenantId): JobQueue;
   consentsScopedTo(tenantId: TenantId): ConsentRepository;
   auditScopedTo(tenantId: TenantId): AuditTrail;
@@ -142,6 +142,21 @@ export type Container = {
   readonly analytics: Analytics;
   close(): Promise<void>;
 };
+
+export type DispatchPersistence = {
+  readonly outbox: Outbox;
+  readonly jobQueue: JobQueue;
+};
+
+const dispatchPersistenceByContainer = new WeakMap<Container, DispatchPersistence>();
+
+export function dispatchPersistenceOf(container: Container): DispatchPersistence {
+  const found = dispatchPersistenceByContainer.get(container);
+  if (!found) {
+    throw new Error("This container was not built by createContainer, so it carries no dispatch persistence");
+  }
+  return found;
+}
 
 const logRedactionPolicy = redactionPolicyFrom(
   tenantFieldClassifications,
@@ -168,7 +183,11 @@ function liveParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
   };
 }
 
-function memoryPersistence(): Pick<Container, "tenantRegistry" | "tenantsScopedTo" | "unitOfWork" | "outbox"> {
+type CorePersistence = Pick<Container, "tenantRegistry" | "tenantsScopedTo" | "unitOfWork"> & {
+  readonly outbox: Outbox;
+};
+
+function memoryPersistence(): CorePersistence {
   const store = new InMemoryTenantStore();
   return {
     tenantRegistry: new InMemoryTenantRepository(store, { kind: "registry" }),
@@ -178,9 +197,7 @@ function memoryPersistence(): Pick<Container, "tenantRegistry" | "tenantsScopedT
   };
 }
 
-function postgresPersistence(
-  client: PostgresClient,
-): Pick<Container, "tenantRegistry" | "tenantsScopedTo" | "unitOfWork" | "outbox"> {
+function postgresPersistence(client: PostgresClient): CorePersistence {
   return {
     tenantRegistry: new PostgresTenantRepository(client.db, { kind: "registry" }),
     tenantsScopedTo: (tenantId) => new PostgresTenantRepository(client.db, { kind: "tenant", tenantId }),
@@ -191,8 +208,10 @@ function postgresPersistence(
 
 type DocumentsPersistence = Pick<
   Container,
-  "documentRegistry" | "documentsScopedTo" | "jobQueue" | "jobsScopedTo" | "consentsScopedTo" | "auditScopedTo"
->;
+  "documentRegistry" | "documentsScopedTo" | "jobsScopedTo" | "consentsScopedTo" | "auditScopedTo"
+> & {
+  readonly jobQueueRegistry: JobQueue;
+};
 
 function memoryDocumentsPersistence(): DocumentsPersistence {
   const documents = new InMemoryDocumentStore();
@@ -202,7 +221,7 @@ function memoryDocumentsPersistence(): DocumentsPersistence {
   return {
     documentRegistry: new InMemoryDocumentRepository(documents, { kind: "registry" }),
     documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documents, { kind: "tenant", tenantId }),
-    jobQueue: new InMemoryJobQueue(jobs, { kind: "registry" }),
+    jobQueueRegistry: new InMemoryJobQueue(jobs, { kind: "registry" }),
     jobsScopedTo: (tenantId) => new InMemoryJobQueue(jobs, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new InMemoryConsentRepository(consents, tenantId),
     auditScopedTo: (tenantId) => new InMemoryAuditTrail(audit, tenantId),
@@ -213,7 +232,7 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
   return {
     documentRegistry: new PostgresDocumentRepository(client.db, { kind: "registry" }, cipher),
     documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, cipher),
-    jobQueue: new PostgresJobQueue(client.db, { kind: "registry" }),
+    jobQueueRegistry: new PostgresJobQueue(client.db, { kind: "registry" }),
     jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new PostgresConsentRepository(client.db, tenantId),
     auditScopedTo: (tenantId) => new PostgresAuditTrail(client.db, tenantId),
@@ -384,11 +403,15 @@ export function createContainer(environment: Environment): Container {
 
   const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);
 
-  return {
+  const container: Container = {
     ...parts,
     ...persistence,
     ...identity,
-    ...documents,
+    documentRegistry: documents.documentRegistry,
+    documentsScopedTo: documents.documentsScopedTo,
+    jobsScopedTo: documents.jobsScopedTo,
+    consentsScopedTo: documents.consentsScopedTo,
+    auditScopedTo: documents.auditScopedTo,
     telemetry,
     permissions: new RolePermissions({ membershipsScopedTo: identity.membershipsScopedTo }),
     ...identityParts(environment),
@@ -404,4 +427,8 @@ export function createContainer(environment: Environment): Container {
       await otelClient?.shutdown();
     },
   };
+
+  dispatchPersistenceByContainer.set(container, { outbox: persistence.outbox, jobQueue: documents.jobQueueRegistry });
+
+  return container;
 }

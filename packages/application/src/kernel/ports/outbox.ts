@@ -6,8 +6,11 @@ export type StoredEvent = {
   readonly attempts: number;
 };
 
-export type Outbox = {
+export type OutboxWriter = {
   enqueue(events: readonly DomainEvent[]): Promise<void>;
+};
+
+export type Outbox = OutboxWriter & {
   pullUnpublished(limit: number): Promise<readonly StoredEvent[]>;
   markPublished(ids: readonly string[]): Promise<void>;
   markFailed(ids: readonly string[]): Promise<void>;

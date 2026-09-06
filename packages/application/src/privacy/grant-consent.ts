@@ -3,7 +3,7 @@ import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
 import type { IdGenerator } from "../kernel/ports/id-generator";
-import type { Outbox } from "../kernel/ports/outbox";
+import type { OutboxWriter } from "../kernel/ports/outbox";
 import type { Permissions } from "../kernel/ports/permissions";
 import type { UnitOfWork } from "../kernel/ports/unit-of-work";
 import { grantConsentAction, consentResource, type ConsentResponse, type GrantConsentRequest } from "./models";
@@ -16,7 +16,7 @@ export type GrantConsentDependencies = {
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly unitOfWork: UnitOfWork;
-  readonly outbox: Outbox;
+  readonly outbox: OutboxWriter;
 };
 
 export type GrantConsent = (request: GrantConsentRequest) => Promise<Result<ConsentResponse, DomainError>>;

@@ -56,7 +56,7 @@ import {
   type RevokeApiKeyController,
 } from "@base/adapters";
 import { isModuleActive } from "../../../../architecture/modules";
-import { createContainer, type Container } from "./container";
+import { createContainer, dispatchPersistenceOf, type Container } from "./container";
 import { env, type Environment } from "./env";
 
 let shared: Container | undefined;
@@ -267,7 +267,7 @@ export function dispatchOutboxOperation() {
       : [],
   );
   const dispatch = dispatchOutbox({
-    outbox: parts.outbox,
+    outbox: dispatchPersistenceOf(parts).outbox,
     handlers,
     permissions: parts.permissions,
     logger: parts.logger,
@@ -287,7 +287,7 @@ export type DispatchJobsOutcome =
 export function dispatchJobsOperation() {
   const parts = container();
   const dispatch = dispatchJobs({
-    jobs: parts.jobQueue,
+    jobs: dispatchPersistenceOf(parts).jobQueue,
     executors: executorRegistry(
       isModuleActive("documents")
         ? [

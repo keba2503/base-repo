@@ -17,7 +17,7 @@ import {
 import type { Actor } from "../kernel/actor";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
-import type { Outbox } from "../kernel/ports/outbox";
+import type { OutboxWriter } from "../kernel/ports/outbox";
 import type { Permissions } from "../kernel/ports/permissions";
 import type { UnitOfWork } from "../kernel/ports/unit-of-work";
 import { manageMembersAction, memberResource, type RegisterUserRequest, type UserResponse } from "./models";
@@ -30,7 +30,7 @@ export type RegisterUserDependencies = {
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly unitOfWork: UnitOfWork;
-  readonly outbox: Outbox;
+  readonly outbox: OutboxWriter;
 };
 
 export type RegisterUser = (request: RegisterUserRequest) => Promise<Result<UserResponse, DomainError>>;

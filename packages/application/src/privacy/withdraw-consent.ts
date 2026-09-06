@@ -2,7 +2,7 @@ import { err, isErr, notFound, ok, type Consent, type DomainError, type Result, 
 import type { AuditTrail } from "../audit/ports/audit-trail";
 import { authorize } from "../kernel/authorize";
 import type { Clock } from "../kernel/ports/clock";
-import type { Outbox } from "../kernel/ports/outbox";
+import type { OutboxWriter } from "../kernel/ports/outbox";
 import type { Permissions } from "../kernel/ports/permissions";
 import type { UnitOfWork } from "../kernel/ports/unit-of-work";
 import { withdrawConsentAction, consentResource, type ConsentResponse, type WithdrawConsentRequest } from "./models";
@@ -14,7 +14,7 @@ export type WithdrawConsentDependencies = {
   readonly permissions: Permissions;
   readonly clock: Clock;
   readonly unitOfWork: UnitOfWork;
-  readonly outbox: Outbox;
+  readonly outbox: OutboxWriter;
 };
 
 export type WithdrawConsent = (request: WithdrawConsentRequest) => Promise<Result<ConsentResponse, DomainError>>;
