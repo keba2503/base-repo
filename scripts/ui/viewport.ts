@@ -115,6 +115,7 @@ async function main(): Promise<void> {
   const routes = routesFromPageFiles(files);
   const documents = documentsFrom(files);
   if (routes.length === 0) throw new Error("no route was found under apps/web/src/app");
+  if (documents.length === 0) throw new Error("no document was found under docs");
 
   const server = spawn("bun", ["run", "dev", "--", "-p", String(port)], {
     cwd: webRoot,
@@ -135,10 +136,11 @@ async function main(): Promise<void> {
     });
     try {
       const page = await browser.newPage();
+      const documentPage = await browser.newPage({ javaScriptEnabled: false });
       const issues: Issue[] = [];
       for (const route of routes) issues.push(...(await issuesForTarget(page, route, `${baseUrl}${route}`)));
       for (const document of documents) {
-        issues.push(...(await issuesForTarget(page, document, `file://${projectRoot}/${document}`)));
+        issues.push(...(await issuesForTarget(documentPage, document, `file://${projectRoot}/${document}`)));
       }
 
       if (issues.length > 0) {

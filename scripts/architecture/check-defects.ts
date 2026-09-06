@@ -16,6 +16,22 @@ export type DefectFailure = {
 export type DefectFrontmatter = Readonly<Record<string, string>>;
 
 const gateDirectories = ["scripts/", ".github/workflows/"] as const;
+const workflowDirectory = ".github/workflows/";
+
+export function gateIsExecutable(gate: string): boolean {
+  return gate.startsWith(workflowDirectory)
+    ? gate.endsWith(".yml") || gate.endsWith(".yaml")
+    : gate.endsWith(".ts");
+}
+
+export function directlyInvoked(sources: readonly DefectFile[]): string[] {
+  const invoked = new Set<string>();
+  for (const source of sources) {
+    if (source.path.startsWith(workflowDirectory)) invoked.add(source.path);
+    for (const match of source.content.matchAll(/scripts\/[A-Za-z0-9_./-]+\.ts/g)) invoked.add(match[0]);
+  }
+  return [...invoked];
+}
 const idPattern = /^DEF-\d{4}$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -40,6 +56,7 @@ function checkDefectFile(
   path: string,
   content: string,
   trackedFiles: ReadonlySet<string>,
+  invocations: ReadonlySet<string>,
 ): readonly DefectFailure[] {
   const frontmatter = parseFrontmatter(content);
   if (frontmatter === undefined) {
@@ -79,6 +96,13 @@ function checkDefectFile(
       failures.push({ path, reason: `gate ${gate} no vive bajo scripts/ ni bajo .github/workflows/` });
     } else if (!trackedFiles.has(gate)) {
       failures.push({ path, reason: `gate ${gate} no existe entre los scripts o los workflows del repositorio` });
+    } else if (!gateIsExecutable(gate)) {
+      failures.push({ path, reason: `gate ${gate} no es un script ejecutable ni un workflow` });
+    } else if (!invocations.has(gate)) {
+      failures.push({
+        path,
+        reason: `gate ${gate} existe pero nadie lo ejecuta: no aparece en los scripts de package.json ni en ningún workflow`,
+      });
     }
   }
 
@@ -106,13 +130,15 @@ function checkDefectFile(
 export function checkDefectRegistry(
   files: readonly DefectFile[],
   trackedFiles: readonly string[],
+  invokedGates: readonly string[] = [],
 ): readonly DefectFailure[] {
   const trackedSet = new Set(trackedFiles);
+  const invocations = new Set(invokedGates);
   const failures: DefectFailure[] = [];
   const idsSeen = new Map<string, string>();
 
   for (const file of files) {
-    failures.push(...checkDefectFile(file.path, file.content, trackedSet));
+    failures.push(...checkDefectFile(file.path, file.content, trackedSet, invocations));
 
     const id = parseFrontmatter(file.content)?.id;
     if (id === undefined) continue;

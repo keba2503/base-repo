@@ -31,7 +31,7 @@ A view that fetches anything, on the server or after an interaction, decides not
 
 ## Responsive, checked by a gate that measures
 
-`scripts/ui/check-viewport.ts` (pure checks) and `scripts/ui/viewport.ts` (the runnable gate: boots the app, visits every static route, measures at 375, 768, 1440 and 1920px) fail a view that:
+`scripts/ui/check-viewport.ts` (pure checks) and `scripts/ui/viewport.ts` (the runnable gate: boots the app, visits every static route and every tracked document under `docs/`, measures at 375, 768, 1440 and 1920px) fail a view that:
 
 - Overflows horizontally at any of those widths (`document.documentElement.scrollWidth` greater than `clientWidth`).
 - Has a button, link, form field or other pointer target under 44×44px — the minimum a finger can reliably hit.

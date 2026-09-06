@@ -11,6 +11,8 @@ const trackedFiles = [
   ".github/workflows/ci.yml",
 ];
 
+const invokedGates = ["scripts/architecture/check-env-completeness.ts", ".github/workflows/ci.yml"];
+
 describe("parseFrontmatter", () => {
   it("reads key value pairs between the opening and closing markers", () => {
     expect(parseFrontmatter(defect("id: DEF-0001\ndate: 2026-09-06"))).toEqual({
@@ -35,7 +37,7 @@ describe("checkDefectRegistry", () => {
         "gate: scripts/architecture/check-env-completeness.ts",
       ].join("\n"),
     );
-    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0001-x.md", content }], trackedFiles)).toEqual([]);
+    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0001-x.md", content }], trackedFiles, invokedGates)).toEqual([]);
   });
 
   it("passes a defect prevented by a gate that lives in a CI workflow", () => {
@@ -48,7 +50,7 @@ describe("checkDefectRegistry", () => {
         "gate: .github/workflows/ci.yml",
       ].join("\n"),
     );
-    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0016-x.md", content }], trackedFiles)).toEqual([]);
+    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0016-x.md", content }], trackedFiles, invokedGates)).toEqual([]);
   });
 
   it("passes a defect prevented by a test that exists on disk", () => {
@@ -61,7 +63,7 @@ describe("checkDefectRegistry", () => {
         "test: packages/application/test/dispatch-jobs.test.ts",
       ].join("\n"),
     );
-    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0002-x.md", content }], trackedFiles)).toEqual([]);
+    expect(checkDefectRegistry([{ path: "docs/defects/DEF-0002-x.md", content }], trackedFiles, invokedGates)).toEqual([]);
   });
 
   it("passes a defect that admits it cannot be measured, with a reason", () => {

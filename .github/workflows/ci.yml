@@ -51,12 +51,15 @@ jobs:
     env:
       DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
       DATABASE_URL: postgres://app_user:ci_only_app_user_password@localhost:5432/postgres
+      POSTGRES_SUITE_REQUIRED: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run --filter @base/infrastructure db:migrate
-      - run: psql "$DATABASE_ADMIN_URL" -c "ALTER ROLE app_user WITH PASSWORD 'ci_only_app_user_password';"
+      - run: psql "$DATABASE_ADMIN_URL" -c "ALTER ROLE app_user WITH PASSWORD '$APP_USER_PASSWORD'"
+        env:
+          APP_USER_PASSWORD: ci_only_app_user_password
       - run: bun test packages/infrastructure/test/postgres.test.ts --conditions react-server
 
   secrets:

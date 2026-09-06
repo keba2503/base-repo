@@ -10,3 +10,5 @@ Check, in order: authorization in every use case touched; tenant scoping in ever
 Report findings as file, line, risk, concrete fix. Severity: critical, high, medium, low. Nothing else.
 
 Every finding you report becomes a defect: it does not close until `docs/defects/` records it, naming the gate or test that now prevents it, or the reason neither exists yet.
+
+When a defect record names a gate or a test, read it: the gate checks the path exists, never that it covers this defect. Confirming that correspondence is your job, not the gate's.

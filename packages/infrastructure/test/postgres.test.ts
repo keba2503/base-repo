@@ -58,6 +58,14 @@ const missingVariables = [
   ...(databaseAdminUrl ? [] : [databaseAdminUrlVariable]),
 ];
 
+const suiteIsRequired = process.env.POSTGRES_SUITE_REQUIRED === "1";
+
+if ((!databaseUrl || !databaseAdminUrl) && suiteIsRequired) {
+  throw new Error(
+    `POSTGRES_SUITE_REQUIRED is set, so this suite may not be skipped, but ${missingVariables.join(" and ")} is missing`,
+  );
+}
+
 if (!databaseUrl || !databaseAdminUrl) {
   console.warn(
     `Skipping the Postgres contract suites: set ${missingVariables.join(" and ")} to run them (${databaseUrlVariable} is the app_user connection the repositories under test use, ${databaseAdminUrlVariable} is a privileged connection used only to migrate and truncate between tests)`,
