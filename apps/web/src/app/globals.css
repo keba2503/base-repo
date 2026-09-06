@@ -11,31 +11,33 @@
   --spacing: 0.25rem;
 }
 
-:root {
-  color-scheme: light dark;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --color-background: #0a0a0a;
-    --color-foreground: #ededed;
+    color-scheme: light dark;
   }
-}
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background: #0a0a0a;
+      --color-foreground: #ededed;
+    }
+  }
 
-html,
-body {
-  min-height: 100%;
-}
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  color: var(--color-foreground);
-  background: var(--color-background);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    color: var(--color-foreground);
+    background: var(--color-background);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 }
