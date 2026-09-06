@@ -3,15 +3,18 @@ import { asc, sql } from "drizzle-orm";
 import {
   apiKeys,
   createPostgresClient,
+  jobs,
   memberships,
   outbox,
   outboxRowToEvent,
   PostgresApiKeyRepository,
+  PostgresJobQueue,
   PostgresMembershipRepository,
   PostgresOutbox,
   PostgresTenantRepository,
   PostgresUnitOfWork,
   PostgresUserRepository,
+  runScoped,
   tenants,
   users,
   type PostgresClient,
@@ -19,6 +22,7 @@ import {
 import { migrateDatabase } from "../src/postgres/migrate";
 import {
   describeApiKeyRepositoryContract,
+  describeJobQueueContract,
   describeMembershipRepositoryContract,
   describeOutboxContract,
   describeTenantRepositoryContract,
@@ -62,7 +66,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     beforeEach(async () => {
       await adminClient.db.execute(
-        sql`truncate table ${outbox}, ${tenants}, ${users}, ${memberships}, ${apiKeys}`,
+        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}`,
       );
     });
 
@@ -79,6 +83,11 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
         const rows = await client.db.select().from(outbox).orderBy(asc(outbox.id));
         return rows.map(outboxRowToEvent);
       },
+    }));
+
+    describeJobQueueContract("PostgresJobQueue", () => ({
+      registry: new PostgresJobQueue(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
     }));
 
     describeTenantRepositoryContract("PostgresTenantRepository", () => ({
@@ -132,6 +141,36 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
         const rows = await client.db.select().from(outbox);
         expect(rows).toHaveLength(1);
         expect(rows[0]?.tenantId).toBe(ownTenant);
+      });
+    });
+
+    describe("PostgresJobQueue row level security isolates tenants independently of the application filter", () => {
+      it("hides another tenant's job from a raw, unfiltered select once the connection is scoped", async () => {
+        const registry = new PostgresJobQueue(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.enqueue({ tenantId: ownTenant, name: "reports.generate", payload: {} });
+        await registry.enqueue({ tenantId: otherTenant, name: "reports.generate", payload: {} });
+
+        const visibleToOwnTenant = await runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.select().from(jobs),
+        );
+
+        expect(visibleToOwnTenant).toHaveLength(1);
+        expect(visibleToOwnTenant[0]?.tenantId).toBe(ownTenant);
+      });
+
+      it("lets the registry scope see jobs from every tenant", async () => {
+        const registry = new PostgresJobQueue(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.enqueue({ tenantId: ownTenant, name: "reports.generate", payload: {} });
+        await registry.enqueue({ tenantId: otherTenant, name: "reports.generate", payload: {} });
+
+        const claimed = await registry.claimDue(10, new Date());
+        expect(claimed.map((job) => job.tenantId).sort()).toEqual([ownTenant, otherTenant].sort());
       });
     });
   });
