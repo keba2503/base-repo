@@ -7,10 +7,12 @@ export {
 } from "./client";
 export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRepository } from "./identity/index";
 export { PostgresDocumentRepository } from "./documents/index";
+export { PostgresConsentRepository } from "./privacy/index";
 export { PostgresJobQueue } from "./jobs/index";
 export { PostgresOutbox, outboxRowToEvent } from "./outbox";
 export {
   apiKeys,
+  consents,
   documents,
   jobs,
   memberships,
@@ -19,6 +21,7 @@ export {
   tenants,
   users,
   type ApiKeyRow,
+  type ConsentRow,
   type DocumentRow,
   type JobRow,
   type MembershipRow,

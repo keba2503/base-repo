@@ -3,6 +3,8 @@ export { describeApiKeyRepositoryContract, type ApiKeyRepositoryHarness } from "
 export { describeClockContract } from "./clock.contract";
 export { describeDocumentRepositoryContract, type DocumentRepositoryHarness } from "./document-repository.contract";
 export { describeDocumentProcessorContract, type DocumentProcessorHarness } from "./document-processor.contract";
+export { describeConsentRepositoryContract, type ConsentRepositoryHarness } from "./consent-repository.contract";
+export { describeFieldCipherContract } from "./field-cipher.contract";
 export { describeFileStoreContract, type FileStoreHarness } from "./file-store.contract";
 export { describeHumanVerifierContract, type HumanVerifierHarness } from "./human-verifier.contract";
 export { describeIdGeneratorContract } from "./id-generator.contract";

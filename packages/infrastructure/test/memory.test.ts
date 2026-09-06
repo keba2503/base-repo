@@ -7,7 +7,10 @@ import {
   FixedClock,
   InMemoryDocumentProcessor,
   InMemoryDocumentRepository,
+  InMemoryConsentRepository,
+  InMemoryConsentStore,
   InMemoryDocumentStore,
+  InMemoryFieldCipher,
   InMemoryFileStore,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
@@ -31,10 +34,13 @@ import {
   type LogSink,
 } from "@base/infrastructure";
 import type { LogFields, MailMessage } from "@base/application";
+import { tenantIdFactory } from "./factories/tenant";
 import {
   describeClockContract,
+  describeConsentRepositoryContract,
   describeDocumentProcessorContract,
   describeDocumentRepositoryContract,
+  describeFieldCipherContract,
   describeFileStoreContract,
   describeHumanVerifierContract,
   describeIdempotencyStoreContract,
@@ -58,6 +64,12 @@ describeIdGeneratorContract("RandomIdGenerator", () => new RandomIdGenerator());
 describePermissionsContract("AllowAllPermissions", () => new AllowAllPermissions());
 describePermissionsContract("DenyAllPermissions", () => new DenyAllPermissions());
 describePermissionsContract("ScopedPermissions", () => new ScopedPermissions());
+
+describeFieldCipherContract("InMemoryFieldCipher", () => new InMemoryFieldCipher());
+
+describeConsentRepositoryContract("InMemoryConsentRepository", () => ({
+  consents: new InMemoryConsentRepository(new InMemoryConsentStore(), tenantIdFactory(1)),
+}));
 
 describeUnitOfWorkContract("InMemoryUnitOfWork", () => new InMemoryUnitOfWork());
 

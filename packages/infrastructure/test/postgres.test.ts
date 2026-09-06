@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { asc, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import {
+  aesGcmKeyByteLength,
+  AesGcmFieldCipher,
   apiKeys,
+  consents,
   createPostgresClient,
   documents,
   jobs,
@@ -9,6 +12,7 @@ import {
   outbox,
   outboxRowToEvent,
   PostgresApiKeyRepository,
+  PostgresConsentRepository,
   PostgresDocumentRepository,
   PostgresJobQueue,
   PostgresMembershipRepository,
@@ -24,6 +28,7 @@ import {
 import { migrateDatabase } from "../src/postgres/migrate";
 import {
   describeApiKeyRepositoryContract,
+  describeConsentRepositoryContract,
   describeDocumentRepositoryContract,
   describeJobQueueContract,
   describeMembershipRepositoryContract,
@@ -35,6 +40,8 @@ import {
 import { tenantIdFactory } from "./factories/tenant";
 import { documentFactory } from "./factories/document";
 import { entityIdFactory } from "./factories/identity";
+
+const testFieldCipher = new AesGcmFieldCipher({ keys: [{ id: "test", key: Buffer.alloc(aesGcmKeyByteLength, 7) }] });
 
 const databaseUrlVariable = "DATABASE_URL";
 const databaseAdminUrlVariable = "DATABASE_ADMIN_URL";
@@ -71,7 +78,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     beforeEach(async () => {
       await adminClient.db.execute(
-        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}`,
+        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}, ${consents}`,
       );
     });
 
@@ -116,9 +123,31 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
     }));
 
     describeDocumentRepositoryContract("PostgresDocumentRepository", () => ({
-      registry: new PostgresDocumentRepository(client.db, { kind: "registry" }),
-      scopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
+      registry: new PostgresDocumentRepository(client.db, { kind: "registry" }, testFieldCipher),
+      scopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, testFieldCipher),
     }));
+
+    describeConsentRepositoryContract("PostgresConsentRepository", () => ({
+      consents: new PostgresConsentRepository(client.db, tenantIdFactory(1)),
+    }));
+
+    describe("PostgresDocumentRepository encrypts the sensitive extracted text field", () => {
+      it("stores the extracted text unreadable in the raw table", async () => {
+        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" }, testFieldCipher);
+        const document = documentFactory({ id: entityIdFactory(1), storageKey: entityIdFactory(1) });
+        document.startProcessing(new Date("2026-01-16T10:00:00.000Z"));
+        document.complete({ at: new Date("2026-01-16T10:05:00.000Z"), extractedText: "diagnóstico confidencial del paciente" });
+        await registry.save(document);
+
+        const rows = await client.db.select().from(documents).where(eq(documents.id, entityIdFactory(1)));
+        const rawExtractedText = rows[0]?.extractedText;
+        expect(rawExtractedText).not.toBeNull();
+        expect(rawExtractedText?.includes("diagnóstico confidencial del paciente")).toBe(false);
+
+        const found = await registry.findById(entityIdFactory(1));
+        expect(found?.extractedText).toBe("diagnóstico confidencial del paciente");
+      });
+    });
 
     describe("tenant scoping opens with the transaction, never inherits it", () => {
       it("rejects an event enqueued for another tenant than the transaction scope", async () => {
@@ -187,7 +216,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     describe("PostgresDocumentRepository row level security isolates tenants independently of the application filter", () => {
       it("hides another tenant's document from a raw, unfiltered select once the connection is scoped", async () => {
-        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" });
+        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" }, testFieldCipher);
         const ownTenant = tenantIdFactory(1);
         const otherTenant = tenantIdFactory(2);
 
@@ -203,7 +232,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
       });
 
       it("lets the registry scope see documents from every tenant", async () => {
-        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" });
+        const registry = new PostgresDocumentRepository(client.db, { kind: "registry" }, testFieldCipher);
         const ownTenant = tenantIdFactory(1);
         const otherTenant = tenantIdFactory(2);
 

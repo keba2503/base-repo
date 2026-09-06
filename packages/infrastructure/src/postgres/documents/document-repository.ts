@@ -1,11 +1,11 @@
-import type { DocumentRepository, TenantScope } from "@base/application";
+import type { DocumentRepository, FieldCipher, TenantScope } from "@base/application";
 import { and, desc, eq, type SQL } from "drizzle-orm";
 import { Document, isOk, parseEntityId, parseTenantId, type DocumentSnapshot, type DocumentStatus, type EntityId } from "@base/domain";
 import type { PostgresDatabase } from "../client";
 import { documents, type DocumentRow } from "../schema/index";
 import { runScoped, type PostgresExecutor } from "../transaction-context";
 
-function hydrate(row: DocumentRow): Document {
+async function hydrate(cipher: FieldCipher, row: DocumentRow): Promise<Document> {
   const id = parseEntityId(row.id);
   const tenantId = parseTenantId(row.tenantId);
   const uploadedBy = parseEntityId(row.uploadedBy);
@@ -21,7 +21,7 @@ function hydrate(row: DocumentRow): Document {
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     status: row.status as DocumentStatus,
-    extractedText: row.extractedText,
+    extractedText: row.extractedText === null ? null : await cipher.decrypt(row.extractedText),
     failureReason: row.failureReason,
     createdAt: row.createdAt,
     processedAt: row.processedAt,
@@ -36,10 +36,12 @@ function hydrate(row: DocumentRow): Document {
 export class PostgresDocumentRepository implements DocumentRepository {
   readonly #db: PostgresDatabase;
   readonly #scope: TenantScope;
+  readonly #cipher: FieldCipher;
 
-  constructor(db: PostgresDatabase, scope: TenantScope) {
+  constructor(db: PostgresDatabase, scope: TenantScope, cipher: FieldCipher) {
     this.#db = db;
     this.#scope = scope;
+    this.#cipher = cipher;
   }
 
   #scopeFilter(): SQL | undefined {
@@ -58,7 +60,7 @@ export class PostgresDocumentRepository implements DocumentRepository {
         .where(and(eq(documents.id, id), this.#scopeFilter()))
         .limit(1);
       const row = rows[0];
-      return row ? hydrate(row) : undefined;
+      return row ? await hydrate(this.#cipher, row) : undefined;
     });
   }
 
@@ -70,7 +72,7 @@ export class PostgresDocumentRepository implements DocumentRepository {
         .where(this.#scopeFilter())
         .orderBy(desc(documents.createdAt))
         .limit(request.limit);
-      return rows.map(hydrate);
+      return Promise.all(rows.map((row) => hydrate(this.#cipher, row)));
     });
   }
 
@@ -79,6 +81,7 @@ export class PostgresDocumentRepository implements DocumentRepository {
     if (!this.#isVisible(snapshot.tenantId)) {
       throw new Error("A tenant scoped repository may not write outside its own tenant");
     }
+    const encryptedExtractedText = snapshot.extractedText === null ? null : await this.#cipher.encrypt(snapshot.extractedText);
     await runScoped(this.#db, this.#scope, async (transaction) => {
       await transaction
         .insert(documents)
@@ -92,7 +95,7 @@ export class PostgresDocumentRepository implements DocumentRepository {
           contentType: snapshot.contentType,
           sizeBytes: snapshot.sizeBytes,
           status: snapshot.status,
-          extractedText: snapshot.extractedText,
+          extractedText: encryptedExtractedText,
           failureReason: snapshot.failureReason,
           processedAt: snapshot.processedAt,
         })
@@ -100,7 +103,7 @@ export class PostgresDocumentRepository implements DocumentRepository {
           target: documents.id,
           set: {
             status: snapshot.status,
-            extractedText: snapshot.extractedText,
+            extractedText: encryptedExtractedText,
             failureReason: snapshot.failureReason,
             processedAt: snapshot.processedAt,
           },
