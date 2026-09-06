@@ -43,8 +43,10 @@ This repository is meant to be derived, not run as-is:
 | `bun run typecheck` | Type-checks every workspace |
 | `bun run arch` | Runs the architecture checker (comments, `any`, `process.env`, layer imports) |
 | `bun run depcruise` | Runs dependency-cruiser against the layer graph |
+| `bun run structure` | Fails when a tracked directory has no line in `ESTRUCTURA.md`, or vice versa |
+| `bun run env-example` | Fails when a variable required in production by any `apps/*/src/main/env.ts` is missing from `.env.example` |
 | `bun run test` | Runs the test suite (`bun test`) |
-| `bun run check` | Runs `lint`, `typecheck`, `depcruise`, `arch`, and `test` in sequence; this is the single gate CI and `pre-push` both call |
+| `bun run check` | Runs every gate above, in the order its own script defines in `package.json`; this is the single gate CI and `pre-push` both call |
 
 ## Repository layout
 
@@ -112,6 +114,10 @@ Recommended branch protection on `main` (GitHub repository settings):
 ## Structure
 
 `ESTRUCTURA.md` describes, in Spanish, every directory of the tree and the role it plays, plus where the pieces that do not exist yet will live. It is verified by `bun run structure`, which is part of `bun run check`: a directory that is not described there fails the gate.
+
+## Environment variables
+
+`.env.example` lists every variable this repository reads, one file per app plus the ones shared across scripts and tests. `bun run env-example`, part of `bun run check`, reads every `requiredInProduction` list out of `apps/*/src/main/env.ts` and fails if any of those variables is missing from `.env.example` — so a variable a deployment actually needs is never discovered missing by first failing in production. It only enforces that direction: a variable used solely by a test suite (`SUPABASE_TEST_EMAIL`, say) can live in `.env.example` without any `env.ts` reading it.
 
 ## Agentic workflow
 
