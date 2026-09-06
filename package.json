@@ -18,6 +18,7 @@
     "test": "bun test --conditions react-server",
     "check": "bun run lint && bun run typecheck && bun run depcruise && bun run arch && bun run structure && bun run env-example && bun run test",
     "ui": "bun scripts/ui/viewport.ts",
+    "browsers": "playwright install --with-deps chromium",
     "prepare": "lefthook install"
   },
   "devDependencies": {

@@ -116,6 +116,7 @@
     "apps/worker/src/main",
     "scripts/agent",
     "scripts/db",
+    "scripts/ui",
     "packages/infrastructure/test"
   ],
   "serverOnlyPackages": [

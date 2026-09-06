@@ -113,6 +113,7 @@ async function main(): Promise<void> {
     cwd: webRoot,
     detached: true,
     stdio: "ignore",
+    env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", NODE_ENV: "development" },
   });
 
   try {
@@ -121,7 +122,7 @@ async function main(): Promise<void> {
     const browser = await chromium.launch().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes("Executable doesn't exist")) {
-        throw new Error(`chromium is not installed for this Playwright version. Run: bunx playwright install chromium`);
+        throw new Error(`chromium is not installed for this Playwright version. Run: bun run browsers`);
       }
       throw error;
     });
