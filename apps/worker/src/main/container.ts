@@ -2,6 +2,7 @@ import type {
   Clock,
   DocumentProcessor,
   DocumentRepository,
+  FieldCipher,
   FileStore,
   IdGenerator,
   JobQueue,
@@ -14,12 +15,14 @@ import type {
 } from "@base/application";
 import { documentFieldClassifications, tenantFieldClassifications, type TenantId } from "@base/domain";
 import {
+  AesGcmFieldCipher,
   ConsoleLogger,
   ConsoleMailer,
   createPostgresClient,
   createResendClient,
   InMemoryDocumentRepository,
   InMemoryDocumentStore,
+  InMemoryFieldCipher,
   InMemoryFileStore,
   InMemoryJobQueue,
   InMemoryJobStore,
@@ -79,14 +82,30 @@ function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | 
 
 function postgresPersistence(
   client: PostgresClient,
+  cipher: FieldCipher,
 ): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue" | "documentsScopedTo"> {
   return {
     tenantRegistry: new PostgresTenantRepository(client.db, { kind: "registry" }),
     unitOfWork: new PostgresUnitOfWork(client.db),
     outbox: new PostgresOutbox(client.db),
     jobQueue: new PostgresJobQueue(client.db, { kind: "registry" }),
-    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
+    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, cipher),
   };
+}
+
+function fieldCipherFor(environment: Environment): FieldCipher {
+  if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
+  if (environment.fieldEncryptionKeys === undefined) {
+    return new AesGcmFieldCipher({ keys: [{ id: "dev", key: crypto.getRandomValues(Buffer.alloc(32)) }] });
+  }
+  const keys = environment.fieldEncryptionKeys.split(",").map((entry) => {
+    const [id, base64Key] = entry.split(":");
+    if (id === undefined || base64Key === undefined) {
+      throw new Error("FIELD_ENCRYPTION_KEYS must be a comma separated list of id:base64key pairs");
+    }
+    return { id, key: Buffer.from(base64Key, "base64") };
+  });
+  return new AesGcmFieldCipher({ keys });
 }
 
 function fileStoreFor(environment: Environment): FileStore {
@@ -121,7 +140,8 @@ export function createContainer(environment: Environment): Container {
     environment.nodeEnv !== "test" && environment.databaseUrl !== undefined
       ? createPostgresClient({ connectionString: environment.databaseUrl })
       : undefined;
-  const persistence = client !== undefined ? postgresPersistence(client) : memoryPersistence();
+  const fieldCipher = fieldCipherFor(environment);
+  const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
 
   return {
     ...persistence,

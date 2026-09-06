@@ -1,6 +1,6 @@
 import "server-only";
 import type { Actor } from "@base/application";
-import { entityIdOf, isOk, parseTenantId, type DomainError, type Result } from "@base/domain";
+import { entityIdOf, isOk, parseEntityId, parseTenantId, type DomainError, type EntityId, type Result } from "@base/domain";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { env, isDevelopment } from "./env";
@@ -34,6 +34,26 @@ export async function resolveActor(request: ActorRequest = {}): Promise<Result<A
   }
   const token = bearer ?? (await sessionToken());
   return resolveActorFromSessionOperation()({ token: token ?? "", tenantSlug: request.tenantSlug, tenantId: request.tenantId });
+}
+
+export function anonymousVisitorActor(subjectId: EntityId): Actor {
+  const tenantId = parseTenantId(platformTenantId);
+  if (!isOk(tenantId)) throw new Error("The platform tenant identifier is malformed");
+  return {
+    tenantId: tenantId.value,
+    subjectId,
+    kind: "system",
+    scopes: ["consent:grant", "consent:withdraw", "consent:read"],
+  };
+}
+
+export function visitorActorFor(existingVisitorId: string | undefined): { actor: Actor; visitorId: string } {
+  const candidate = existingVisitorId ?? crypto.randomUUID();
+  const parsed = parseEntityId(candidate);
+  const visitorId = isOk(parsed) ? candidate : crypto.randomUUID();
+  const finalParsed = isOk(parsed) ? parsed : parseEntityId(visitorId);
+  if (!isOk(finalParsed)) throw new Error("Unable to mint a visitor identifier");
+  return { actor: anonymousVisitorActor(finalParsed.value), visitorId };
 }
 
 export function developmentActor(): Actor {

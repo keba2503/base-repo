@@ -2,8 +2,10 @@ import type {
   ApiKeyHasher,
   ApiKeyRepository,
   Clock,
+  ConsentRepository,
   DocumentProcessor,
   DocumentRepository,
+  FieldCipher,
   FileStore,
   HumanVerifier,
   IdempotencyStore,
@@ -31,6 +33,7 @@ import {
   type TenantId,
 } from "@base/domain";
 import {
+  AesGcmFieldCipher,
   ConsoleLogger,
   ConsoleMailer,
   createPostgresClient,
@@ -40,8 +43,11 @@ import {
   InMemoryApiKeyHasher,
   InMemoryApiKeyRepository,
   InMemoryApiKeyStore,
+  InMemoryConsentRepository,
+  InMemoryConsentStore,
   InMemoryDocumentRepository,
   InMemoryDocumentStore,
+  InMemoryFieldCipher,
   InMemoryFileStore,
   InMemoryHumanVerifier,
   InMemoryIdempotencyStore,
@@ -59,6 +65,7 @@ import {
   InMemoryUserStore,
   NullDocumentProcessor,
   PostgresApiKeyRepository,
+  PostgresConsentRepository,
   PostgresDocumentRepository,
   PostgresJobQueue,
   PostgresMembershipRepository,
@@ -101,6 +108,7 @@ export type Container = {
   readonly documentRegistry: DocumentRepository;
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
   jobsScopedTo(tenantId: TenantId): JobQueue;
+  consentsScopedTo(tenantId: TenantId): ConsentRepository;
   readonly fileStore: FileStore;
   readonly documentProcessor: DocumentProcessor;
   readonly identityProvider: IdentityProvider;
@@ -158,24 +166,45 @@ function postgresPersistence(
   };
 }
 
-type DocumentsPersistence = Pick<Container, "documentRegistry" | "documentsScopedTo" | "jobsScopedTo">;
+type DocumentsPersistence = Pick<
+  Container,
+  "documentRegistry" | "documentsScopedTo" | "jobsScopedTo" | "consentsScopedTo"
+>;
 
 function memoryDocumentsPersistence(): DocumentsPersistence {
   const documents = new InMemoryDocumentStore();
   const jobs = new InMemoryJobStore();
+  const consents = new InMemoryConsentStore();
   return {
     documentRegistry: new InMemoryDocumentRepository(documents, { kind: "registry" }),
     documentsScopedTo: (tenantId) => new InMemoryDocumentRepository(documents, { kind: "tenant", tenantId }),
     jobsScopedTo: (tenantId) => new InMemoryJobQueue(jobs, { kind: "tenant", tenantId }),
+    consentsScopedTo: (tenantId) => new InMemoryConsentRepository(consents, tenantId),
   };
 }
 
-function postgresDocumentsPersistence(client: PostgresClient): DocumentsPersistence {
+function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCipher): DocumentsPersistence {
   return {
-    documentRegistry: new PostgresDocumentRepository(client.db, { kind: "registry" }),
-    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }),
+    documentRegistry: new PostgresDocumentRepository(client.db, { kind: "registry" }, cipher),
+    documentsScopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, cipher),
     jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
+    consentsScopedTo: (tenantId) => new PostgresConsentRepository(client.db, tenantId),
   };
+}
+
+function fieldCipherFor(environment: Environment): FieldCipher {
+  if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
+  if (environment.fieldEncryptionKeys === undefined) {
+    return new AesGcmFieldCipher({ keys: [{ id: "dev", key: crypto.getRandomValues(Buffer.alloc(32)) }] });
+  }
+  const keys = environment.fieldEncryptionKeys.split(",").map((entry) => {
+    const [id, base64Key] = entry.split(":");
+    if (id === undefined || base64Key === undefined) {
+      throw new Error("FIELD_ENCRYPTION_KEYS must be a comma separated list of id:base64key pairs");
+    }
+    return { id, key: Buffer.from(base64Key, "base64") };
+  });
+  return new AesGcmFieldCipher({ keys });
 }
 
 function fileStoreFor(environment: Environment): FileStore {
@@ -276,7 +305,9 @@ export function createContainer(environment: Environment): Container {
 
   const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();
 
-  const documents = client !== undefined ? postgresDocumentsPersistence(client) : memoryDocumentsPersistence();
+  const fieldCipher = fieldCipherFor(environment);
+  const documents =
+    client !== undefined ? postgresDocumentsPersistence(client, fieldCipher) : memoryDocumentsPersistence();
 
   return {
     ...parts,

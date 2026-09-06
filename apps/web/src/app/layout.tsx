@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { readConsentStatus } from "@/main/privacy";
+import { CookieBanner } from "./cookie-consent/cookie-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,10 +9,16 @@ export const metadata: Metadata = {
   description: "Next.js base repository",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const store = await cookies();
+  const { known } = await readConsentStatus(store.get("visitor_id")?.value);
+
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieBanner initiallyKnown={known} />
+      </body>
     </html>
   );
 }

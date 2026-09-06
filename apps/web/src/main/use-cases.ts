@@ -5,15 +5,22 @@ import {
   createTenant,
   getDocument,
   getTenantBySlug,
+  grantConsent,
+  hasActiveConsent,
   listDocuments,
   registerUser,
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
+  withdrawConsent,
+  type GrantConsent,
+  type HasActiveConsent,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
+  type WithdrawConsent,
 } from "@base/application";
+import { ScopedPermissions } from "@base/infrastructure";
 import {
   confirmDocumentUploadController,
   createApiKeyController,
@@ -148,6 +155,39 @@ export function listDocumentsOperation(): ListDocumentsController {
   return listDocumentsController(
     listDocuments({ documentsScopedTo: parts.documentsScopedTo, permissions: parts.permissions }),
   );
+}
+
+const consentPermissions = new ScopedPermissions();
+
+export function grantConsentOperation(): GrantConsent {
+  const parts = container();
+  return grantConsent({
+    consentsScopedTo: parts.consentsScopedTo,
+    permissions: consentPermissions,
+    clock: parts.clock,
+    idGenerator: parts.idGenerator,
+    unitOfWork: parts.unitOfWork,
+    outbox: parts.outbox,
+  });
+}
+
+export function withdrawConsentOperation(): WithdrawConsent {
+  const parts = container();
+  return withdrawConsent({
+    consentsScopedTo: parts.consentsScopedTo,
+    permissions: consentPermissions,
+    clock: parts.clock,
+    unitOfWork: parts.unitOfWork,
+    outbox: parts.outbox,
+  });
+}
+
+export function hasActiveConsentOperation(): HasActiveConsent {
+  const parts = container();
+  return hasActiveConsent({
+    consentsScopedTo: parts.consentsScopedTo,
+    permissions: consentPermissions,
+  });
 }
 
 export function registerUserOperation(): RegisterUser {
