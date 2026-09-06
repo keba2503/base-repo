@@ -20,6 +20,9 @@ const environmentSchema = z
     outboxMaxAttempts: z.coerce.number().int().positive().default(5),
     outboxPollMs: z.coerce.number().int().positive().default(1_000),
     outboxMaxBackoffMs: z.coerce.number().int().positive().default(30_000),
+    jobsBatchSize: z.coerce.number().int().positive().max(500).default(50),
+    jobsPollMs: z.coerce.number().int().positive().default(1_000),
+    jobsMaxBackoffMs: z.coerce.number().int().positive().default(30_000),
   })
   .superRefine((value, context) => {
     if (value.nodeEnv !== "production") return;
@@ -46,4 +49,7 @@ export const env: Environment = environmentSchema.parse({
   outboxMaxAttempts: process.env.OUTBOX_MAX_ATTEMPTS,
   outboxPollMs: process.env.OUTBOX_POLL_MS,
   outboxMaxBackoffMs: process.env.OUTBOX_MAX_BACKOFF_MS,
+  jobsBatchSize: process.env.JOBS_BATCH_SIZE,
+  jobsPollMs: process.env.JOBS_POLL_MS,
+  jobsMaxBackoffMs: process.env.JOBS_MAX_BACKOFF_MS,
 });

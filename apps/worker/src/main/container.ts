@@ -1,15 +1,28 @@
-import type { Clock, IdGenerator, Logger, Mailer, Outbox, Permissions, TenantRepository, UnitOfWork } from "@base/application";
+import type {
+  Clock,
+  IdGenerator,
+  JobQueue,
+  Logger,
+  Mailer,
+  Outbox,
+  Permissions,
+  TenantRepository,
+  UnitOfWork,
+} from "@base/application";
 import { tenantFieldClassifications } from "@base/domain";
 import {
   ConsoleLogger,
   ConsoleMailer,
   createPostgresClient,
   createResendClient,
+  InMemoryJobQueue,
+  InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  PostgresJobQueue,
   PostgresOutbox,
   PostgresTenantRepository,
   PostgresUnitOfWork,
@@ -30,6 +43,7 @@ export type Container = {
   readonly idGenerator: IdGenerator;
   readonly unitOfWork: UnitOfWork;
   readonly outbox: Outbox;
+  readonly jobQueue: JobQueue;
   readonly logger: Logger;
   readonly mailer: Mailer;
   close(): Promise<void>;
@@ -37,20 +51,25 @@ export type Container = {
 
 const logRedactionPolicy = redactionPolicyFrom(tenantFieldClassifications);
 
-function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox"> {
+function memoryPersistence(): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue"> {
   const store = new InMemoryTenantStore();
+  const jobStore = new InMemoryJobStore();
   return {
     tenantRegistry: new InMemoryTenantRepository(store, { kind: "registry" }),
     unitOfWork: new InMemoryUnitOfWork(),
     outbox: new InMemoryOutbox(),
+    jobQueue: new InMemoryJobQueue(jobStore, { kind: "registry" }),
   };
 }
 
-function postgresPersistence(client: PostgresClient): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox"> {
+function postgresPersistence(
+  client: PostgresClient,
+): Pick<Container, "tenantRegistry" | "unitOfWork" | "outbox" | "jobQueue"> {
   return {
     tenantRegistry: new PostgresTenantRepository(client.db, { kind: "registry" }),
     unitOfWork: new PostgresUnitOfWork(client.db),
     outbox: new PostgresOutbox(client.db),
+    jobQueue: new PostgresJobQueue(client.db, { kind: "registry" }),
   };
 }
 

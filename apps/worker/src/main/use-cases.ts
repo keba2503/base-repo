@@ -1,7 +1,10 @@
 import {
+  dispatchJobs,
   dispatchOutbox,
+  executorRegistry,
   handlerRegistry,
   sendTenantWelcome,
+  type DispatchJobsResponse,
   type DispatchOutboxResponse,
   type MailMessage,
   type TenantResponse,
@@ -51,6 +54,26 @@ export function dispatchOutboxOperation(container: Container, environment: Envir
 
   return async (limit: number, maxAttempts: number): Promise<DispatchBatchOutcome> => {
     const result = await dispatch({ actor: workerActor(), limit, maxAttempts });
+    if (isErr(result)) return { refused: true, code: result.error.code };
+    return { refused: false, counts: result.value };
+  };
+}
+
+export type DispatchJobsOutcome =
+  | { readonly refused: false; readonly counts: DispatchJobsResponse }
+  | { readonly refused: true; readonly code: string };
+
+export function dispatchJobsOperation(container: Container) {
+  const dispatch = dispatchJobs({
+    jobs: container.jobQueue,
+    executors: executorRegistry([]),
+    permissions: container.permissions,
+    logger: container.logger,
+    clock: container.clock,
+  });
+
+  return async (limit: number): Promise<DispatchJobsOutcome> => {
+    const result = await dispatch({ actor: workerActor(), limit });
     if (isErr(result)) return { refused: true, code: result.error.code };
     return { refused: false, counts: result.value };
   };

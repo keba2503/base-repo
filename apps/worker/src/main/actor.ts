@@ -10,6 +10,6 @@ export function workerActor(): Actor {
     tenantId: tenantId.value,
     subjectId: entityIdOf(tenantId.value),
     kind: "system",
-    scopes: ["outbox:dispatch"],
+    scopes: ["outbox:dispatch", "jobQueue:dispatch"],
   };
 }
