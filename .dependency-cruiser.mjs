@@ -143,7 +143,7 @@ export default {
   options: {
     tsPreCompilationDeps: true,
     exclude: {
-      path: "(^|/)(node_modules|\\.next|dist|coverage)(/|$)",
+      path: "(^|/)(node_modules|\\.next|dist|coverage|scripts/load)(/|$)",
     },
     doNotFollow: {
       path: "node_modules",
