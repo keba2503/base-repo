@@ -23,6 +23,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0012 | Configuration is validated at runtime, not at build | accepted |
 | 0013 | The remote address trusts the platform header first | accepted |
 | 0014 | The development actor requires its own flag, not just NODE_ENV | accepted |
+| 0015 | A deferred job queue is its own table, not pgmq | accepted |
 
 ## Template
 

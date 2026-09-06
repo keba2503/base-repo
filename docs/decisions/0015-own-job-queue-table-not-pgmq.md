@@ -1,0 +1,31 @@
+---
+status: accepted
+date: 2026-09-06
+---
+
+# 0015 A deferred job queue is its own table, not pgmq
+
+## Context
+
+`ESTRUCTURA.md` already reserved this capability for pgmq: "Cola de trabajos sobre pgmq". Building the queue meant revisiting that plan against what this repository had already proven for a structurally identical problem: the outbox in `packages/application/src/kernel/ports/outbox.ts` and `packages/infrastructure/src/postgres/outbox.ts` already claim rows safely under concurrent workers with `FOR UPDATE SKIP LOCKED`, inside the same transaction and row-level-security machinery every other tenant-scoped table uses.
+
+pgmq puts its queues in its own `pgmq` schema, addressed through its own functions (`pgmq.send`, `pgmq.read`, `pgmq.archive`), outside the `public` schema this repository builds its row-level-security model around. Every derived project would need to enable the extension, and the queue tables would sit outside the tenant isolation this repository verifies with contract suites and, for Postgres, with row-level-security policies owned by this codebase. A job also needed a per-job maximum attempts, a deferred `runAt` and a tenant scope on the same terms as every other table here; expressing that against pgmq's message envelope would mean bolting a second, parallel scoping mechanism onto a system that already has one.
+
+A queue is not the same problem as the outbox, and the two must not be confused: the outbox exists so that something that already happened is published atomically with the write that produced it. A job queue holds work that has not happened yet, is not tied to any prior write, and may be retried by a different process later. Routing job dispatch through the outbox, or the reverse, would add an indirection without adding any guarantee neither already provides on its own.
+
+## Decision
+
+The job queue is a `jobs` table of its own, following the outbox's shape and its migration pattern: `tenant_id`, `created_at`, `run_at` (defaults to now, so an immediate job needs no special case), `attempts`, `max_attempts` (per job, not per dispatch call), `completed_at` and `exhausted_at` as terminal markers, the same partial index shape as `outbox_unpublished_idx`, `ENABLE`/`FORCE ROW LEVEL SECURITY`, and `GRANT SELECT, INSERT, UPDATE` only — no `DELETE`, no `TRUNCATE` — to `app_user`, in `packages/infrastructure/migrations/0003_job_queue.sql`.
+
+Unlike the outbox, `JobQueue` takes an explicit `TenantScope` at construction, the same as `TenantRepository`: a tenant-scoped instance can only enqueue for its own tenant and only claims and marks its own tenant's jobs; a registry-scoped instance, which is what the worker uses, sees and claims jobs across every tenant. This is deliberate and different from the outbox, which has no scope in its constructor at all: a job is meant to be introspectable per tenant later (a tenant admin listing their own pending jobs), the outbox never is.
+
+`packages/application/src/jobs/` adds `dispatchJobs`, mirroring `dispatchOutbox`: it claims a due batch, runs the one executor registered for each job's name (`ExecutorRegistry`, one executor per job name — a job is a command with a single owner, unlike an event, which can have many handlers), and settles each job as completed, failed with a retry at `now + 2^attempts` seconds, or exhausted once it reaches its own `maxAttempts`. A job whose name has no registered executor is marked exhausted immediately and counted separately as `unhandled`, so the metric distinguishes "nothing claims this job" from "the executor tried and gave up".
+
+Since the queue is behind a port, a project that later needs pgmq, SQS, or anything else writes one adapter against `JobQueue` and wires it in `src/main`; nothing in `packages/application` changes.
+
+## Consequences
+
+- No extension to enable in a derived project; the queue lives in the same schema, migration set and role model as everything else.
+- A job belongs to exactly one tenant and is invisible to another tenant's scoped queue instance, verified by the shared contract suite (`packages/infrastructure/test/contracts/job-queue.contract.ts`, run against both the in-memory and the Postgres implementation) and, for Postgres, additionally by a raw, unfiltered select under a scoped connection in `packages/infrastructure/test/postgres.test.ts`, so isolation is not only the application's `WHERE` clause but row-level security itself.
+- `claimDue` opens and commits its own short transaction, exactly like the outbox's `pullUnpublished`; the lock `FOR UPDATE SKIP LOCKED` takes is released the instant the batch is read, before the job is actually processed. This repository already accepts that trade-off for the outbox under a single worker process; the job queue accepts it on the same terms. A future multi-worker deployment that needs the claim to survive until completion is a different, harder problem — a visibility timeout, or a `claimed_at`/`claimed_by` column — and should be solved when it is actually needed, not guessed at now.
+- No producer use case or concrete job type was written in this wave; only the port, its two implementations, the dispatcher, and the worker wiring. The first feature that needs deferred work calls `jobs.enqueue` on a tenant-scoped `JobQueue`, the same way a use case calls `TenantRepository.save`, and registers its `JobExecutor` in the worker's registry.

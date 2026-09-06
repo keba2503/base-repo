@@ -14,6 +14,8 @@ import {
 import type {
   Clock,
   IdGenerator,
+  JobQueue,
+  JobRetry,
   LogFields,
   Logger,
   Mailer,
@@ -21,6 +23,7 @@ import type {
   Outbox,
   PermissionRequest,
   StoredEvent,
+  StoredJob,
   Permissions,
   TenantRepository,
   TenantScope,
@@ -124,6 +127,94 @@ export class StubOutbox implements Outbox {
 
   get events(): readonly DomainEvent[] {
     return this.#rows.map((row) => row.event);
+  }
+}
+
+type StoredJobRow = {
+  id: string;
+  tenantId: StoredJob["tenantId"];
+  name: string;
+  payload: unknown;
+  attempts: number;
+  maxAttempts: number;
+  runAt: number;
+  completed: boolean;
+  exhausted: boolean;
+};
+
+export class StubJobQueue implements JobQueue {
+  readonly #rows: StoredJobRow[] = [];
+  readonly completed: string[] = [];
+  readonly failed: string[] = [];
+  readonly exhausted: string[] = [];
+
+  enqueue(request: {
+    tenantId: StoredJob["tenantId"];
+    name: string;
+    payload: unknown;
+    runAt?: Date;
+    maxAttempts?: number;
+  }): Promise<void> {
+    this.#rows.push({
+      id: String(this.#rows.length + 1),
+      tenantId: request.tenantId,
+      name: request.name,
+      payload: request.payload,
+      attempts: 0,
+      maxAttempts: request.maxAttempts ?? 5,
+      runAt: request.runAt?.getTime() ?? 0,
+      completed: false,
+      exhausted: false,
+    });
+    return Promise.resolve();
+  }
+
+  seed(job: StoredJob, runAt = 0): string {
+    this.#rows.push({ ...job, runAt, completed: false, exhausted: false });
+    return job.id;
+  }
+
+  claimDue(limit: number, now: Date): Promise<readonly StoredJob[]> {
+    const due = this.#rows
+      .filter((row) => !row.completed && !row.exhausted && row.runAt <= now.getTime())
+      .slice(0, limit)
+      .map(({ id, tenantId, name, payload, attempts, maxAttempts }) => ({
+        id,
+        tenantId,
+        name,
+        payload,
+        attempts,
+        maxAttempts,
+      }));
+    return Promise.resolve(due);
+  }
+
+  markCompleted(ids: readonly string[]): Promise<void> {
+    for (const row of this.#rows) {
+      if (ids.includes(row.id)) row.completed = true;
+    }
+    this.completed.push(...ids);
+    return Promise.resolve();
+  }
+
+  markFailed(retries: readonly JobRetry[]): Promise<void> {
+    const byId = new Map(retries.map((retry) => [retry.id, retry.retryAt]));
+    for (const row of this.#rows) {
+      const retryAt = byId.get(row.id);
+      if (retryAt === undefined) continue;
+      row.attempts += 1;
+      row.runAt = retryAt.getTime();
+    }
+    this.failed.push(...retries.map((retry) => retry.id));
+    return Promise.resolve();
+  }
+
+  markExhausted(ids: readonly string[]): Promise<void> {
+    for (const row of this.#rows) {
+      if (ids.includes(row.id)) row.exhausted = true;
+    }
+    this.exhausted.push(...ids);
+    return Promise.resolve();
   }
 }
 

@@ -3,6 +3,13 @@ export { authorize, type AuthorizationRequest } from "./authorize";
 export type { Clock } from "./ports/clock";
 export type { HumanVerification, HumanVerificationRequest, HumanVerifier } from "./ports/human-verifier";
 export type { IdGenerator } from "./ports/id-generator";
+export {
+  defaultJobMaxAttempts,
+  type EnqueueJobRequest,
+  type JobQueue,
+  type JobRetry,
+  type StoredJob,
+} from "./ports/job-queue";
 export type {
   IdempotencyKey,
   IdempotencyRecord,
