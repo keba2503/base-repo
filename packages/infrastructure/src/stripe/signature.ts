@@ -1,8 +1,6 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const stripeSignatureToleranceSeconds = 300;
-
-const digestLengthBytes = 32;
 
 type ParsedSignatureHeader = {
   readonly timestampSeconds: number;
@@ -25,15 +23,12 @@ function digestOf(secret: string, timestampSeconds: number, rawBody: string): Bu
   return createHmac("sha256", secret).update(`${String(timestampSeconds)}.${rawBody}`).digest();
 }
 
-function normalized(digest: Buffer): Buffer {
-  if (digest.length === digestLengthBytes) return digest;
-  const fixed = Buffer.alloc(digestLengthBytes);
-  digest.copy(fixed);
-  return fixed;
+function fingerprint(value: string): Buffer {
+  return createHash("sha256").update(value, "utf8").digest();
 }
 
-function digestsMatch(expected: Buffer, candidate: Buffer): boolean {
-  return timingSafeEqual(normalized(expected), normalized(candidate));
+function digestsMatch(expected: string, candidate: string): boolean {
+  return timingSafeEqual(fingerprint(expected), fingerprint(candidate));
 }
 
 export type VerifyStripeSignatureRequest = {
@@ -46,9 +41,8 @@ export type VerifyStripeSignatureRequest = {
 export function verifyStripeSignature(request: VerifyStripeSignatureRequest): boolean {
   const parsed = parseSignatureHeader(request.signatureHeader);
   if (!parsed) return false;
-  const expected = digestOf(request.secret, parsed.timestampSeconds, request.rawBody);
-  const candidate = Buffer.from(parsed.v1, "hex");
-  const signatureValid = digestsMatch(expected, candidate);
+  const expected = digestOf(request.secret, parsed.timestampSeconds, request.rawBody).toString("hex");
+  const signatureValid = digestsMatch(expected, parsed.v1);
   const ageSeconds = Math.abs(request.receivedAt.getTime() / 1000 - parsed.timestampSeconds);
   const timestampValid = ageSeconds <= stripeSignatureToleranceSeconds;
   return signatureValid && timestampValid;

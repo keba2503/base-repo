@@ -4,6 +4,8 @@ export function startPaymentResponseFactory(overrides: Partial<StartPaymentRespo
   return {
     paymentId: "00000000-0000-4000-8000-000000000040",
     status: "pending",
+    amountMinor: 1999,
+    currency: "EUR",
     handoff: {
       kind: "redirect",
       url: "https://provider.example/checkout/session_123",

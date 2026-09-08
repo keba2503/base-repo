@@ -50,14 +50,14 @@ describe("start payment controller", () => {
     expect(seen).toEqual([validPayload]);
   });
 
-  it("returns the response model on success with a redirect handoff", async () => {
+  it("answers with the amount the use case recorded, never the one the caller sent", async () => {
     const outcome = await controllerOver(succeedingUseCase)({ actor: actorFactory(), payload: validPayload });
     expect(outcome).toEqual({
       kind: "ok",
       value: {
         paymentId: "00000000-0000-4000-8000-000000000040",
         status: "pending",
-        amountMinor: 2_500,
+        amountMinor: 1_999,
         currency: "EUR",
         handoff: {
           kind: "redirect",

@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   paymentInstructionInvalidCode,
   paymentNotificationMalformedCode,
@@ -92,11 +92,12 @@ function tamper(hex: string): string {
   return `${hex.slice(0, -1)}${lastCharacter === "0" ? "1" : "0"}`;
 }
 
+function fingerprint(value: string): Buffer {
+  return createHash("sha256").update(value, "utf8").digest();
+}
+
 function signaturesMatch(expectedHex: string, candidateHex: string): boolean {
-  const expected = Buffer.from(expectedHex, "hex");
-  const candidate = Buffer.from(candidateHex, "hex");
-  if (expected.length !== candidate.length) return false;
-  return timingSafeEqual(expected, candidate);
+  return timingSafeEqual(fingerprint(expectedHex), fingerprint(candidateHex));
 }
 
 function parseSignatureHeader(signature: string): { readonly timestampSeconds: number; readonly v1: string } | undefined {

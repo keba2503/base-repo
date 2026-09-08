@@ -45,8 +45,8 @@ export function startPaymentController(useCase: StartPayment): StartPaymentContr
     return succeeded({
       paymentId: result.value.paymentId,
       status: result.value.status,
-      amountMinor: parsed.input.amountMinor,
-      currency: parsed.input.currency,
+      amountMinor: result.value.amountMinor,
+      currency: result.value.currency,
       handoff: handoffOutputFrom(result.value),
     });
   };

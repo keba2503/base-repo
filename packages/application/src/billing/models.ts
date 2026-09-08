@@ -19,6 +19,8 @@ export type StartPaymentRequest = {
 export type StartPaymentResponse = {
   readonly paymentId: string;
   readonly status: PaymentStatus;
+  readonly amountMinor: number;
+  readonly currency: string;
   readonly handoff: PaymentHandoff;
 };
 

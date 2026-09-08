@@ -209,6 +209,14 @@ export class Payment extends AggregateRoot {
     if (this.#status !== "pending") {
       return err(conflict("payment.settle.terminal", `A payment in status ${this.#status} cannot be settled`));
     }
+    if (this.#providerReference !== null && this.#providerReference !== providerReference) {
+      return err(
+        conflict(
+          "payment.settle.referenceMismatch",
+          "A payment cannot be settled through a provider reference other than the one it was started with",
+        ),
+      );
+    }
     this.#status = "succeeded";
     this.#providerReference = providerReference;
     this.#resolvedAt = at;

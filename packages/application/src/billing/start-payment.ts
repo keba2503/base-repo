@@ -117,6 +117,12 @@ export function startPayment(dependencies: StartPaymentDependencies): StartPayme
       await payments.save(payment);
     });
 
-    return ok({ paymentId: payment.id, status: payment.status, handoff: handoff.value });
+    return ok({
+      paymentId: payment.id,
+      status: payment.status,
+      amountMinor: payment.amountMinor,
+      currency: payment.currency,
+      handoff: handoff.value,
+    });
   };
 }

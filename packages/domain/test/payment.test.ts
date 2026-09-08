@@ -387,3 +387,20 @@ describe("attaching a provider reference", () => {
     expect(empty.error.kind).toBe("invariantViolation");
   });
 });
+
+describe("settling through a reference the payment was not started with", () => {
+  it("refuses a settlement whose provider reference is not the one already attached", () => {
+    const payment = pendingPayment();
+    payment.attachProviderReference("cs_test_1");
+    const settled = payment.settle("cs_test_2", moneyOf(1999, "EUR"), new Date("2026-01-15T10:00:00.000Z"));
+    if (isOk(settled)) throw new Error("Expected a failure");
+    expect([settled.error.kind, settled.error.code]).toEqual(["conflict", "payment.settle.referenceMismatch"]);
+  });
+
+  it("leaves the payment pending when it refuses", () => {
+    const payment = pendingPayment();
+    payment.attachProviderReference("cs_test_1");
+    payment.settle("cs_test_2", moneyOf(1999, "EUR"), new Date("2026-01-15T10:00:00.000Z"));
+    expect(payment.status).toBe("pending");
+  });
+});

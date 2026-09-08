@@ -44,6 +44,13 @@ export async function stripeWebhookHandler(
   });
 
   try {
+    const declaredLength = Number(request.headers.get("content-length") ?? "");
+    if (Number.isFinite(declaredLength) && declaredLength > maxWebhookBodyBytes) {
+      span.setAttribute("statusCode", 422);
+      span.end("error");
+      return bodyTooLargeResponse(requestId);
+    }
+
     const rawBody = await request.text();
     if (Buffer.byteLength(rawBody, "utf8") > maxWebhookBodyBytes) {
       span.setAttribute("statusCode", 422);
