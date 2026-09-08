@@ -3,6 +3,7 @@ name: Cron dispatch
 on:
   schedule:
     - cron: "*/5 * * * *"
+    - cron: "41 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -14,7 +15,7 @@ concurrency:
 
 jobs:
   dispatch:
-    if: github.event_name == 'workflow_dispatch' || vars.CRON_DISPATCH_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' || (github.event.schedule == '*/5 * * * *' && vars.CRON_DISPATCH_ENABLED == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Drain the outbox and job queue
@@ -37,3 +38,19 @@ jobs:
               break
             fi
           done
+
+  configuration:
+    if: github.event.schedule == '41 7 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when the dispatch secrets exist but the trigger is off
+        env:
+          CRON_DISPATCH_URL: ${{ secrets.CRON_DISPATCH_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CRON_DISPATCH_ENABLED: ${{ vars.CRON_DISPATCH_ENABLED }}
+        run: |
+          if [ -n "$CRON_DISPATCH_URL" ] && [ -n "$CRON_SECRET" ] && [ "$CRON_DISPATCH_ENABLED" != "true" ]; then
+            echo "CRON_DISPATCH_URL and CRON_SECRET are configured but CRON_DISPATCH_ENABLED is not true: nothing is draining the outbox or the job queue" >&2
+            exit 1
+          fi
+          echo "The dispatch trigger's variable and secrets agree with each other"

@@ -105,7 +105,7 @@ The GitHub Actions dispatch trigger (`.github/workflows/cron-dispatch.yml`, the 
 - the secret `CRON_DISPATCH_URL`, the deployed `https://.../api/cron/dispatch`
 - the secret `CRON_SECRET`, the same value the Vercel project uses
 
-With the variable unset, **Actions → Cron dispatch → Run workflow** still runs the job on demand and names whichever secret is missing, which is the quickest way to check the wiring before turning the schedule on.
+With the variable unset, **Actions → Cron dispatch → Run workflow** still runs the job on demand and names whichever secret is missing, which is the quickest way to check the wiring before turning the schedule on. The workflow's `configuration` job also runs once a day and fails if the two secrets are set while the variable is not, so a half-enabled trigger cannot sit unnoticed.
 
 Recommended branch protection on `main` (GitHub repository settings):
 
