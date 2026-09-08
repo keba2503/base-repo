@@ -1,5 +1,10 @@
 export {
   paymentEventAmountMissingCode,
+  paymentIdempotencyConflictCode,
+  paymentInstructionInvalidCode,
+  paymentNotificationMalformedCode,
+  paymentNotificationSignatureInvalidCode,
+  paymentProviderMalformedResponseCode,
   paymentEventReasonMissingCode,
   paymentProviderUnavailableCode,
   paymentResource,

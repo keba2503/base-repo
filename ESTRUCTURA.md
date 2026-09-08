@@ -202,6 +202,7 @@ packages/infrastructure/src/memory/privacy   Repositorio de consentimiento en me
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
 packages/infrastructure/src/otel             Telemetría real con OpenTelemetry, exportada a Sentry por OTLP
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
+packages/infrastructure/src/postgres/billing   Repositorio de pagos sobre Postgres, con su índice único por referencia del proveedor
 packages/infrastructure/src/postgres/documents Repositorio de documentos sobre Postgres
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
 packages/infrastructure/src/postgres/jobs    Cola de trabajos diferidos sobre Postgres, con reintento y espera creciente

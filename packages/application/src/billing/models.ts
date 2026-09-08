@@ -41,5 +41,10 @@ export const paymentResource = resourceOfAction(startPaymentAction);
 export const recordProviderPaymentEventAction = "payments:recordProviderEvent";
 
 export const paymentProviderUnavailableCode = "payment.provider.unavailable";
+export const paymentInstructionInvalidCode = "payment.instruction.invalid";
+export const paymentNotificationSignatureInvalidCode = "payment.notification.signatureInvalid";
+export const paymentNotificationMalformedCode = "payment.notification.malformed";
+export const paymentIdempotencyConflictCode = "payment.idempotency.conflict";
+export const paymentProviderMalformedResponseCode = "payment.provider.malformedResponse";
 export const paymentEventAmountMissingCode = "payment.event.amountMissing";
 export const paymentEventReasonMissingCode = "payment.event.reasonMissing";

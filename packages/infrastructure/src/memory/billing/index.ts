@@ -2,9 +2,6 @@ export { InMemoryPaymentRepository, InMemoryPaymentStore } from "./payment-repos
 export {
   InMemoryPaymentGateway,
   paymentHandoffLifetimeMilliseconds,
-  paymentInstructionInvalidCode,
-  paymentNotificationMalformedCode,
-  paymentNotificationSignatureInvalidCode,
   paymentNotificationToleranceMilliseconds,
   paymentWebhookSecretMinimumLength,
   type InMemoryPaymentGatewayOptions,

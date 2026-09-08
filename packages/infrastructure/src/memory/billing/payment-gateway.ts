@@ -1,5 +1,8 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import {
+  paymentInstructionInvalidCode,
+  paymentNotificationMalformedCode,
+  paymentNotificationSignatureInvalidCode,
   paymentProviderUnavailableCode,
   type Clock,
   type PaymentGateway,
@@ -22,9 +25,6 @@ import {
   type Result,
 } from "@base/domain";
 
-export const paymentInstructionInvalidCode = "payment.instruction.invalid";
-export const paymentNotificationSignatureInvalidCode = "payment.notification.signatureInvalid";
-export const paymentNotificationMalformedCode = "payment.notification.malformed";
 
 export const paymentHandoffLifetimeMilliseconds = 24 * 60 * 60 * 1000;
 export const paymentNotificationToleranceMilliseconds = 5 * 60 * 1000;
