@@ -139,6 +139,7 @@ docs/workflow                                Cómo añadir funcionalidad, cómo 
 packages                                     Los anillos 1 a 4 que no son mecanismo de entrega
 packages/adapters                            Anillo 3: traductores puros, sin efectos
 packages/adapters/src                        Controladores y presentadores
+packages/adapters/src/billing                 Controlador de iniciar un cobro
 packages/adapters/src/documents               Controladores de subir, leer y listar documentos
 packages/adapters/src/email                  Presentación del correo como una vista más
 packages/adapters/src/identity               Controladores de claves de API
@@ -173,6 +174,7 @@ packages/contracts                           Anillo 3: esquemas de entrada y sal
 packages/contracts/src                       Contratos y sus metadatos de autenticación, captcha, idempotencia y límite de tasa
 packages/contracts/src/kernel                Piezas compartidas de los contratos
 packages/contracts/src/v1                    Contratos de la versión 1 de la API
+packages/contracts/src/v1/billing             Contrato de iniciar un cobro
 packages/contracts/src/v1/documents           Contratos de subir, leer y listar documentos
 packages/contracts/src/v1/identity           Contratos de claves de API
 packages/contracts/src/v1/tenants            Contratos de tenants
@@ -210,6 +212,7 @@ packages/infrastructure/src/postgres/privacy Repositorio de consentimiento sobre
 packages/infrastructure/src/postgres/schema  Definición de tablas en Drizzle
 packages/infrastructure/src/postgres/tenants Repositorio de tenants sobre Postgres
 packages/infrastructure/src/resend           Envío de correo
+packages/infrastructure/src/stripe           Pagos: crear la sesión de cobro y verificar la firma de la notificación, el único sitio que sustituir por Redsys
 packages/infrastructure/src/supabase         Proveedor de identidad y almacenamiento de ficheros sobre Supabase Storage
 packages/infrastructure/src/turnstile        Verificación de humano
 packages/infrastructure/test                 Tests de infraestructura
@@ -236,7 +239,6 @@ La configuración se lee en `apps/*/src/main` y en ningún otro sitio. El compro
 El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene su sitio decidido, y ninguno de estos directorios existe todavía: `bun run structure` falla si alguno aparece sin salir de aquí y entrar en el árbol.
 
 ```
-packages/infrastructure/src/stripe           Pagos: el proveedor, un solo sitio que sustituir por Redsys
 packages/application/src/search              Búsqueda: el puerto y sus casos de uso
 packages/infrastructure/src/search           Búsqueda: el proveedor real
 packages/application/src/webhooks            Webhooks salientes: firma, reintento y registro de entregas
