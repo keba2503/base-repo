@@ -19,7 +19,7 @@ import { startPaymentInstructionFactory } from "./factories/payment";
 
 const secretKey = process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const testWebhookSecret = "whsec_test_0123456789abcdef";
+const testWebhookSecret = "stripe-webhook-secret-for-this-test-only";
 
 function signatureHeaderFor(secret: string, timestampSeconds: number, rawBody: string): string {
   const digest = createHmac("sha256", secret).update(`${String(timestampSeconds)}.${rawBody}`).digest("hex");
