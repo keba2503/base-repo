@@ -150,6 +150,8 @@ packages/application                         Anillo 2: casos de uso y puertos
 packages/application/src                     Casos de uso agrupados por componente de negocio
 packages/application/src/audit               Quién hizo qué, a qué recurso y cuándo; su consulta autorizada
 packages/application/src/audit/ports         Puerto del registro de auditoría
+packages/application/src/billing             Iniciar un pago y registrar el evento del proveedor tras interpretarlo
+packages/application/src/billing/ports       Puertos de pagos: la pasarela de pago (iniciar, interpretar notificación) y el repositorio de pagos
 packages/application/src/documents           Subir, listar y procesar documentos: el ejecutor de trabajos que hace avanzar la máquina de estados
 packages/application/src/documents/ports     Puertos de documentos: repositorio, almacenamiento de ficheros y procesado
 packages/application/src/identity            Resolver actor, registrar usuario, crear y revocar claves de API
@@ -232,7 +234,6 @@ La configuración se lee en `apps/*/src/main` y en ningún otro sitio. El compro
 El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene su sitio decidido, y ninguno de estos directorios existe todavía: `bun run structure` falla si alguno aparece sin salir de aquí y entrar en el árbol.
 
 ```
-packages/application/src/billing             Pagos: suscribir, facturar, conciliar, y sus puertos
 packages/infrastructure/src/stripe           Pagos: el proveedor, un solo sitio que sustituir por Redsys
 packages/application/src/search              Búsqueda: el puerto y sus casos de uso
 packages/infrastructure/src/search           Búsqueda: el proveedor real
