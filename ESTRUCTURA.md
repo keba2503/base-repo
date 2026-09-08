@@ -178,6 +178,7 @@ packages/contracts/test                      Tests de validación y de forma del
 packages/domain                              Anillo 1: las reglas de negocio
 packages/domain/src                          Agregados, objetos de valor y piezas compartidas
 packages/domain/src/consent                  El agregado Consent: qué se consintió, bajo qué versión de política, y su retirada sin borrado
+packages/domain/src/billing                   El agregado Payment y el objeto de valor Money: importe en unidades menores, moneda y estado del cobro
 packages/domain/src/documents                 El agregado Document: máquina de estados pendiente, procesando, procesado o fallido
 packages/domain/src/identity                 Usuario, membresía, clave de API y matriz de roles
 packages/domain/src/kernel                   Result, identificadores, eventos, errores y clasificación de datos personales
@@ -231,7 +232,6 @@ La configuración se lee en `apps/*/src/main` y en ningún otro sitio. El compro
 El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene su sitio decidido, y ninguno de estos directorios existe todavía: `bun run structure` falla si alguno aparece sin salir de aquí y entrar en el árbol.
 
 ```
-packages/domain/src/billing                  Pagos: ciclo de facturación propio, para que cambiar de proveedor sea cambiar un adaptador
 packages/application/src/billing             Pagos: suscribir, facturar, conciliar, y sus puertos
 packages/infrastructure/src/stripe           Pagos: el proveedor, un solo sitio que sustituir por Redsys
 packages/application/src/search              Búsqueda: el puerto y sus casos de uso
