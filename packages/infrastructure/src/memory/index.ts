@@ -23,6 +23,19 @@ export { InMemoryTelemetry, NoopTelemetry, type InMemoryTelemetryOptions, type R
 export { AllowAllPermissions, DenyAllPermissions, ScopedPermissions } from "./permissions";
 export { SlidingWindowRateLimiter, type SlidingWindowRateLimiterOptions } from "./rate-limiter";
 export { InMemoryUnitOfWork } from "./unit-of-work";
+export {
+  InMemoryPaymentGateway,
+  InMemoryPaymentRepository,
+  InMemoryPaymentStore,
+  paymentHandoffLifetimeMilliseconds,
+  paymentInstructionInvalidCode,
+  paymentNotificationMalformedCode,
+  paymentNotificationSignatureInvalidCode,
+  paymentNotificationToleranceMilliseconds,
+  paymentWebhookSecretMinimumLength,
+  type InMemoryPaymentGatewayOptions,
+  type PaymentNotificationFixture,
+} from "./billing/index";
 export { InMemoryTenantRepository, InMemoryTenantStore } from "./tenants/index";
 export { InMemoryConsentRepository, InMemoryConsentStore } from "./privacy/index";
 export { InMemoryDocumentProcessor, InMemoryDocumentRepository, InMemoryDocumentStore, InMemoryFileStore } from "./documents/index";

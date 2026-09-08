@@ -195,6 +195,7 @@ packages/infrastructure/src/analytics        Envío de eventos de servidor a Mea
 packages/infrastructure/src/crypto           Hash de claves de API con pimienta y comparación en tiempo constante
 packages/infrastructure/src/documents        El punto de enchufe del procesado real: NullDocumentProcessor, a sustituir por OCR o modelo
 packages/infrastructure/src/memory           Implementación en memoria de cada puerto, completa, no un esbozo
+packages/infrastructure/src/memory/billing   Repositorio de pagos y pasarela de pago en memoria, firma y verifica notificaciones con HMAC
 packages/infrastructure/src/memory/documents Repositorio de documentos, almacenamiento de ficheros y procesador en memoria
 packages/infrastructure/src/memory/identity  Repositorios de identidad en memoria
 packages/infrastructure/src/memory/privacy   Repositorio de consentimiento en memoria
