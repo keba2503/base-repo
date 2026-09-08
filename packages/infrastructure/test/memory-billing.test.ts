@@ -46,3 +46,27 @@ describe("in memory payment gateway outage", () => {
     expect(interpreted.error.code).toBe(paymentProviderUnavailableCode);
   });
 });
+
+describe("in memory payment gateway return urls", () => {
+  it("accepts a loopback return url, because that is what a provider's test mode accepts locally", async () => {
+    const gateway = gatewayFactory();
+    const started = await gateway.start(
+      startPaymentInstructionFactory({
+        returnUrl: "http://localhost:3000/payments/1/return",
+        cancelUrl: "http://localhost:3000/payments/1/cancel",
+      }),
+    );
+    expect(isOk(started)).toBe(true);
+  });
+
+  it("refuses a plain http return url pointing anywhere else", async () => {
+    const gateway = gatewayFactory();
+    const started = await gateway.start(
+      startPaymentInstructionFactory({
+        returnUrl: "http://payments.example/return",
+        cancelUrl: "https://payments.example/cancel",
+      }),
+    );
+    expect(isErr(started)).toBe(true);
+  });
+});

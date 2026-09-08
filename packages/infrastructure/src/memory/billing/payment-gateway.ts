@@ -62,12 +62,17 @@ type ProviderEventBody = {
   };
 };
 
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 function isAbsoluteHttpsUrl(candidate: string): boolean {
+  let url: URL;
   try {
-    return new URL(candidate).protocol === "https:";
+    url = new URL(candidate);
   } catch {
     return false;
   }
+  if (url.protocol === "https:") return true;
+  return url.protocol === "http:" && loopbackHosts.has(url.hostname);
 }
 
 function validateInstruction(instruction: StartPaymentInstruction): DomainError | undefined {
