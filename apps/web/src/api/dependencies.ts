@@ -8,6 +8,7 @@ import type {
   GetTenantBySlugController,
   ListDocumentsController,
   RevokeApiKeyController,
+  StartPaymentController,
 } from "@base/adapters";
 import type { HumanVerifier, IdempotencyStore, Logger, RateLimiter, Telemetry } from "./ports";
 
@@ -27,12 +28,17 @@ export type DocumentControllers = {
   readonly listDocuments: ListDocumentsController;
 };
 
+export type BillingControllers = {
+  readonly startPayment: StartPaymentController;
+};
+
 export type ApiControllers = {
   readonly createTenant: CreateTenantController;
   readonly getTenantBySlug: GetTenantBySlugController;
   readonly createApiKey: CreateApiKeyController;
   readonly revokeApiKey: RevokeApiKeyController;
   readonly documents?: DocumentControllers;
+  readonly billing?: BillingControllers;
 };
 
 export type RateLimitPolicy = {
@@ -72,4 +78,5 @@ export const defaultRateLimits: RateLimitPolicies = {
   "apikeys-write": { limit: 10, windowMilliseconds: oneMinute },
   "documents-write": { limit: 20, windowMilliseconds: oneMinute },
   "documents-read": { limit: 120, windowMilliseconds: oneMinute },
+  "payments-write": { limit: 10, windowMilliseconds: oneMinute },
 };

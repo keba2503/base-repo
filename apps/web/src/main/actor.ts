@@ -67,6 +67,17 @@ export function cronActor(): Actor {
   };
 }
 
+export function providerCallbackActor(): Actor {
+  const tenantId = parseTenantId(platformTenantId);
+  if (!isOk(tenantId)) throw new Error("The platform tenant identifier is malformed");
+  return {
+    tenantId: tenantId.value,
+    subjectId: entityIdOf(tenantId.value),
+    kind: "system",
+    scopes: ["payments:recordProviderEvent"],
+  };
+}
+
 export function developmentActor(): Actor {
   const tenantId = parseTenantId(platformTenantId);
   if (!isOk(tenantId)) throw new Error("The platform tenant identifier is malformed");

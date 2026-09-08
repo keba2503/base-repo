@@ -19,6 +19,8 @@ import type {
   MembershipRepository,
   Outbox,
   OutboxWriter,
+  PaymentGateway,
+  PaymentRepository,
   Permissions,
   RateLimiter,
   SecretGenerator,
@@ -33,6 +35,7 @@ import {
   consentFieldClassifications,
   documentFieldClassifications,
   membershipFieldClassifications,
+  paymentFieldClassifications,
   tenantFieldClassifications,
   userFieldClassifications,
   type TenantId,
@@ -66,6 +69,9 @@ import {
   InMemoryMembershipRepository,
   InMemoryMembershipStore,
   InMemoryOutbox,
+  InMemoryPaymentGateway,
+  InMemoryPaymentRepository,
+  InMemoryPaymentStore,
   InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
@@ -84,6 +90,7 @@ import {
   PostgresJobQueue,
   PostgresMembershipRepository,
   PostgresOutbox,
+  PostgresPaymentRepository,
   PostgresTenantRepository,
   PostgresUnitOfWork,
   PostgresUserRepository,
@@ -92,12 +99,14 @@ import {
   redactionPolicyFrom,
   ResendMailer,
   createOtelClient,
+  createStripeClient,
   sentryOtlpEndpointFrom,
   SequentialIdGenerator,
   SequentialSecretGenerator,
   Sha256ApiKeyHasher,
   SilentLogger,
   SlidingWindowRateLimiter,
+  StripePaymentGateway,
   SupabaseFileStore,
   SupabaseIdentityProvider,
   SystemClock,
@@ -128,6 +137,8 @@ export type Container = {
   readonly documentRegistry: DocumentRepository;
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
   jobsScopedTo(tenantId: TenantId): JobQueue;
+  paymentsScopedTo(tenantId: TenantId): PaymentRepository;
+  readonly paymentGateway: PaymentGateway;
   consentsScopedTo(tenantId: TenantId): ConsentRepository;
   auditScopedTo(tenantId: TenantId): AuditTrail;
   readonly fileStore: FileStore;
@@ -158,6 +169,20 @@ export function dispatchPersistenceOf(container: Container): DispatchPersistence
   return found;
 }
 
+export type PaymentPersistence = {
+  readonly registry: PaymentRepository;
+};
+
+const paymentPersistenceByContainer = new WeakMap<Container, PaymentPersistence>();
+
+export function paymentPersistenceOf(container: Container): PaymentPersistence {
+  const found = paymentPersistenceByContainer.get(container);
+  if (!found) {
+    throw new Error("This container was not built by createContainer, so it carries no payment persistence");
+  }
+  return found;
+}
+
 const logRedactionPolicy = redactionPolicyFrom(
   tenantFieldClassifications,
   userFieldClassifications,
@@ -165,6 +190,7 @@ const logRedactionPolicy = redactionPolicyFrom(
   membershipFieldClassifications,
   documentFieldClassifications,
   consentFieldClassifications,
+  paymentFieldClassifications,
 );
 
 function deterministicParts(): Pick<Container, "clock" | "idGenerator" | "logger"> {
@@ -236,6 +262,25 @@ function postgresDocumentsPersistence(client: PostgresClient, cipher: FieldCiphe
     jobsScopedTo: (tenantId) => new PostgresJobQueue(client.db, { kind: "tenant", tenantId }),
     consentsScopedTo: (tenantId) => new PostgresConsentRepository(client.db, tenantId),
     auditScopedTo: (tenantId) => new PostgresAuditTrail(client.db, tenantId),
+  };
+}
+
+type BillingPersistence = Pick<Container, "paymentsScopedTo"> & {
+  readonly paymentRegistry: PaymentRepository;
+};
+
+function memoryBillingPersistence(): BillingPersistence {
+  const store = new InMemoryPaymentStore();
+  return {
+    paymentRegistry: new InMemoryPaymentRepository(store, { kind: "registry" }),
+    paymentsScopedTo: (tenantId) => new InMemoryPaymentRepository(store, { kind: "tenant", tenantId }),
+  };
+}
+
+function postgresBillingPersistence(client: PostgresClient): BillingPersistence {
+  return {
+    paymentRegistry: new PostgresPaymentRepository(client.db, { kind: "registry" }),
+    paymentsScopedTo: (tenantId) => new PostgresPaymentRepository(client.db, { kind: "tenant", tenantId }),
   };
 }
 
@@ -367,6 +412,35 @@ function analyticsFor(environment: Environment, logger: Logger): Analytics {
   });
 }
 
+const inMemoryPaymentGatewayBaseUrl = "https://payments.invalid";
+const inMemoryPaymentGatewayFallbackWebhookSecret = "in-memory-payment-gateway-webhook-secret";
+
+function paymentGatewayFor(environment: Environment, clock: Clock): PaymentGateway {
+  const memoryGateway = (): PaymentGateway =>
+    new InMemoryPaymentGateway({
+      clock,
+      webhookSecret: environment.stripeWebhookSecret ?? inMemoryPaymentGatewayFallbackWebhookSecret,
+      baseUrl: inMemoryPaymentGatewayBaseUrl,
+    });
+
+  if (environment.nodeEnv === "test") return memoryGateway();
+  if (!isModuleActive("billing")) return memoryGateway();
+
+  const { stripeSecretKey, stripeWebhookSecret } = environment;
+  const keysPresent = stripeSecretKey !== undefined && stripeWebhookSecret !== undefined;
+  if (!keysPresent && environment.nodeEnv !== "production") return memoryGateway();
+  if (stripeSecretKey === undefined || stripeWebhookSecret === undefined) {
+    throw new Error(
+      "STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are required in production while the billing module is active; deactivate billing in architecture/modules.json instead if you do not need to take payments",
+    );
+  }
+
+  return new StripePaymentGateway({
+    client: createStripeClient({ secretKey: stripeSecretKey, timeoutMilliseconds: environment.stripeTimeoutMs }),
+    webhookSecret: stripeWebhookSecret,
+  });
+}
+
 function mailerFor(environment: Environment): Mailer {
   if (environment.nodeEnv === "test") return new InMemoryMailer();
   if (!isModuleActive("notifications")) return new ConsoleMailer();
@@ -401,6 +475,8 @@ export function createContainer(environment: Environment): Container {
   const documents =
     client !== undefined ? postgresDocumentsPersistence(client, fieldCipher) : memoryDocumentsPersistence();
 
+  const billing = client !== undefined ? postgresBillingPersistence(client) : memoryBillingPersistence();
+
   const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);
 
   const container: Container = {
@@ -412,6 +488,7 @@ export function createContainer(environment: Environment): Container {
     jobsScopedTo: documents.jobsScopedTo,
     consentsScopedTo: documents.consentsScopedTo,
     auditScopedTo: documents.auditScopedTo,
+    paymentsScopedTo: billing.paymentsScopedTo,
     telemetry,
     permissions: new RolePermissions({ membershipsScopedTo: identity.membershipsScopedTo }),
     ...identityParts(environment),
@@ -421,6 +498,7 @@ export function createContainer(environment: Environment): Container {
     idempotencyStore: new InMemoryIdempotencyStore({ clock: parts.clock, timeToLiveMilliseconds: 24 * 60 * 60 * 1000 }),
     rateLimiter: new SlidingWindowRateLimiter({ clock: parts.clock }),
     mailer: mailerFor(environment),
+    paymentGateway: paymentGatewayFor(environment, parts.clock),
     analytics: analyticsFor(environment, parts.logger),
     close: async () => {
       await client?.close();
@@ -429,6 +507,7 @@ export function createContainer(environment: Environment): Container {
   };
 
   dispatchPersistenceByContainer.set(container, { outbox: persistence.outbox, jobQueue: documents.jobQueueRegistry });
+  paymentPersistenceByContainer.set(container, { registry: billing.paymentRegistry });
 
   return container;
 }

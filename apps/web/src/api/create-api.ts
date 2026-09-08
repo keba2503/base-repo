@@ -6,6 +6,7 @@ import { renderDocsPage } from "./openapi/docs-page";
 import { requestIdHeader, requestIdOf } from "./request-id";
 import { honoPathOf, type RouteDefinition } from "./route-definition";
 import { routeHandler, type ApiEnvironment } from "./route-handler";
+import { billingRoutes } from "./v1/billing";
 import { documentRoutes } from "./v1/documents";
 import { identityRoutes } from "./v1/identity";
 import { tenantRoutes } from "./v1/tenants";
@@ -18,10 +19,12 @@ export type Api = Hono<ApiEnvironment>;
 
 export function defaultRoutes(dependencies: ApiDependencies): readonly RouteDefinition[] {
   const documents = dependencies.controllers.documents;
+  const billing = dependencies.controllers.billing;
   return [
     ...tenantRoutes(dependencies.controllers),
     ...identityRoutes(dependencies.controllers),
     ...(documents ? documentRoutes(documents) : []),
+    ...(billing ? billingRoutes(billing) : []),
   ];
 }
 
