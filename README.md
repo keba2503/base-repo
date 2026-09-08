@@ -99,6 +99,14 @@ In the Vercel project dashboard, under **Settings → Build and Deployment**:
 
 In the Vercel project dashboard, under **Settings → Environment Variables**, set `CRON_SECRET` (production): Vercel signs its own cron requests with it automatically once set, matching what `apps/web/src/main/env.ts` requires in production.
 
+The GitHub Actions dispatch trigger (`.github/workflows/cron-dispatch.yml`, the free-tier alternative to Vercel Cron described in `docs/decisions/0028`) is off until the repository asks for it (`docs/decisions/0029`). To enable it, in the GitHub repository settings under **Settings → Secrets and variables → Actions** set all three:
+
+- the variable `CRON_DISPATCH_ENABLED` to `true`, which is what puts the schedule to work; without it every scheduled run is a skipped job
+- the secret `CRON_DISPATCH_URL`, the deployed `https://.../api/cron/dispatch`
+- the secret `CRON_SECRET`, the same value the Vercel project uses
+
+With the variable unset, **Actions → Cron dispatch → Run workflow** still runs the job on demand and fails saying the two secrets are required, which is the quickest way to check the wiring before turning the schedule on. The workflow's `configuration` job also runs once a day and fails if either secret is set while the variable is not, so a half-enabled trigger cannot sit unnoticed.
+
 Recommended branch protection on `main` (GitHub repository settings):
 
 - Require a pull request before merging
