@@ -31,7 +31,7 @@ import type { PaymentGateway, ProviderPaymentEvent } from "./ports/payment-gatew
 import type { PaymentRepository } from "./ports/payment-repository";
 
 export type RecordProviderPaymentEventDependencies = {
-  readonly paymentsScopedTo: (tenantId: TenantId) => PaymentRepository;
+  readonly payments: PaymentRepository;
   readonly gateway: PaymentGateway;
   readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
@@ -78,7 +78,7 @@ function applyTransition(payment: Payment, event: ProviderPaymentEvent, at: Date
 export function recordProviderPaymentEvent(
   dependencies: RecordProviderPaymentEventDependencies,
 ): RecordProviderPaymentEvent {
-  const { paymentsScopedTo, gateway, auditScopedTo, permissions, clock, unitOfWork, outbox, idempotency, provider } =
+  const { payments, gateway, auditScopedTo, permissions, clock, unitOfWork, outbox, idempotency, provider } =
     dependencies;
 
   return async (request) => {
@@ -103,7 +103,6 @@ export function recordProviderPaymentEvent(
     if (existing) return ok(replayedResponse(event));
 
     const paymentId = resolvePaymentId(event.paymentId);
-    const payments = paymentsScopedTo(request.actor.tenantId);
     const payment = paymentId ? await payments.findById(paymentId) : undefined;
     if (!payment) return ok(unmatchedResponse(event));
 

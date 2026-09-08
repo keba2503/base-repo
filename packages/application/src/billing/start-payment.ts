@@ -44,10 +44,6 @@ function idempotencyKeyFor(paymentId: EntityId): string {
   return `payment.start:${paymentId}`;
 }
 
-function withProviderReference(payment: Payment, providerReference: string): Result<Payment, DomainError> {
-  return Payment.restore({ ...payment.toSnapshot(), providerReference });
-}
-
 export function startPayment(dependencies: StartPaymentDependencies): StartPayment {
   const {
     paymentsScopedTo,
@@ -114,11 +110,11 @@ export function startPayment(dependencies: StartPaymentDependencies): StartPayme
     });
     if (isErr(handoff)) return handoff;
 
-    const withReference = withProviderReference(payment, handoff.value.providerReference);
-    if (isErr(withReference)) return withReference;
+    const attached = payment.attachProviderReference(handoff.value.providerReference);
+    if (isErr(attached)) return attached;
 
     await unitOfWork.run({ kind: "tenant", tenantId: request.actor.tenantId }, async () => {
-      await payments.save(withReference.value);
+      await payments.save(payment);
     });
 
     return ok({ paymentId: payment.id, status: payment.status, handoff: handoff.value });

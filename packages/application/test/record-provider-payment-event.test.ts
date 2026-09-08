@@ -39,7 +39,7 @@ function harnessFactory(granted: readonly string[] = ["payments:recordProviderEv
   const idempotency = new StubIdempotencyStore();
   const permissions = new StubPermissions(granted);
   const useCase = recordProviderPaymentEvent({
-    paymentsScopedTo: () => payments,
+    payments,
     gateway,
     auditScopedTo: () => audit,
     permissions,

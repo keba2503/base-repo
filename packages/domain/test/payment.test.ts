@@ -343,3 +343,47 @@ describe("payment data classification", () => {
     expect([paymentFieldClassifications.initiatedBy, paymentFieldClassifications.provider]).toEqual(["none", "none"]);
   });
 });
+
+describe("attaching a provider reference", () => {
+  it("takes the reference while the payment is still pending", () => {
+    const payment = pendingPayment();
+    const attached = payment.attachProviderReference("cs_test_1");
+    expect(isOk(attached) && attached.value).toBe("applied");
+    expect(payment.providerReference).toBe("cs_test_1");
+  });
+
+  it("leaves the payment pending", () => {
+    const payment = pendingPayment();
+    payment.attachProviderReference("cs_test_1");
+    expect(payment.status).toBe("pending");
+  });
+
+  it("records nothing, because carrying a provider reference is not a business fact", () => {
+    const payment = pendingPayment();
+    payment.pullEvents();
+    payment.attachProviderReference("cs_test_1");
+    expect(payment.pullEvents()).toEqual([]);
+  });
+
+  it("accepts the same reference twice without applying it again", () => {
+    const payment = pendingPayment();
+    payment.attachProviderReference("cs_test_1");
+    const again = payment.attachProviderReference("cs_test_1");
+    expect(isOk(again) && again.value).toBe("alreadyApplied");
+  });
+
+  it("refuses a second, different reference", () => {
+    const payment = pendingPayment();
+    payment.attachProviderReference("cs_test_1");
+    const other = payment.attachProviderReference("cs_test_2");
+    if (isOk(other)) throw new Error("Expected a failure");
+    expect([other.error.kind, other.error.code]).toEqual(["conflict", "payment.providerReference.alreadyAttached"]);
+  });
+
+  it("refuses an empty reference", () => {
+    const payment = pendingPayment();
+    const empty = payment.attachProviderReference("");
+    if (isOk(empty)) throw new Error("Expected a failure");
+    expect(empty.error.kind).toBe("invariantViolation");
+  });
+});

@@ -244,6 +244,30 @@ export class Payment extends AggregateRoot {
     return ok("applied");
   }
 
+  attachProviderReference(providerReference: string): Result<PaymentTransition, DomainError> {
+    const invalid = validateProviderReference(providerReference);
+    if (invalid) return err(invalid);
+    if (this.#providerReference === providerReference) return ok("alreadyApplied");
+    if (this.#providerReference !== null) {
+      return err(
+        conflict(
+          "payment.providerReference.alreadyAttached",
+          "A payment already carries a different provider reference",
+        ),
+      );
+    }
+    if (this.#status !== "pending") {
+      return err(
+        conflict(
+          "payment.providerReference.terminal",
+          `A payment in status ${this.#status} cannot take a provider reference`,
+        ),
+      );
+    }
+    this.#providerReference = providerReference;
+    return ok("applied");
+  }
+
   cancel(at: Date): Result<PaymentTransition, DomainError> {
     if (this.#status === "canceled") return ok("alreadyApplied");
     if (this.#status !== "pending") {
