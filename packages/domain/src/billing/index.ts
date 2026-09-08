@@ -2,7 +2,7 @@ export {
   Money,
   currencyMinorUnitExponents,
   isCurrency,
-  moneyOf,
+  moneyAmountMinorMaximum,
   type Currency,
 } from "./money";
 
@@ -11,6 +11,7 @@ export {
   paymentDescriptionMaximumLength,
   paymentDescriptionMinimumLength,
   paymentFieldClassifications,
+  paymentProviderMaximumLength,
   type PaymentCanceled,
   type PaymentCanceledPayload,
   type PaymentFailed,
@@ -21,4 +22,5 @@ export {
   type PaymentStatus,
   type PaymentSucceeded,
   type PaymentSucceededPayload,
+  type PaymentTransition,
 } from "./payment";

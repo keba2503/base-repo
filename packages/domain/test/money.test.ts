@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { isOk } from "../src/kernel/result";
-import { Money } from "../src/billing/money";
+import { Money, moneyAmountMinorMaximum } from "../src/billing/money";
 
 function createFailureCode(amountMinor: number, currency: string): string {
   const result = Money.create(amountMinor, currency);
@@ -20,11 +20,25 @@ describe("money creation", () => {
   });
 
   it("rejects a negative amount", () => {
-    expect(createFailureCode(-100, "EUR")).toBe("money.amountMinor.negative");
+    expect(createFailureCode(-100, "EUR")).toBe("money.amountMinor.notPositive");
   });
 
   it("rejects a zero amount", () => {
-    expect(createFailureCode(0, "EUR")).toBe("money.amountMinor.zero");
+    expect(createFailureCode(0, "EUR")).toBe("money.amountMinor.notPositive");
+  });
+
+  it("rejects an amount over the maximum", () => {
+    expect(createFailureCode(moneyAmountMinorMaximum + 1, "EUR")).toBe("money.amountMinor.tooLarge");
+  });
+
+  it("accepts an amount at the maximum", () => {
+    const result = Money.create(moneyAmountMinorMaximum, "EUR");
+    if (!isOk(result)) throw new Error("Expected the amount to be accepted");
+    expect(result.value.amountMinor).toBe(moneyAmountMinorMaximum);
+  });
+
+  it("rejects an unsafe integer amount", () => {
+    expect(createFailureCode(2 ** 53, "EUR")).toBe("money.amountMinor.notInteger");
   });
 
   it("rejects an unknown currency", () => {

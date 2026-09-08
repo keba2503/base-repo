@@ -56,7 +56,15 @@ describe("resolving an actor from a session", () => {
       tenantId: firstTenantId,
       subjectId: userId,
       kind: "user",
-      scopes: ["tenants:create", "tenants:read", "apikeys:manage", "members:manage", "documents:upload", "documents:read"],
+      scopes: [
+        "tenants:create",
+        "tenants:read",
+        "apikeys:manage",
+        "members:manage",
+        "documents:upload",
+        "documents:read",
+        "payments:start",
+      ],
     });
   });
 

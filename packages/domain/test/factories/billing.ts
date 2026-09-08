@@ -6,13 +6,15 @@ export function paymentSnapshotFactory(overrides: Partial<PaymentSnapshot> = {})
   return {
     id: entityIdFactory(40),
     tenantId: tenantIdFactory(1),
+    initiatedBy: entityIdFactory(41),
     amountMinor: 1_999,
     currency: "EUR",
     description: "Consulta de seguimiento",
+    provider: "stripe",
     status: "pending",
     providerReference: null,
     createdAt: new Date("2026-01-15T10:00:00.000Z"),
-    settledAt: null,
+    resolvedAt: null,
     failureReason: null,
     ...overrides,
   };

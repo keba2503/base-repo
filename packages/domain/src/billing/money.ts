@@ -14,18 +14,23 @@ export function isCurrency(value: string): value is Currency {
   return Object.prototype.hasOwnProperty.call(currencyMinorUnitExponents, value);
 }
 
+export const moneyAmountMinorMaximum = 99_999_999;
+
 function validateAmountMinor(amountMinor: number): DomainError | undefined {
-  if (!Number.isInteger(amountMinor)) {
+  if (!Number.isSafeInteger(amountMinor)) {
     return invariantViolation(
       "money.amountMinor.notInteger",
       "An amount must be an integer number of minor currency units",
     );
   }
-  if (amountMinor < 0) {
-    return invariantViolation("money.amountMinor.negative", "An amount must not be negative");
+  if (amountMinor <= 0) {
+    return invariantViolation("money.amountMinor.notPositive", "An amount must be greater than zero");
   }
-  if (amountMinor === 0) {
-    return invariantViolation("money.amountMinor.zero", "An amount must be greater than zero");
+  if (amountMinor > moneyAmountMinorMaximum) {
+    return invariantViolation(
+      "money.amountMinor.tooLarge",
+      `An amount must not exceed ${String(moneyAmountMinorMaximum)} minor units`,
+    );
   }
   return undefined;
 }
@@ -58,12 +63,4 @@ export class Money {
   equals(other: Money): boolean {
     return this.amountMinor === other.amountMinor && this.currency === other.currency;
   }
-
-  static restoreValidated(amountMinor: number, currency: Currency): Money {
-    return new Money(amountMinor, currency);
-  }
-}
-
-export function moneyOf(amountMinor: number, currency: Currency): Money {
-  return Money.restoreValidated(amountMinor, currency);
 }

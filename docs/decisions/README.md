@@ -37,6 +37,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0026 | An active optional module requires its real provider in production, with no middle state, and architecture/ is now a layer nothing but src/main may read | accepted |
 | 0027 | Component source is copied by hand from official documentation, never through an unpinned CLI | accepted |
 | 0028 | Three dispatch triggers, and fair multi-tenant job scheduling | accepted |
+| 0030 | Money is an integer count of minor units, and a provider notification is verified inside the adapter | accepted |
 
 ## Template
 
