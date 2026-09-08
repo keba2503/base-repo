@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   dispatch:
+    if: github.event_name == 'workflow_dispatch' || vars.CRON_DISPATCH_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Drain the outbox and job queue

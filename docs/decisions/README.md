@@ -37,6 +37,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0026 | An active optional module requires its real provider in production, with no middle state, and architecture/ is now a layer nothing but src/main may read | accepted |
 | 0027 | Component source is copied by hand from official documentation, never through an unpinned CLI | accepted |
 | 0028 | Three dispatch triggers, and fair multi-tenant job scheduling | accepted |
+| 0029 | The GitHub Actions dispatch trigger is opt-in per repository, and off in this base | accepted |
 
 ## Template
 
