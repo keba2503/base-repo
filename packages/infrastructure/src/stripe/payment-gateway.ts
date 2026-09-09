@@ -127,6 +127,13 @@ function paymentIdOf(object: Record<string, unknown>): string | undefined {
   return typeof paymentId === "string" && paymentId.length > 0 ? paymentId : undefined;
 }
 
+function tenantIdOf(object: Record<string, unknown>): string | undefined {
+  const metadata = object.metadata;
+  if (!isRecord(metadata)) return undefined;
+  const tenantId = metadata.tenantId;
+  return typeof tenantId === "string" && tenantId.length > 0 ? tenantId : undefined;
+}
+
 function amountOf(object: Record<string, unknown>): Money | undefined {
   const amountMinor = object.amount_total;
   const currency = object.currency;
@@ -150,6 +157,7 @@ function eventOf(event: StripeEventBody): ProviderPaymentEvent {
     providerEventId: event.id,
     kind,
     paymentId: paymentIdOf(event.object),
+    tenantId: tenantIdOf(event.object),
     providerReference: String(event.object.id),
     amount: kind === "succeeded" ? amountOf(event.object) : undefined,
     occurredAt: new Date(event.created * 1000),

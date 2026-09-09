@@ -222,7 +222,132 @@ describe("a settlement whose amount does not match", () => {
 
   it("writes nothing", async () => {
     await harness.useCase(request);
-    expect(harness.unitOfWork.runs).toBe(0);
     expect(harness.idempotency.size).toBe(0);
+    expect(harness.outbox.events).toEqual([]);
+    expect(harness.audit.entries).toEqual([]);
+  });
+});
+
+describe("the row is locked between the read and the write of its transition", () => {
+  it("computes the transition from the locked read rather than the first, unlocked one", async () => {
+    const payment = paymentFactory();
+    harness.payments.seed(payment);
+    harness.payments.seedLockedRead(
+      payment.id,
+      paymentFactory({
+        status: "succeeded",
+        providerReference: "provider-ref-9",
+        resolvedAt: occurredAt,
+      }),
+    );
+    harness.gateway.resolveInterpretWith(
+      ok(providerPaymentEventFactory({ paymentId: payment.id, providerReference: "provider-ref-9" })),
+    );
+
+    const response = expectOk(await harness.useCase(request));
+
+    expect(response.applied).toBe(false);
+  });
+
+  it("reports a payment that vanished between the two reads as unmatched", async () => {
+    const payment = paymentFactory();
+    harness.payments.seed(payment);
+    harness.payments.seedLockedRead(payment.id, undefined);
+    harness.gateway.resolveInterpretWith(
+      ok(providerPaymentEventFactory({ paymentId: payment.id, providerReference: "provider-ref-9" })),
+    );
+
+    const response = expectOk(await harness.useCase(request));
+
+    expect(response).toEqual({
+      applied: false,
+      replayed: false,
+      paymentId: payment.id,
+      status: undefined,
+      kind: "succeeded",
+    });
+  });
+
+  it("writes no idempotency record for a payment that vanished between the two reads", async () => {
+    const payment = paymentFactory();
+    harness.payments.seed(payment);
+    harness.payments.seedLockedRead(payment.id, undefined);
+    harness.gateway.resolveInterpretWith(
+      ok(providerPaymentEventFactory({ paymentId: payment.id, providerReference: "provider-ref-9" })),
+    );
+
+    await harness.useCase(request);
+
+    expect(harness.idempotency.size).toBe(0);
+  });
+});
+
+describe("an event whose tenant contradicts the payment it resolved to", () => {
+  function seededMismatch(): Harness {
+    const built = harnessFactory();
+    const payment = paymentFactory();
+    built.payments.seed(payment);
+    built.gateway.resolveInterpretWith(
+      ok(
+        providerPaymentEventFactory({
+          paymentId: payment.id,
+          providerReference: "provider-ref-9",
+          tenantId: "some-other-tenant",
+        }),
+      ),
+    );
+    return built;
+  }
+
+  it("is refused with the tenant mismatch code", async () => {
+    const built = seededMismatch();
+    const error = expectErr(await built.useCase(request));
+    expect([error.kind, error.code]).toEqual(["forbidden", "payment.notification.tenantMismatch"]);
+  });
+
+  it("writes nothing", async () => {
+    const built = seededMismatch();
+    await built.useCase(request);
+    expect(built.unitOfWork.runs).toBe(0);
+    expect(built.idempotency.size).toBe(0);
+    expect(built.payments.saved.map((payment) => payment.status)).toEqual(["pending"]);
+  });
+});
+
+describe("an event whose tenant matches or carries none", () => {
+  it("applies normally when the event carries no tenant id at all", async () => {
+    const payment = paymentFactory();
+    harness.payments.seed(payment);
+    harness.gateway.resolveInterpretWith(
+      ok(
+        providerPaymentEventFactory({
+          paymentId: payment.id,
+          providerReference: "provider-ref-9",
+          tenantId: undefined,
+        }),
+      ),
+    );
+
+    const response = expectOk(await harness.useCase(request));
+
+    expect(response.applied).toBe(true);
+  });
+
+  it("applies normally when the event's tenant id matches the payment's own", async () => {
+    const payment = paymentFactory();
+    harness.payments.seed(payment);
+    harness.gateway.resolveInterpretWith(
+      ok(
+        providerPaymentEventFactory({
+          paymentId: payment.id,
+          providerReference: "provider-ref-9",
+          tenantId: payment.tenantId,
+        }),
+      ),
+    );
+
+    const response = expectOk(await harness.useCase(request));
+
+    expect(response.applied).toBe(true);
   });
 });

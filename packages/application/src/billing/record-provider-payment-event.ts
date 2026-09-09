@@ -1,5 +1,6 @@
 import {
   err,
+  forbidden,
   invariantViolation,
   isErr,
   isOk,
@@ -22,6 +23,7 @@ import type { UnitOfWork } from "../kernel/ports/unit-of-work";
 import {
   paymentEventAmountMissingCode,
   paymentEventReasonMissingCode,
+  paymentNotificationTenantMismatchCode,
   paymentResource,
   recordProviderPaymentEventAction,
   type RecordProviderPaymentEventRequest,
@@ -103,25 +105,53 @@ export function recordProviderPaymentEvent(
     if (existing) return ok(replayedResponse(event));
 
     const paymentId = resolvePaymentId(event.paymentId);
-    const payment = paymentId ? await payments.findById(paymentId) : undefined;
+    if (!paymentId) return ok(unmatchedResponse(event));
+
+    const payment = await payments.findById(paymentId);
     if (!payment) return ok(unmatchedResponse(event));
 
-    const transition = applyTransition(payment, event, clock.now());
-    if (isErr(transition)) return transition;
+    if (event.tenantId !== undefined && event.tenantId !== payment.tenantId) {
+      return err(
+        forbidden(
+          paymentNotificationTenantMismatchCode,
+          "A provider notification's tenant does not match the tenant of the payment it resolved to",
+        ),
+      );
+    }
 
-    await unitOfWork.run({ kind: "tenant", tenantId: payment.tenantId }, async () => {
-      await payments.save(payment);
-      await outbox.enqueue(payment.pullEvents());
-      await auditScopedTo(payment.tenantId).record({
-        tenantId: payment.tenantId,
-        occurredAt: clock.now(),
-        actorId: request.actor.subjectId,
-        actorKind: request.actor.kind,
-        action: recordProviderPaymentEventAction,
-        resourceType: "payment",
-        resourceId: payment.id,
-      });
-    });
+    const outcome = await unitOfWork.run(
+      { kind: "tenant", tenantId: payment.tenantId },
+      async (): Promise<Result<RecordProviderPaymentEventResponse, DomainError>> => {
+        const locked = await payments.findByIdForUpdate(paymentId);
+        if (!locked) return ok(unmatchedResponse(event));
+
+        const transition = applyTransition(locked, event, clock.now());
+        if (isErr(transition)) return transition;
+
+        await payments.save(locked);
+        await outbox.enqueue(locked.pullEvents());
+        await auditScopedTo(locked.tenantId).record({
+          tenantId: locked.tenantId,
+          occurredAt: clock.now(),
+          actorId: request.actor.subjectId,
+          actorKind: request.actor.kind,
+          action: recordProviderPaymentEventAction,
+          resourceType: "payment",
+          resourceId: locked.id,
+        });
+
+        return ok({
+          applied: transition.value === "applied",
+          replayed: false,
+          paymentId: locked.id,
+          status: locked.status,
+          kind: event.kind,
+        });
+      },
+    );
+
+    if (isErr(outcome)) return outcome;
+    if (outcome.value.status === undefined) return outcome;
 
     await idempotency.save({
       ...idempotencyKey,
@@ -129,12 +159,6 @@ export function recordProviderPaymentEvent(
       reply: { status: 200, body: "" },
     });
 
-    return ok({
-      applied: transition.value === "applied",
-      replayed: false,
-      paymentId: payment.id,
-      status: payment.status,
-      kind: event.kind,
-    });
+    return outcome;
   };
 }

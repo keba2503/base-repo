@@ -50,3 +50,4 @@ export const paymentIdempotencyConflictCode = "payment.idempotency.conflict";
 export const paymentProviderMalformedResponseCode = "payment.provider.malformedResponse";
 export const paymentEventAmountMissingCode = "payment.event.amountMissing";
 export const paymentEventReasonMissingCode = "payment.event.reasonMissing";
+export const paymentNotificationTenantMismatchCode = "payment.notification.tenantMismatch";

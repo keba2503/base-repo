@@ -34,7 +34,7 @@ function checkoutSessionEventBody(
 ): string {
   const object: Record<string, unknown> = {
     id: fixture.providerReference,
-    metadata: { paymentId: fixture.paymentId },
+    metadata: { paymentId: fixture.paymentId, tenantId: fixture.tenantId },
   };
   let type = "checkout.session.expired";
   if (kind === "succeeded") {
@@ -403,6 +403,29 @@ describe("stripe payment gateway notification interpretation", () => {
     if (!isOk(interpreted)) throw new Error(`Expected an event, received ${interpreted.error.code}`);
     expect(interpreted.value.kind).toBe("failed");
     expect(interpreted.value.reason).toBe("insufficient_funds");
+  });
+
+  it("reads the tenant id from the event metadata", async () => {
+    const notification = notificationFor("succeeded", {
+      paymentId: instruction.paymentId,
+      providerReference: "cs_test_tenant",
+      amount: instruction.amount,
+      tenantId: instruction.tenantId,
+    });
+    const interpreted = await gateway.interpret(notification);
+    if (!isOk(interpreted)) throw new Error(`Expected an event, received ${interpreted.error.code}`);
+    expect(interpreted.value.tenantId).toBe(instruction.tenantId);
+  });
+
+  it("leaves the tenant id undefined when the event carries none", async () => {
+    const notification = notificationFor("succeeded", {
+      paymentId: instruction.paymentId,
+      providerReference: "cs_test_no_tenant",
+      amount: instruction.amount,
+    });
+    const interpreted = await gateway.interpret(notification);
+    if (!isOk(interpreted)) throw new Error(`Expected an event, received ${interpreted.error.code}`);
+    expect(interpreted.value.tenantId).toBeUndefined();
   });
 
   it("interprets checkout.session.expired as canceled", async () => {

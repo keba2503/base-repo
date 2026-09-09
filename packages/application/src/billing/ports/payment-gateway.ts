@@ -39,6 +39,7 @@ export type ProviderPaymentEvent = {
   readonly providerEventId: string;
   readonly kind: ProviderPaymentEventKind;
   readonly paymentId: string | undefined;
+  readonly tenantId: string | undefined;
   readonly providerReference: string;
   readonly amount: Money | undefined;
   readonly occurredAt: Date;

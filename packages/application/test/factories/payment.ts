@@ -54,6 +54,7 @@ export function providerPaymentEventFactory(overrides: Partial<ProviderPaymentEv
     providerEventId: "evt_1",
     kind: "succeeded",
     paymentId: entityIdFactory(40),
+    tenantId: undefined,
     providerReference: "provider-ref-1",
     amount: moneyFactory(),
     occurredAt: new Date("2026-01-15T10:05:00.000Z"),

@@ -37,6 +37,7 @@ const unsupportedEventType = "payment.refunded";
 
 export type PaymentNotificationFixture = {
   readonly paymentId: EntityId;
+  readonly tenantId?: string;
   readonly providerReference: string;
   readonly amount?: Money;
   readonly reason?: string;
@@ -55,6 +56,7 @@ type ProviderEventBody = {
   readonly created: number;
   readonly data: {
     readonly paymentId: string | undefined;
+    readonly tenantId: string | undefined;
     readonly providerReference: string;
     readonly amountMinor: number | undefined;
     readonly currency: string | undefined;
@@ -142,6 +144,7 @@ function parseEventBody(rawBody: string): ProviderEventBody | undefined {
     created,
     data: {
       paymentId: typeof data.paymentId === "string" ? data.paymentId : undefined,
+      tenantId: typeof data.tenantId === "string" ? data.tenantId : undefined,
       providerReference,
       amountMinor: typeof data.amountMinor === "number" ? data.amountMinor : undefined,
       currency: typeof data.currency === "string" ? data.currency : undefined,
@@ -170,6 +173,7 @@ function bodyFor(fixture: PaymentNotificationFixture, eventId: string, createdSe
     created: createdSeconds,
     data: {
       paymentId: fixture.paymentId,
+      tenantId: fixture.tenantId,
       providerReference: fixture.providerReference,
       amountMinor: fixture.amount?.amountMinor,
       currency: fixture.amount?.currency,
@@ -274,6 +278,7 @@ export class InMemoryPaymentGateway implements PaymentGateway {
         providerEventId: body.id,
         kind,
         paymentId: body.data.paymentId,
+        tenantId: body.data.tenantId,
         providerReference: body.data.providerReference,
         amount: money && isOk(money) ? money.value : undefined,
         occurredAt: new Date(body.created * 1000),

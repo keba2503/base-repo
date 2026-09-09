@@ -50,6 +50,22 @@ export function describePaymentRepositoryContract(
       expect((await harness.registry.findById(entityIdFactory(1)))?.pullEvents()).toEqual([]);
     });
 
+    it("returns the same payment through a locked read as an unlocked one would", async () => {
+      const harness = createHarness();
+      const payment = paymentFactory({ id: entityIdFactory(1) });
+      await harness.registry.save(payment);
+      const unlocked = await harness.registry.findById(entityIdFactory(1));
+      const locked = await harness.registry.findByIdForUpdate(entityIdFactory(1));
+      expect(idOf(locked)).toBe(idOf(unlocked));
+    });
+
+    it("hides another tenant's payment from a tenant scoped repository through the locked read too", async () => {
+      const harness = createHarness();
+      await harness.registry.save(paymentFactory({ id: entityIdFactory(1), tenantId: otherTenant }));
+      const scoped = harness.scopedTo(ownTenant);
+      expect(await scoped.findByIdForUpdate(entityIdFactory(1))).toBeUndefined();
+    });
+
     it("lets a tenant scoped repository read its own payment", async () => {
       const harness = createHarness();
       const scoped = harness.scopedTo(ownTenant);

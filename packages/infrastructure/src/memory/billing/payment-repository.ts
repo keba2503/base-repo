@@ -44,6 +44,10 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     return Promise.resolve(hydrate(snapshot));
   }
 
+  findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
+    return this.findById(id);
+  }
+
   save(payment: Payment): Promise<void> {
     if (!this.#isVisible(payment.toSnapshot())) {
       throw new Error("A tenant scoped repository may not write outside its own tenant");

@@ -4,6 +4,7 @@ import { isErr, isOk, type EntityId, type Money } from "@base/domain";
 
 export type PaymentNotificationFixture = {
   readonly paymentId: EntityId;
+  readonly tenantId?: string;
   readonly providerReference: string;
   readonly amount?: Money;
   readonly reason?: string;
@@ -83,6 +84,21 @@ export function describePaymentGatewayContract(name: string, createHarness: () =
       expect(interpreted.value.kind).toBe("succeeded");
       expect(interpreted.value.paymentId).toBe(harness.instruction.paymentId);
       expect(interpreted.value.amount).toEqual(harness.instruction.amount);
+    });
+
+    it("carries back the tenant id that was in the instruction on a success notification", async () => {
+      const harness = createHarness();
+      const started = await harness.gateway.start(harness.instruction);
+      if (!isOk(started)) throw new Error(`Expected a handoff, received ${started.error.code}`);
+      const notification = harness.notificationOf("succeeded", {
+        paymentId: harness.instruction.paymentId,
+        providerReference: started.value.providerReference,
+        amount: harness.instruction.amount,
+        tenantId: harness.instruction.tenantId,
+      });
+      const interpreted = await harness.gateway.interpret(notification);
+      if (!isOk(interpreted)) throw new Error(`Expected an event, received ${interpreted.error.code}`);
+      expect(interpreted.value.tenantId).toBe(harness.instruction.tenantId);
     });
 
     it("returns a non-empty provider event id that stays identical for the same notification", async () => {

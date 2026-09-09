@@ -10,6 +10,7 @@ import type {
 
 export class StubPaymentRepository implements PaymentRepository {
   readonly #payments: Map<string, Payment>;
+  readonly #lockedReadOverrides = new Map<string, Payment | undefined>();
 
   constructor(shared?: Map<string, Payment>) {
     this.#payments = shared ?? new Map<string, Payment>();
@@ -19,7 +20,16 @@ export class StubPaymentRepository implements PaymentRepository {
     this.#payments.set(payment.id, payment);
   }
 
+  seedLockedRead(id: EntityId, payment: Payment | undefined): void {
+    this.#lockedReadOverrides.set(id, payment);
+  }
+
   findById(id: EntityId): Promise<Payment | undefined> {
+    return Promise.resolve(this.#payments.get(id));
+  }
+
+  findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
+    if (this.#lockedReadOverrides.has(id)) return Promise.resolve(this.#lockedReadOverrides.get(id));
     return Promise.resolve(this.#payments.get(id));
   }
 

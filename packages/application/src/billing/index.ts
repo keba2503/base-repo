@@ -4,6 +4,7 @@ export {
   paymentInstructionInvalidCode,
   paymentNotificationMalformedCode,
   paymentNotificationSignatureInvalidCode,
+  paymentNotificationTenantMismatchCode,
   paymentProviderMalformedResponseCode,
   paymentEventReasonMissingCode,
   paymentProviderUnavailableCode,
