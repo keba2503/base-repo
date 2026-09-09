@@ -10,7 +10,7 @@ import {
 describe("moduleNames", () => {
   it("lists every module declared in architecture/modules.json", () => {
     expect([...moduleNames].sort()).toEqual(
-      ["audit", "documents", "identity", "jobs", "notifications", "privacy", "tenants"].sort(),
+      ["audit", "billing", "documents", "identity", "jobs", "notifications", "privacy", "tenants"].sort(),
     );
   });
 });

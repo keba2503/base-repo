@@ -16,6 +16,10 @@ export const moduleEnvVariables = {
   ],
   observability: [["sentryDsn", "SENTRY_DSN"]],
   cron: [["cronSecret", "CRON_SECRET"]],
+  billing: [
+    ["stripeSecretKey", "STRIPE_SECRET_KEY"],
+    ["stripeWebhookSecret", "STRIPE_WEBHOOK_SECRET"],
+  ],
 } as const;
 
 export const intentionallyOptionalEnvVariables = ["gtmContainerId", "gaMeasurementId", "gaApiSecret"] as const;
@@ -53,6 +57,9 @@ const environmentSchema = z
     cronDispatchOutboxBatchSize: z.coerce.number().int().positive().max(500).default(25),
     cronDispatchOutboxMaxAttempts: z.coerce.number().int().positive().default(5),
     cronDispatchJobsBatchSize: z.coerce.number().int().positive().max(500).default(25),
+    stripeSecretKey: z.string().min(1).optional(),
+    stripeWebhookSecret: z.string().min(1).optional(),
+    stripeTimeoutMs: z.coerce.number().int().positive().default(10_000),
   })
   .superRefine((value, context) => {
     if (isNextBuildPhase) return;
@@ -150,6 +157,25 @@ const environmentSchema = z
       });
     }
 
+    if (isModuleActive("billing") && value.nodeEnv === "production") {
+      if (value.stripeSecretKey === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["stripeSecretKey"],
+          message:
+            "STRIPE_SECRET_KEY is required in production while the billing module is active: without it no payment can be started and every provider notification is refused, so a payer can be charged with nothing recording it. Deactivate billing in architecture/modules.json instead if you do not need to take payments",
+        });
+      }
+      if (value.stripeWebhookSecret === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["stripeWebhookSecret"],
+          message:
+            "STRIPE_WEBHOOK_SECRET is required in production while the billing module is active: without it no payment can be started and every provider notification is refused, so a payer can be charged with nothing recording it. Deactivate billing in architecture/modules.json instead if you do not need to take payments",
+        });
+      }
+    }
+
     if (
       value.databaseUrl !== undefined &&
       value.fieldEncryptionKeys === undefined &&
@@ -198,6 +224,9 @@ export const env: Environment = environmentSchema.parse({
   cronDispatchOutboxBatchSize: process.env.CRON_DISPATCH_OUTBOX_BATCH_SIZE,
   cronDispatchOutboxMaxAttempts: process.env.CRON_DISPATCH_OUTBOX_MAX_ATTEMPTS,
   cronDispatchJobsBatchSize: process.env.CRON_DISPATCH_JOBS_BATCH_SIZE,
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  stripeTimeoutMs: process.env.STRIPE_TIMEOUT_MS,
 });
 
 export const isDevelopment = env.nodeEnv === "development";

@@ -4,6 +4,7 @@ import {
   aesGcmKeyByteLength,
   AesGcmFieldCipher,
   apiKeys,
+  applyTenantScope,
   auditLog,
   consents,
   createPostgresClient,
@@ -12,6 +13,7 @@ import {
   memberships,
   outbox,
   outboxRowToEvent,
+  payments,
   PostgresApiKeyRepository,
   PostgresAuditTrail,
   PostgresConsentRepository,
@@ -19,6 +21,7 @@ import {
   PostgresJobQueue,
   PostgresMembershipRepository,
   PostgresOutbox,
+  PostgresPaymentRepository,
   PostgresTenantRepository,
   PostgresUnitOfWork,
   PostgresUserRepository,
@@ -36,6 +39,7 @@ import {
   describeJobQueueContract,
   describeMembershipRepositoryContract,
   describeOutboxContract,
+  describePaymentRepositoryContract,
   describeTenantRepositoryContract,
   describeUnitOfWorkContract,
   describeUserRepositoryContract,
@@ -44,6 +48,7 @@ import { tenantIdFactory } from "./factories/tenant";
 import { auditEntryInputFactory } from "./factories/audit";
 import { documentFactory } from "./factories/document";
 import { entityIdFactory } from "./factories/identity";
+import { paymentFactory } from "./factories/payment";
 
 const testFieldCipher = new AesGcmFieldCipher({ keys: [{ id: "test", key: Buffer.alloc(aesGcmKeyByteLength, 7) }] });
 
@@ -77,6 +82,18 @@ if (!databaseUrl || !databaseAdminUrl) {
   describePostgresSuites(databaseUrl, databaseAdminUrl);
 }
 
+const lockNotAvailableSqlState = "55P03";
+
+function sqlStateOf(thrown: unknown): string | undefined {
+  let current: unknown = thrown;
+  while (current instanceof Error) {
+    const code: unknown = (current as { readonly code?: unknown }).code;
+    if (typeof code === "string") return code;
+    current = current.cause;
+  }
+  return undefined;
+}
+
 function describePostgresSuites(connectionString: string, adminConnectionString: string): void {
   describe("Postgres", () => {
     let client: PostgresClient;
@@ -90,7 +107,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
     beforeEach(async () => {
       await adminClient.db.execute(
-        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}, ${consents}, ${auditLog}`,
+        sql`truncate table ${outbox}, ${jobs}, ${tenants}, ${users}, ${memberships}, ${apiKeys}, ${documents}, ${consents}, ${auditLog}, ${payments}`,
       );
     });
 
@@ -137,6 +154,11 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
     describeDocumentRepositoryContract("PostgresDocumentRepository", () => ({
       registry: new PostgresDocumentRepository(client.db, { kind: "registry" }, testFieldCipher),
       scopedTo: (tenantId) => new PostgresDocumentRepository(client.db, { kind: "tenant", tenantId }, testFieldCipher),
+    }));
+
+    describePaymentRepositoryContract("PostgresPaymentRepository", () => ({
+      registry: new PostgresPaymentRepository(client.db, { kind: "registry" }),
+      scopedTo: (tenantId) => new PostgresPaymentRepository(client.db, { kind: "tenant", tenantId }),
     }));
 
     describeConsentRepositoryContract("PostgresConsentRepository", () => ({
@@ -304,6 +326,109 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
 
         const listed = await registry.list({ limit: 10 });
         expect(listed.map((document) => document.tenantId).sort()).toEqual([ownTenant, otherTenant].sort());
+      });
+    });
+
+    describe("PostgresPaymentRepository row level security isolates tenants independently of the application filter", () => {
+      it("hides another tenant's payment from a raw, unfiltered select once the connection is scoped", async () => {
+        const registry = new PostgresPaymentRepository(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.save(paymentFactory({ id: entityIdFactory(1), tenantId: ownTenant }));
+        await registry.save(paymentFactory({ id: entityIdFactory(2), tenantId: otherTenant }));
+
+        const visibleToOwnTenant = await runScoped(client.db, { kind: "tenant", tenantId: ownTenant }, (transaction) =>
+          transaction.select().from(payments),
+        );
+
+        expect(visibleToOwnTenant).toHaveLength(1);
+        expect(visibleToOwnTenant[0]?.tenantId).toBe(ownTenant);
+      });
+
+      it("lets the registry scope see payments from every tenant", async () => {
+        const registry = new PostgresPaymentRepository(client.db, { kind: "registry" });
+        const ownTenant = tenantIdFactory(1);
+        const otherTenant = tenantIdFactory(2);
+
+        await registry.save(paymentFactory({ id: entityIdFactory(1), tenantId: ownTenant }));
+        await registry.save(paymentFactory({ id: entityIdFactory(2), tenantId: otherTenant }));
+
+        expect((await registry.findById(entityIdFactory(1)))?.tenantId).toBe(ownTenant);
+        expect((await registry.findById(entityIdFactory(2)))?.tenantId).toBe(otherTenant);
+      });
+    });
+
+    describe("payments provider reference uniqueness", () => {
+      it("rejects a second payment recorded against the same provider session", async () => {
+        const registry = new PostgresPaymentRepository(client.db, { kind: "registry" });
+        const settled = paymentFactory({ id: entityIdFactory(1) });
+        settled.settle("session_shared", settled.money, new Date("2026-01-16T10:00:00.000Z"));
+        await registry.save(settled);
+
+        const conflicting = paymentFactory({ id: entityIdFactory(2) });
+        conflicting.settle("session_shared", conflicting.money, new Date("2026-01-16T10:05:00.000Z"));
+        const attempt = registry.save(conflicting);
+
+        const caught = await attempt.then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+        expect(caught).toBeInstanceOf(Error);
+      });
+    });
+
+    describe("findByIdForWrite serializes writers through a real row lock", () => {
+      it("blocks a second connection from taking the same lock until the first transaction commits", async () => {
+        const ownTenant = tenantIdFactory(1);
+        const paymentId = entityIdFactory(1);
+        const registry = new PostgresPaymentRepository(client.db, { kind: "registry" });
+        await registry.save(paymentFactory({ id: paymentId, tenantId: ownTenant }));
+
+        const secondClient = createPostgresClient({ connectionString, maxConnections: 1 });
+        try {
+          const firstUnitOfWork = new PostgresUnitOfWork(client.db);
+          const firstRepository = new PostgresPaymentRepository(client.db, { kind: "tenant", tenantId: ownTenant });
+
+          let notifyLockAcquired: () => void = () => undefined;
+          const lockAcquired = new Promise<void>((resolve) => {
+            notifyLockAcquired = resolve;
+          });
+          let releaseFirstTransaction: () => void = () => undefined;
+          const firstTransactionMayCommit = new Promise<void>((resolve) => {
+            releaseFirstTransaction = resolve;
+          });
+
+          const firstTransaction = firstUnitOfWork.run({ kind: "tenant", tenantId: ownTenant }, async () => {
+            await firstRepository.findByIdForWrite(paymentId);
+            notifyLockAcquired();
+            await firstTransactionMayCommit;
+          });
+
+          await lockAcquired;
+
+          const secondAttempt = secondClient.db.transaction(async (transaction) => {
+            await applyTenantScope(transaction, { kind: "tenant", tenantId: ownTenant });
+            return transaction
+              .select()
+              .from(payments)
+              .where(eq(payments.id, paymentId))
+              .for("update", { noWait: true });
+          });
+
+          const secondOutcome = await secondAttempt.then(
+            () => undefined,
+            (error: unknown) => error,
+          );
+
+          releaseFirstTransaction();
+          await firstTransaction;
+
+          expect(secondOutcome).toBeInstanceOf(Error);
+          expect(sqlStateOf(secondOutcome)).toBe(lockNotAvailableSqlState);
+        } finally {
+          await secondClient.close();
+        }
       });
     });
   });

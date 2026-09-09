@@ -38,6 +38,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0027 | Component source is copied by hand from official documentation, never through an unpinned CLI | accepted |
 | 0028 | Three dispatch triggers, and fair multi-tenant job scheduling | accepted |
 | 0029 | The GitHub Actions dispatch trigger is opt-in per repository, and off in this base | accepted |
+| 0030 | Money is an integer count of minor units, and a provider notification is verified inside the adapter | accepted |
 
 ## Template
 

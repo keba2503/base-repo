@@ -24,6 +24,12 @@ export {
   type MembershipRepositoryHarness,
 } from "./membership-repository.contract";
 export { describeOutboxContract, type OutboxHarness } from "./outbox.contract";
+export {
+  describePaymentGatewayContract,
+  type PaymentGatewayHarness,
+  type PaymentNotificationFixture,
+} from "./payment-gateway.contract";
+export { describePaymentRepositoryContract, type PaymentRepositoryHarness } from "./payment-repository.contract";
 export { describePermissionsContract } from "./permissions.contract";
 export { describeRateLimiterContract, type RateLimiterHarness } from "./rate-limiter.contract";
 export { describeSecretGeneratorContract } from "./secret-generator.contract";

@@ -14,11 +14,13 @@ import {
   listAuditEntries,
   listDocuments,
   processDocument,
+  recordProviderPaymentEvent,
   registerUser,
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
   sendTenantWelcome,
+  startPayment,
   withdrawConsent,
   type Actor as ApplicationActor,
   type DispatchJobsResponse,
@@ -27,6 +29,8 @@ import {
   type HasActiveConsent,
   type ListAuditEntries,
   type MailMessage,
+  type PaymentReturnUrlFactory,
+  type RecordProviderPaymentEvent,
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
@@ -46,6 +50,7 @@ import {
   presentTenantWelcomeEmail,
   renderEmail,
   revokeApiKeyController,
+  startPaymentController,
   type ConfirmDocumentUploadController,
   type CreateApiKeyController,
   type CreateDocumentUploadController,
@@ -54,9 +59,10 @@ import {
   type GetTenantBySlugController,
   type ListDocumentsController,
   type RevokeApiKeyController,
+  type StartPaymentController,
 } from "@base/adapters";
 import { isModuleActive } from "../../../../architecture/modules";
-import { createContainer, dispatchPersistenceOf, type Container } from "./container";
+import { createContainer, dispatchPersistenceOf, paymentPersistenceOf, type Container } from "./container";
 import { env, type Environment } from "./env";
 
 let shared: Container | undefined;
@@ -174,6 +180,49 @@ export function listDocumentsOperation(): ListDocumentsController {
   return listDocumentsController(
     listDocuments({ documentsScopedTo: parts.documentsScopedTo, permissions: parts.permissions }),
   );
+}
+
+function paymentReturnUrlsFor(environment: Environment): PaymentReturnUrlFactory {
+  return (paymentId) => ({
+    returnUrl: `${environment.appUrl}/payments/${paymentId}/return`,
+    cancelUrl: `${environment.appUrl}/payments/${paymentId}/cancel`,
+  });
+}
+
+const paymentProvider = "stripe";
+
+export function startPaymentOperation(): StartPaymentController {
+  const parts = container();
+  return startPaymentController(
+    startPayment({
+      paymentsScopedTo: parts.paymentsScopedTo,
+      gateway: parts.paymentGateway,
+      auditScopedTo: parts.auditScopedTo,
+      permissions: parts.permissions,
+      clock: parts.clock,
+      idGenerator: parts.idGenerator,
+      unitOfWork: parts.unitOfWork,
+      outbox: parts.outbox,
+      returnUrlsFor: paymentReturnUrlsFor(env),
+      provider: paymentProvider,
+    }),
+  );
+}
+
+export function recordProviderPaymentEventOperation(): RecordProviderPaymentEvent {
+  const parts = container();
+  return recordProviderPaymentEvent({
+    payments: paymentPersistenceOf(parts).registry,
+    paymentsScopedTo: parts.paymentsScopedTo,
+    gateway: parts.paymentGateway,
+    auditScopedTo: parts.auditScopedTo,
+    permissions: parts.permissions,
+    clock: parts.clock,
+    unitOfWork: parts.unitOfWork,
+    outbox: parts.outbox,
+    idempotency: parts.idempotencyStore,
+    provider: paymentProvider,
+  });
 }
 
 const scopedPermissions = new ScopedPermissions();

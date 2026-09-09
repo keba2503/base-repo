@@ -15,6 +15,7 @@ import {
   resolveActorFromSessionOperation,
   revokeApiKeyOperation,
   sharedContainer,
+  startPaymentOperation,
 } from "./use-cases";
 import { isOk } from "@base/domain";
 
@@ -60,6 +61,13 @@ export function buildApiDependencies(modules: ModuleActivation = defaultModuleAc
               confirmDocumentUpload: confirmDocumentUploadOperation(),
               getDocument: getDocumentOperation(),
               listDocuments: listDocumentsOperation(),
+            },
+          }
+        : {}),
+      ...(isModuleActive("billing", modules)
+        ? {
+            billing: {
+              startPayment: startPaymentOperation(),
             },
           }
         : {}),

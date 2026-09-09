@@ -7,6 +7,7 @@ export {
 } from "./client";
 export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRepository } from "./identity/index";
 export { PostgresAuditTrail } from "./audit-trail";
+export { PostgresPaymentRepository } from "./billing/index";
 export { PostgresDocumentRepository } from "./documents/index";
 export { PostgresConsentRepository } from "./privacy/index";
 export { PostgresJobQueue } from "./jobs/index";
@@ -19,6 +20,7 @@ export {
   jobs,
   memberships,
   outbox,
+  payments,
   tenantScopedColumns,
   tenants,
   users,
@@ -29,6 +31,7 @@ export {
   type JobRow,
   type MembershipRow,
   type OutboxRow,
+  type PaymentRow,
   type TenantRow,
   type TenantScopedColumns,
   type UserRow,

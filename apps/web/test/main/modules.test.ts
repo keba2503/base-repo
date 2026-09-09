@@ -38,6 +38,30 @@ describe("composition root with the documents module active", () => {
   });
 });
 
+describe("composition root with the billing module inactive (the default)", () => {
+  it("does not mount the billing controllers", () => {
+    const dependencies = buildApiDependencies();
+    expect(dependencies.controllers.billing).toBeUndefined();
+  });
+
+  it("does not register the payments route", () => {
+    const dependencies = buildApiDependencies();
+    const routes = defaultRoutes(dependencies);
+    expect(routes.some((route) => route.tag === "billing")).toBe(false);
+  });
+});
+
+describe("composition root with the billing module active", () => {
+  const modules = activationWith({ billing: true });
+
+  it("mounts the billing controllers and routes", () => {
+    const dependencies = buildApiDependencies(modules);
+    expect(dependencies.controllers.billing).toBeDefined();
+    const routes = defaultRoutes(dependencies);
+    expect(routes.some((route) => route.tag === "billing")).toBe(true);
+  });
+});
+
 describe("cookie consent with the privacy module inactive", () => {
   const modules = activationWith({ privacy: false });
 

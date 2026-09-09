@@ -21,6 +21,9 @@ import {
   InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
+  InMemoryPaymentGateway,
+  InMemoryPaymentRepository,
+  InMemoryPaymentStore,
   InMemoryTelemetry,
   NoopAnalytics,
   NoopTelemetry,
@@ -40,6 +43,7 @@ import {
   type LogSink,
 } from "@base/infrastructure";
 import type { LogFields, MailMessage } from "@base/application";
+import { startPaymentInstructionFactory } from "./factories/payment";
 import { tenantIdFactory } from "./factories/tenant";
 import {
   describeAnalyticsContract,
@@ -57,6 +61,8 @@ import {
   describeLoggerContract,
   describeMailerContract,
   describeOutboxContract,
+  describePaymentGatewayContract,
+  describePaymentRepositoryContract,
   describePermissionsContract,
   describeRateLimiterContract,
   describeTelemetryContract,
@@ -127,6 +133,35 @@ describeDocumentRepositoryContract("InMemoryDocumentRepository", () => {
   return {
     registry: new InMemoryDocumentRepository(store, { kind: "registry" }),
     scopedTo: (tenantId) => new InMemoryDocumentRepository(store, { kind: "tenant", tenantId }),
+  };
+});
+
+describePaymentRepositoryContract("InMemoryPaymentRepository", () => {
+  const store = new InMemoryPaymentStore();
+  return {
+    registry: new InMemoryPaymentRepository(store, { kind: "registry" }),
+    scopedTo: (tenantId) => new InMemoryPaymentRepository(store, { kind: "tenant", tenantId }),
+  };
+});
+
+const paymentGatewayWebhookSecret = "test-payment-webhook-secret-0123456789";
+const paymentGatewayBaseUrl = "https://payments.example";
+
+describePaymentGatewayContract("InMemoryPaymentGateway", () => {
+  const gateway = new InMemoryPaymentGateway({
+    clock: new SystemClock(),
+    webhookSecret: paymentGatewayWebhookSecret,
+    baseUrl: paymentGatewayBaseUrl,
+  });
+  const instruction = startPaymentInstructionFactory();
+  return {
+    gateway,
+    instruction,
+    notificationOf: (kind, fixture) => gateway.buildNotification(kind, fixture),
+    tamperedNotification: (fixture) => gateway.buildTamperedNotification("succeeded", fixture),
+    staleNotification: (fixture) => gateway.buildStaleNotification("succeeded", fixture),
+    unsupportedNotification: (fixture) => gateway.buildUnsupportedNotification(fixture),
+    malformedNotification: () => gateway.buildMalformedNotification(),
   };
 });
 

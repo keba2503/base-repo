@@ -76,6 +76,7 @@ La aplicación está dividida por módulos de negocio. Cada módulo es una carpe
 | `audit` | El registro de las acciones importantes: quién las hizo, sobre qué, en qué momento. No se puede modificar ni borrar, ni siquiera con acceso directo a la base de datos. Es lo que consultas el día que alguien pregunta quién cambió algo, y es distinto de los logs, que se rotan y se pierden | `packages/application/src/audit`, `packages/infrastructure/src/postgres/audit-trail.ts`, `packages/infrastructure/src/memory/audit-trail.ts` | Núcleo |
 | `documents` | Guarda los ficheros que suben los usuarios y lleva la cuenta de en qué estado está cada uno: subido, procesándose, procesado o fallido. Deja preparado el sitio donde mañana conectas un OCR o un modelo de lenguaje que lea su contenido — hoy ese hueco está vacío a propósito y no rompe nada | `packages/domain/src/documents`, `packages/application/src/documents`, `packages/contracts/src/v1/documents`, `packages/adapters/src/documents`, `packages/infrastructure/src/documents`, `packages/infrastructure/src/postgres/documents`, `packages/infrastructure/src/memory/documents`, `apps/web/src/api/v1/documents.ts` | Opcional (depende de `jobs`) |
 | `privacy` | Cubre dos cosas: el consentimiento (qué aceptó cada persona, para qué, y bajo qué versión de tu política; cuando cambias la política, el consentimiento anterior deja de valer automáticamente — es la base del banner de cookies y de que la analítica no se cargue mientras nadie haya dicho que sí) y los derechos que la ley da sobre los datos (pedir una copia de todo lo que tienes sobre una persona, llevárselo a otro sitio, o que lo borres). Aquí borrar significa anonimizar, no eliminar filas: hay datos que deben sobrevivir a la persona, como una factura o la prueba de que consintió algo. También vive aquí la retención, que es cuánto tiempo se guarda cada cosa antes de anonimizarla sola | `packages/domain/src/consent`, `packages/application/src/privacy`, `packages/infrastructure/src/postgres/privacy`, `packages/infrastructure/src/memory/privacy`, `apps/web/src/main/privacy.ts`, `apps/web/src/app/cookie-consent` | Opcional (depende de `jobs` y `documents`) |
+| `billing` | Cobrar. El cobro es una entidad nuestra con su máquina de estados, no un reflejo de lo que diga el proveedor: se crea antes de hablar con nadie, se liquida solo con el importe por el que nació, y una notificación repetida no lo cobra dos veces. Stripe es el adaptador de referencia y vive en una sola carpeta, para que cambiarlo por Redsys sea cambiar esa carpeta. Nace apagado: encenderlo obliga a configurar el proveedor en producción, y un repositorio base no cobra a nadie | `packages/domain/src/billing`, `packages/application/src/billing`, `packages/contracts/src/v1/billing`, `packages/adapters/src/billing`, `packages/infrastructure/src/stripe`, `packages/infrastructure/src/postgres/billing`, `packages/infrastructure/src/memory/billing`, `apps/web/src/api/v1/billing.ts`, `apps/web/src/app/api/billing` | Opcional, apagado por defecto |
 | `notifications` | El envío de correo, y el mecanismo general para reaccionar cuando algo pasa. Alguien crea una organización, y eso dispara un correo de bienvenida sin que quien creó la organización tenga que saber nada del correo | `packages/application/src/notifications`, `packages/adapters/src/email`, `packages/infrastructure/src/resend`, `packages/infrastructure/src/memory/mailer.ts` | Opcional |
 | `jobs` | Procesar un documento, enviar un correo, limpiar datos antiguos. Todo eso se encola y lo ejecuta un proceso aparte, para que la persona que pulsó el botón reciba su respuesta al instante. Si algo falla, se reintenta solo, esperando cada vez un poco más, y se rinde después de unos cuantos intentos | `packages/application/src/jobs`, `packages/infrastructure/src/postgres/jobs`, `packages/infrastructure/src/memory/job-queue.ts` | Opcional |
 | `kernel` | No es un módulo de negocio: son las herramientas que todos los demás usan. El resultado de una operación, los identificadores, los errores, la autorización, el reloj, y la clasificación de qué campos contienen datos personales | `packages/domain/src/kernel`, `packages/application/src/kernel`, `packages/contracts/src/kernel`, `packages/adapters/src/kernel` | Compartido, no es un módulo de negocio |
@@ -110,6 +111,9 @@ apps/web/src/api/v1                          Definición de rutas de la versión
 apps/web/src/app                             Rutas y páginas del App Router. Las vistas no deciden nada
 apps/web/src/app/api                         Punto de montaje de la API dentro del App Router
 apps/web/src/app/api/[[...route]]            Ruta atrapatodo que entrega las peticiones a Hono
+apps/web/src/app/api/billing                 Rutas que un proveedor de pago invoca desde fuera, nunca el navegador
+apps/web/src/app/api/billing/stripe          Notificaciones de Stripe
+apps/web/src/app/api/billing/stripe/webhook  Recibe la notificación firmada, con el cuerpo crudo intacto porque la firma se calcula sobre esos bytes; ver decisión 0030
 apps/web/src/app/api/cron                    Rutas que un disparador programado invoca desde fuera del proceso, nunca desde el navegador
 apps/web/src/app/api/cron/dispatch           Despacha un lote del outbox y un lote de la cola de trabajos por HTTP, protegida por secreto compartido; ver decisión 0028
 apps/web/src/app/analytics                   Carga del contenedor GTM tras el consentimiento de analítica
@@ -139,6 +143,7 @@ docs/workflow                                Cómo añadir funcionalidad, cómo 
 packages                                     Los anillos 1 a 4 que no son mecanismo de entrega
 packages/adapters                            Anillo 3: traductores puros, sin efectos
 packages/adapters/src                        Controladores y presentadores
+packages/adapters/src/billing                 Controlador de iniciar un cobro
 packages/adapters/src/documents               Controladores de subir, leer y listar documentos
 packages/adapters/src/email                  Presentación del correo como una vista más
 packages/adapters/src/identity               Controladores de claves de API
@@ -150,6 +155,8 @@ packages/application                         Anillo 2: casos de uso y puertos
 packages/application/src                     Casos de uso agrupados por componente de negocio
 packages/application/src/audit               Quién hizo qué, a qué recurso y cuándo; su consulta autorizada
 packages/application/src/audit/ports         Puerto del registro de auditoría
+packages/application/src/billing             Iniciar un pago y registrar el evento del proveedor tras interpretarlo
+packages/application/src/billing/ports       Puertos de pagos: la pasarela de pago (iniciar, interpretar notificación) y el repositorio de pagos
 packages/application/src/documents           Subir, listar y procesar documentos: el ejecutor de trabajos que hace avanzar la máquina de estados
 packages/application/src/documents/ports     Puertos de documentos: repositorio, almacenamiento de ficheros y procesado
 packages/application/src/identity            Resolver actor, registrar usuario, crear y revocar claves de API
@@ -171,6 +178,7 @@ packages/contracts                           Anillo 3: esquemas de entrada y sal
 packages/contracts/src                       Contratos y sus metadatos de autenticación, captcha, idempotencia y límite de tasa
 packages/contracts/src/kernel                Piezas compartidas de los contratos
 packages/contracts/src/v1                    Contratos de la versión 1 de la API
+packages/contracts/src/v1/billing             Contrato de iniciar un cobro
 packages/contracts/src/v1/documents           Contratos de subir, leer y listar documentos
 packages/contracts/src/v1/identity           Contratos de claves de API
 packages/contracts/src/v1/tenants            Contratos de tenants
@@ -178,6 +186,7 @@ packages/contracts/test                      Tests de validación y de forma del
 packages/domain                              Anillo 1: las reglas de negocio
 packages/domain/src                          Agregados, objetos de valor y piezas compartidas
 packages/domain/src/consent                  El agregado Consent: qué se consintió, bajo qué versión de política, y su retirada sin borrado
+packages/domain/src/billing                   El agregado Payment y el objeto de valor Money: importe en unidades menores, moneda y estado del cobro
 packages/domain/src/documents                 El agregado Document: máquina de estados pendiente, procesando, procesado o fallido
 packages/domain/src/identity                 Usuario, membresía, clave de API y matriz de roles
 packages/domain/src/kernel                   Result, identificadores, eventos, errores y clasificación de datos personales
@@ -192,12 +201,14 @@ packages/infrastructure/src/analytics        Envío de eventos de servidor a Mea
 packages/infrastructure/src/crypto           Hash de claves de API con pimienta y comparación en tiempo constante
 packages/infrastructure/src/documents        El punto de enchufe del procesado real: NullDocumentProcessor, a sustituir por OCR o modelo
 packages/infrastructure/src/memory           Implementación en memoria de cada puerto, completa, no un esbozo
+packages/infrastructure/src/memory/billing   Repositorio de pagos y pasarela de pago en memoria, firma y verifica notificaciones con HMAC
 packages/infrastructure/src/memory/documents Repositorio de documentos, almacenamiento de ficheros y procesador en memoria
 packages/infrastructure/src/memory/identity  Repositorios de identidad en memoria
 packages/infrastructure/src/memory/privacy   Repositorio de consentimiento en memoria
 packages/infrastructure/src/memory/tenants   Repositorio de tenants en memoria
 packages/infrastructure/src/otel             Telemetría real con OpenTelemetry, exportada a Sentry por OTLP
 packages/infrastructure/src/postgres         Esquema Drizzle, repositorios, unidad de trabajo, outbox y contexto de transacción
+packages/infrastructure/src/postgres/billing   Repositorio de pagos sobre Postgres, con su índice único por referencia del proveedor
 packages/infrastructure/src/postgres/documents Repositorio de documentos sobre Postgres
 packages/infrastructure/src/postgres/identity Repositorios de identidad sobre Postgres
 packages/infrastructure/src/postgres/jobs    Cola de trabajos diferidos sobre Postgres, con reintento y espera creciente
@@ -205,6 +216,7 @@ packages/infrastructure/src/postgres/privacy Repositorio de consentimiento sobre
 packages/infrastructure/src/postgres/schema  Definición de tablas en Drizzle
 packages/infrastructure/src/postgres/tenants Repositorio de tenants sobre Postgres
 packages/infrastructure/src/resend           Envío de correo
+packages/infrastructure/src/stripe           Pagos: crear la sesión de cobro y verificar la firma de la notificación, el único sitio que sustituir por Redsys
 packages/infrastructure/src/supabase         Proveedor de identidad y almacenamiento de ficheros sobre Supabase Storage
 packages/infrastructure/src/turnstile        Verificación de humano
 packages/infrastructure/test                 Tests de infraestructura
@@ -231,9 +243,6 @@ La configuración se lee en `apps/*/src/main` y en ningún otro sitio. El compro
 El esqueleto está pensado para que estas piezas entren sin mover las anteriores. Cada una tiene su sitio decidido, y ninguno de estos directorios existe todavía: `bun run structure` falla si alguno aparece sin salir de aquí y entrar en el árbol.
 
 ```
-packages/domain/src/billing                  Pagos: ciclo de facturación propio, para que cambiar de proveedor sea cambiar un adaptador
-packages/application/src/billing             Pagos: suscribir, facturar, conciliar, y sus puertos
-packages/infrastructure/src/stripe           Pagos: el proveedor, un solo sitio que sustituir por Redsys
 packages/application/src/search              Búsqueda: el puerto y sus casos de uso
 packages/infrastructure/src/search           Búsqueda: el proveedor real
 packages/application/src/webhooks            Webhooks salientes: firma, reintento y registro de entregas

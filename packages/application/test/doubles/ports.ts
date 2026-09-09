@@ -16,6 +16,9 @@ import type {
   AuditEntryInput,
   AuditTrail,
   Clock,
+  IdempotencyKey,
+  IdempotencyRecord,
+  IdempotencyStore,
   IdGenerator,
   JobQueue,
   JobRetry,
@@ -361,5 +364,28 @@ export class StubAuditTrail implements AuditTrail {
 
   findForResource(resourceType: string, resourceId: string): Promise<readonly AuditEntry[]> {
     return Promise.resolve(this.entries.filter((entry) => entry.resourceType === resourceType && entry.resourceId === resourceId));
+  }
+}
+
+function slotOf(key: IdempotencyKey): string {
+  return `${key.scope} ${key.key}`;
+}
+
+export class StubIdempotencyStore implements IdempotencyStore {
+  readonly #records = new Map<string, IdempotencyRecord>();
+  readonly saved: IdempotencyRecord[] = [];
+
+  find(key: IdempotencyKey): Promise<IdempotencyRecord | undefined> {
+    return Promise.resolve(this.#records.get(slotOf(key)));
+  }
+
+  save(record: IdempotencyRecord): Promise<void> {
+    this.#records.set(slotOf(record), record);
+    this.saved.push(record);
+    return Promise.resolve();
+  }
+
+  get size(): number {
+    return this.#records.size;
   }
 }

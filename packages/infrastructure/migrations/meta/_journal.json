@@ -57,6 +57,13 @@
       "when": 1788696636021,
       "tag": "0007_fair_job_dispatch",
       "breakpoints": false
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788905006565,
+      "tag": "0008_payments",
+      "breakpoints": false
     }
   ]
 }

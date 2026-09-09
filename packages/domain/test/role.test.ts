@@ -27,6 +27,10 @@ describe("permission matrix", () => {
     expect(roles.filter((role) => roleAllows({ role, action: "members:manage" }))).toEqual(["owner", "admin"]);
   });
 
+  it("lets the owner and the admin start payments", () => {
+    expect(roles.filter((role) => roleAllows({ role, action: "payments:start" }))).toEqual(["owner", "admin"]);
+  });
+
   it("denies an action it does not know", () => {
     expect(roleAllows({ role: "owner", action: "tenants:delete" })).toBe(false);
   });
@@ -70,5 +74,9 @@ describe("resource of an action", () => {
 
   it("maps the member action to the member resource", () => {
     expect(resourceOfAction("members:manage")).toBe("member");
+  });
+
+  it("maps the payments action to the payment resource", () => {
+    expect(resourceOfAction("payments:start")).toBe("payment");
   });
 });

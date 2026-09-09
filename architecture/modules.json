@@ -6,6 +6,7 @@
     "jobs": { "core": false, "active": true, "dependsOn": [] },
     "documents": { "core": false, "active": true, "dependsOn": ["jobs"] },
     "notifications": { "core": false, "active": true, "dependsOn": [] },
-    "privacy": { "core": false, "active": true, "dependsOn": ["jobs", "documents"] }
+    "privacy": { "core": false, "active": true, "dependsOn": ["jobs", "documents"] },
+    "billing": { "core": false, "active": false, "dependsOn": [] }
   }
 }
