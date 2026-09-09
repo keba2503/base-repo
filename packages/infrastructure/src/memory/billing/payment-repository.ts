@@ -44,7 +44,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     return Promise.resolve(hydrate(snapshot));
   }
 
-  findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
+  findByIdForWrite(id: EntityId): Promise<Payment | undefined> {
     return this.findById(id);
   }
 

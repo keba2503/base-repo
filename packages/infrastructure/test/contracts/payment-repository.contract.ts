@@ -55,7 +55,7 @@ export function describePaymentRepositoryContract(
       const payment = paymentFactory({ id: entityIdFactory(1) });
       await harness.registry.save(payment);
       const unlocked = await harness.registry.findById(entityIdFactory(1));
-      const locked = await harness.registry.findByIdForUpdate(entityIdFactory(1));
+      const locked = await harness.registry.findByIdForWrite(entityIdFactory(1));
       expect(idOf(locked)).toBe(idOf(unlocked));
     });
 
@@ -63,7 +63,7 @@ export function describePaymentRepositoryContract(
       const harness = createHarness();
       await harness.registry.save(paymentFactory({ id: entityIdFactory(1), tenantId: otherTenant }));
       const scoped = harness.scopedTo(ownTenant);
-      expect(await scoped.findByIdForUpdate(entityIdFactory(1))).toBeUndefined();
+      expect(await scoped.findByIdForWrite(entityIdFactory(1))).toBeUndefined();
     });
 
     it("lets a tenant scoped repository read its own payment", async () => {

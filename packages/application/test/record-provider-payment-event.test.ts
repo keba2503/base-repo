@@ -120,7 +120,7 @@ describe("recording a successful provider event", () => {
     const registryCalls = harness.payments.calls.filter((call) => call.scope.kind === "registry");
     const scopedCalls = harness.payments.calls.filter((call) => call.scope.kind === "tenant");
     expect(registryCalls.map((call) => call.method)).toEqual(["findById"]);
-    expect(scopedCalls.map((call) => call.method)).toEqual(["findByIdForUpdate", "save"]);
+    expect(scopedCalls.map((call) => call.method)).toEqual(["findByIdForWrite", "save"]);
   });
 });
 

@@ -57,6 +57,10 @@ function replayedResponse(event: ProviderPaymentEvent): RecordProviderPaymentEve
   return { applied: false, replayed: true, paymentId: event.paymentId, status: undefined, kind: event.kind };
 }
 
+type LockedTransitionOutcome =
+  | { readonly matched: false; readonly response: RecordProviderPaymentEventResponse }
+  | { readonly matched: true; readonly response: RecordProviderPaymentEventResponse };
+
 function resolvePaymentId(candidate: string | undefined): EntityId | undefined {
   if (!candidate) return undefined;
   const parsed = parseEntityId(candidate);
@@ -134,9 +138,9 @@ export function recordProviderPaymentEvent(
 
     const outcome = await unitOfWork.run(
       { kind: "tenant", tenantId: payment.tenantId },
-      async (): Promise<Result<RecordProviderPaymentEventResponse, DomainError>> => {
-        const locked = await scopedPayments.findByIdForUpdate(paymentId);
-        if (!locked) return ok(unmatchedResponse(event));
+      async (): Promise<Result<LockedTransitionOutcome, DomainError>> => {
+        const locked = await scopedPayments.findByIdForWrite(paymentId);
+        if (!locked) return ok({ matched: false, response: unmatchedResponse(event) });
 
         const transition = applyTransition(locked, event, clock.now());
         if (isErr(transition)) return transition;
@@ -154,17 +158,20 @@ export function recordProviderPaymentEvent(
         });
 
         return ok({
-          applied: transition.value === "applied",
-          replayed: false,
-          paymentId: locked.id,
-          status: locked.status,
-          kind: event.kind,
+          matched: true,
+          response: {
+            applied: transition.value === "applied",
+            replayed: false,
+            paymentId: locked.id,
+            status: locked.status,
+            kind: event.kind,
+          },
         });
       },
     );
 
     if (isErr(outcome)) return outcome;
-    if (outcome.value.status === undefined) return outcome;
+    if (!outcome.value.matched) return ok(outcome.value.response);
 
     await idempotency.save({
       ...idempotencyKey,
@@ -172,6 +179,6 @@ export function recordProviderPaymentEvent(
       reply: { status: 200, body: "" },
     });
 
-    return outcome;
+    return ok(outcome.value.response);
   };
 }

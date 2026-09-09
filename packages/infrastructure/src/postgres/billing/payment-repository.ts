@@ -62,7 +62,7 @@ export class PostgresPaymentRepository implements PaymentRepository {
     });
   }
 
-  findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
+  findByIdForWrite(id: EntityId): Promise<Payment | undefined> {
     return runScoped(this.#db, this.#scope, async (transaction: PostgresExecutor) => {
       const rows = await transaction
         .select()

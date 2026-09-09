@@ -11,7 +11,7 @@ import type {
 export type StubPaymentRepositoryScope = { readonly kind: "registry" } | { readonly kind: "tenant"; readonly tenantId: TenantId };
 
 export type StubPaymentRepositoryCall = {
-  readonly method: "findById" | "findByIdForUpdate" | "save";
+  readonly method: "findById" | "findByIdForWrite" | "save";
   readonly scope: StubPaymentRepositoryScope;
   readonly id: string;
 };
@@ -56,8 +56,8 @@ export class StubPaymentRepository implements PaymentRepository {
     return Promise.resolve(found && this.#isVisible(found.tenantId) ? found : undefined);
   }
 
-  findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
-    this.#calls.push({ method: "findByIdForUpdate", scope: this.#scope, id });
+  findByIdForWrite(id: EntityId): Promise<Payment | undefined> {
+    this.#calls.push({ method: "findByIdForWrite", scope: this.#scope, id });
     const found = this.#lockedReadOverrides.has(id) ? this.#lockedReadOverrides.get(id) : this.#payments.get(id);
     return Promise.resolve(found && this.#isVisible(found.tenantId) ? found : undefined);
   }

@@ -4,6 +4,7 @@ import {
   aesGcmKeyByteLength,
   AesGcmFieldCipher,
   apiKeys,
+  applyTenantScope,
   auditLog,
   consents,
   createPostgresClient,
@@ -362,6 +363,60 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
           (error: unknown) => error,
         );
         expect(caught).toBeInstanceOf(Error);
+      });
+    });
+
+    describe("findByIdForWrite serializes writers through a real row lock", () => {
+      it("blocks a second connection from taking the same lock until the first transaction commits", async () => {
+        const ownTenant = tenantIdFactory(1);
+        const paymentId = entityIdFactory(1);
+        const registry = new PostgresPaymentRepository(client.db, { kind: "registry" });
+        await registry.save(paymentFactory({ id: paymentId, tenantId: ownTenant }));
+
+        const secondClient = createPostgresClient({ connectionString, maxConnections: 1 });
+        try {
+          const firstUnitOfWork = new PostgresUnitOfWork(client.db);
+          const firstRepository = new PostgresPaymentRepository(client.db, { kind: "tenant", tenantId: ownTenant });
+
+          let notifyLockAcquired: () => void = () => undefined;
+          const lockAcquired = new Promise<void>((resolve) => {
+            notifyLockAcquired = resolve;
+          });
+          let releaseFirstTransaction: () => void = () => undefined;
+          const firstTransactionMayCommit = new Promise<void>((resolve) => {
+            releaseFirstTransaction = resolve;
+          });
+
+          const firstTransaction = firstUnitOfWork.run({ kind: "tenant", tenantId: ownTenant }, async () => {
+            await firstRepository.findByIdForWrite(paymentId);
+            notifyLockAcquired();
+            await firstTransactionMayCommit;
+          });
+
+          await lockAcquired;
+
+          const secondAttempt = secondClient.db.transaction(async (transaction) => {
+            await applyTenantScope(transaction, { kind: "tenant", tenantId: ownTenant });
+            return transaction
+              .select()
+              .from(payments)
+              .where(eq(payments.id, paymentId))
+              .for("update", { noWait: true });
+          });
+
+          const secondOutcome = await secondAttempt.then(
+            () => undefined,
+            (error: unknown) => error,
+          );
+
+          releaseFirstTransaction();
+          await firstTransaction;
+
+          expect(secondOutcome).toBeInstanceOf(Error);
+          expect((secondOutcome as Error).message).toMatch(/lock/i);
+        } finally {
+          await secondClient.close();
+        }
       });
     });
   });
