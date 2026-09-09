@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { routesFromPageFiles, viewportIssues, type PageSnapshot, type Viewport } from "./check-viewport";
+import { documentsFromFiles, routesFromPageFiles, viewportIssues, type PageSnapshot, type Viewport } from "./check-viewport";
 
 const viewport: Viewport = { width: 375, label: "mobile" };
 
@@ -161,5 +161,19 @@ describe("routesFromPageFiles", () => {
         "apps/web/src/app/page.tsx",
       ]),
     ).toEqual(["/", "/tenants/new"]);
+  });
+});
+
+describe("documentsFromFiles", () => {
+  test("collects the html documents under docs, sorted", () => {
+    expect(documentsFromFiles(["docs/b.html", "docs/a.html"])).toEqual(["docs/a.html", "docs/b.html"]);
+  });
+
+  test("ignores documents that are not html and html outside docs", () => {
+    expect(documentsFromFiles(["docs/base.md", "README.html", "apps/web/x.html"])).toEqual([]);
+  });
+
+  test("returns nothing when a derived project ships no html document, instead of failing", () => {
+    expect(documentsFromFiles(["docs/architecture/layers.md", "apps/web/src/app/page.tsx"])).toEqual([]);
   });
 });

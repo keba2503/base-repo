@@ -95,6 +95,12 @@ function isRouteSegment(segment: string): boolean {
   return !segment.startsWith("[") && !segment.startsWith("(");
 }
 
+export const documentDirectory = "docs/";
+
+export function documentsFromFiles(files: readonly string[]): string[] {
+  return files.filter((file) => file.startsWith(documentDirectory) && file.endsWith(".html")).sort();
+}
+
 export function routesFromPageFiles(files: readonly string[]): string[] {
   const routes = new Set<string>();
 
