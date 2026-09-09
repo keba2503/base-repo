@@ -82,6 +82,18 @@ if (!databaseUrl || !databaseAdminUrl) {
   describePostgresSuites(databaseUrl, databaseAdminUrl);
 }
 
+const lockNotAvailableSqlState = "55P03";
+
+function sqlStateOf(thrown: unknown): string | undefined {
+  let current: unknown = thrown;
+  while (current instanceof Error) {
+    const code: unknown = (current as { readonly code?: unknown }).code;
+    if (typeof code === "string") return code;
+    current = current.cause;
+  }
+  return undefined;
+}
+
 function describePostgresSuites(connectionString: string, adminConnectionString: string): void {
   describe("Postgres", () => {
     let client: PostgresClient;
@@ -413,7 +425,7 @@ function describePostgresSuites(connectionString: string, adminConnectionString:
           await firstTransaction;
 
           expect(secondOutcome).toBeInstanceOf(Error);
-          expect((secondOutcome as Error).message).toMatch(/lock/i);
+          expect(sqlStateOf(secondOutcome)).toBe(lockNotAvailableSqlState);
         } finally {
           await secondClient.close();
         }
