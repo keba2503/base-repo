@@ -226,6 +226,7 @@ scripts                                      Herramientas propias, fuera de los 
 scripts/agent                                Hooks de Claude Code: revisan lo que se va a escribir y lo que se va a ejecutar
 scripts/architecture                         El comprobador propio de capas, comentarios, any y process.env
 scripts/db                                   Configuración de Drizzle y aplicación de migraciones
+scripts/derive                               La herramienta que convierte una copia de esta base en un proyecto propio. Solo existe aquí: al derivar se borra a sí misma
 scripts/load                                 Guiones de carga con k6 contra la API, umbrales incluidos
 scripts/ui                                   La puerta visual: arranca la web, visita cada ruta estática y mide con un navegador de verdad
 ```

@@ -28,10 +28,14 @@ The architecture follows Robert C. Martin's Clean Architecture. The dependency r
 This repository is meant to be derived, not run as-is:
 
 1. Use it as a template (GitHub "Use this template") or clone it into a new directory.
-2. Rename the scope: replace `@base` in `architecture/layers.json`, `tsconfig.json`, and any `package.json` name fields with your project's scope.
+2. Run `bun run derive <scope> <repo-name>`. The `@base` scope is not a handful of occurrences to fix by hand: it is in every import of every ring, in `.github/workflows/ci.yml`, in the documentation and in the tests, and two of those files used to read as binary to `grep`. `derive` renames it in every tracked text file, renames the root package, deletes `docs/base.html`, rewrites the prose in this file, in `SECURITY.md`, in `AGENTS.md` and in `docs/layers/web.md` that is only true of the base, and prints what it changed. It refuses to run a second time.
 3. Update `.github/CODEOWNERS` and `SECURITY.md` with the new owners and contact.
-4. Run `bun install`.
-5. Start building inside `packages/domain` outward; see the layer table below.
+4. Run `bun install`, then `bun run check`.
+5. Commit the result as `chore: derive from base-repo`. Nothing but names changed, so it needs no ring review.
+6. If the derived repository is private, code scanning needs GitHub Code Security enabled for the account. Without it, `.github/workflows/codeql.yml` fails on every pull request; disable that workflow under **Actions** rather than making it report green without scanning (`docs/decisions/0031`).
+7. Start building inside `packages/domain` outward; see the layer table below.
+
+`derive` writes these same steps into the derived project's own "Getting started", and prints them when it finishes, so they are read at the moment they apply rather than only here.
 
 ## Commands
 
@@ -45,6 +49,7 @@ This repository is meant to be derived, not run as-is:
 | `bun run depcruise` | Runs dependency-cruiser against the layer graph |
 | `bun run structure` | Fails when a tracked directory has no line in `ESTRUCTURA.md`, or vice versa |
 | `bun run env-example` | Fails when a variable required in production by any `apps/*/src/main/env.ts` is missing from `.env.example` |
+| `bun run derive` | Turns a fresh copy of this base into a project of its own: `bun run derive <scope> <repo-name>` |
 | `bun run test` | Runs the test suite (`bun test`) |
 | `bun run check` | Runs every gate above, in the order its own script defines in `package.json`; this is the single gate CI and `pre-push` both call |
 
