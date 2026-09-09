@@ -10,7 +10,7 @@ Four gates, fastest first. Each one runs the same checks; the later ones only ex
 | Gate | When | What runs | Bypass |
 | --- | --- | --- | --- |
 | Agent hooks | before every file write, every shell command, and before an agent stops | architecture check on the content about to be written; command deny list; full `bun run check` on stop when the tree is dirty | none |
-| lefthook | pre-commit, commit-msg, pre-push | eslint and architecture check on staged files, typecheck, conventional commit message, full check before push | `--no-verify`, forbidden by the agent hook |
+| lefthook | pre-commit, commit-msg, pre-push | eslint and architecture check on staged files, typecheck, conventional commit message, the commit carries a `Reviewed-by:` or `Review-exempt:` trailer (rule 13), full check before push | `--no-verify`, forbidden by the agent hook |
 | GitHub Actions | pull request and push to main | install with frozen lockfile, `bun run check`, build, `bun run ui` (its own job), secret scan, CodeQL, dependency audit | none, required checks |
 | Vercel | every deployment | production build | none |
 

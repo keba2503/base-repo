@@ -14,6 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  review-trailer:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: git log -1 --format=%B HEAD > /tmp/commit-message.txt
+      - run: bun run review-trailer /tmp/commit-message.txt
+
   check:
     runs-on: ubuntu-latest
     steps:
