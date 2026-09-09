@@ -217,6 +217,7 @@ describe("stripe payment gateway checkout session request", () => {
     expect(body.get("metadata[paymentId]")).toBe(instruction.paymentId);
     expect(body.get("metadata[tenantId]")).toBe(instruction.tenantId);
     expect(body.get("payment_intent_data[metadata][paymentId]")).toBe(instruction.paymentId);
+    expect(body.get("payment_intent_data[metadata][tenantId]")).toBe(instruction.tenantId);
     expect(body.get("line_items[0][quantity]")).toBe("1");
     expect(body.get("line_items[0][price_data][currency]")).toBe(instruction.amount.currency.toLowerCase());
     expect(body.get("line_items[0][price_data][unit_amount]")).toBe(String(instruction.amount.amountMinor));
@@ -380,7 +381,7 @@ describe("stripe payment gateway notification interpretation", () => {
     expect(interpreted.value.reason).toBe("card_declined");
   });
 
-  it("interprets payment_intent.payment_failed as failed", async () => {
+  it("interprets payment_intent.payment_failed as failed and carries the tenant id from the payment intent metadata", async () => {
     const timestampSeconds = Math.floor(Date.now() / 1000);
     const rawBody = JSON.stringify({
       id: `evt_${randomUUID()}`,
@@ -389,7 +390,7 @@ describe("stripe payment gateway notification interpretation", () => {
       data: {
         object: {
           id: "pi_test_failed",
-          metadata: { paymentId: instruction.paymentId },
+          metadata: { paymentId: instruction.paymentId, tenantId: instruction.tenantId },
           last_payment_error: { code: "insufficient_funds" },
         },
       },
@@ -403,6 +404,7 @@ describe("stripe payment gateway notification interpretation", () => {
     if (!isOk(interpreted)) throw new Error(`Expected an event, received ${interpreted.error.code}`);
     expect(interpreted.value.kind).toBe("failed");
     expect(interpreted.value.reason).toBe("insufficient_funds");
+    expect(interpreted.value.tenantId).toBe(instruction.tenantId);
   });
 
   it("reads the tenant id from the event metadata", async () => {

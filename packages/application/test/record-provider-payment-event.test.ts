@@ -40,6 +40,7 @@ function harnessFactory(granted: readonly string[] = ["payments:recordProviderEv
   const permissions = new StubPermissions(granted);
   const useCase = recordProviderPaymentEvent({
     payments,
+    paymentsScopedTo: (tenantId) => payments.scopedTo(tenantId),
     gateway,
     auditScopedTo: () => audit,
     permissions,
@@ -112,6 +113,14 @@ describe("recording a successful provider event", () => {
   it("asks the permissions port before acting", async () => {
     await harness.useCase(request);
     expect(harness.permissions.requests.map((entry) => entry.action)).toEqual(["payments:recordProviderEvent"]);
+  });
+
+  it("locks and saves through a tenant scoped repository, never through the registry one", async () => {
+    await harness.useCase(request);
+    const registryCalls = harness.payments.calls.filter((call) => call.scope.kind === "registry");
+    const scopedCalls = harness.payments.calls.filter((call) => call.scope.kind === "tenant");
+    expect(registryCalls.map((call) => call.method)).toEqual(["findById"]);
+    expect(scopedCalls.map((call) => call.method)).toEqual(["findByIdForUpdate", "save"]);
   });
 });
 
@@ -311,6 +320,28 @@ describe("an event whose tenant contradicts the payment it resolved to", () => {
     expect(built.unitOfWork.runs).toBe(0);
     expect(built.idempotency.size).toBe(0);
     expect(built.payments.saved.map((payment) => payment.status)).toEqual(["pending"]);
+  });
+
+  it("refuses an ordinary declined card notification whose payment intent metadata names a different tenant", async () => {
+    const built = harnessFactory();
+    const payment = paymentFactory();
+    built.payments.seed(payment);
+    built.gateway.resolveInterpretWith(
+      ok(
+        providerPaymentEventFactory({
+          kind: "failed",
+          paymentId: payment.id,
+          providerReference: "pi_test_failed",
+          tenantId: "some-other-tenant",
+          amount: undefined,
+          reason: "card_declined",
+        }),
+      ),
+    );
+
+    const error = expectErr(await built.useCase(request));
+
+    expect([error.kind, error.code]).toEqual(["forbidden", "payment.notification.tenantMismatch"]);
   });
 });
 

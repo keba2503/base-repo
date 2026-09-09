@@ -1,4 +1,4 @@
-import type { DomainError, EntityId, Payment, Result } from "@base/domain";
+import type { DomainError, EntityId, Payment, Result, TenantId } from "@base/domain";
 import type {
   PaymentGateway,
   PaymentHandoff,
@@ -8,12 +8,38 @@ import type {
   StartPaymentInstruction,
 } from "../../src/index";
 
+export type StubPaymentRepositoryScope = { readonly kind: "registry" } | { readonly kind: "tenant"; readonly tenantId: TenantId };
+
+export type StubPaymentRepositoryCall = {
+  readonly method: "findById" | "findByIdForUpdate" | "save";
+  readonly scope: StubPaymentRepositoryScope;
+  readonly id: string;
+};
+
 export class StubPaymentRepository implements PaymentRepository {
   readonly #payments: Map<string, Payment>;
-  readonly #lockedReadOverrides = new Map<string, Payment | undefined>();
+  readonly #lockedReadOverrides: Map<string, Payment | undefined>;
+  readonly #scope: StubPaymentRepositoryScope;
+  readonly #calls: StubPaymentRepositoryCall[];
 
-  constructor(shared?: Map<string, Payment>) {
+  constructor(
+    shared?: Map<string, Payment>,
+    scope: StubPaymentRepositoryScope = { kind: "registry" },
+    lockedReadOverrides?: Map<string, Payment | undefined>,
+    calls?: StubPaymentRepositoryCall[],
+  ) {
     this.#payments = shared ?? new Map<string, Payment>();
+    this.#lockedReadOverrides = lockedReadOverrides ?? new Map<string, Payment | undefined>();
+    this.#scope = scope;
+    this.#calls = calls ?? [];
+  }
+
+  scopedTo(tenantId: TenantId): StubPaymentRepository {
+    return new StubPaymentRepository(this.#payments, { kind: "tenant", tenantId }, this.#lockedReadOverrides, this.#calls);
+  }
+
+  #isVisible(tenantId: string): boolean {
+    return this.#scope.kind === "registry" || this.#scope.tenantId === tenantId;
   }
 
   seed(payment: Payment): void {
@@ -25,21 +51,32 @@ export class StubPaymentRepository implements PaymentRepository {
   }
 
   findById(id: EntityId): Promise<Payment | undefined> {
-    return Promise.resolve(this.#payments.get(id));
+    this.#calls.push({ method: "findById", scope: this.#scope, id });
+    const found = this.#payments.get(id);
+    return Promise.resolve(found && this.#isVisible(found.tenantId) ? found : undefined);
   }
 
   findByIdForUpdate(id: EntityId): Promise<Payment | undefined> {
-    if (this.#lockedReadOverrides.has(id)) return Promise.resolve(this.#lockedReadOverrides.get(id));
-    return Promise.resolve(this.#payments.get(id));
+    this.#calls.push({ method: "findByIdForUpdate", scope: this.#scope, id });
+    const found = this.#lockedReadOverrides.has(id) ? this.#lockedReadOverrides.get(id) : this.#payments.get(id);
+    return Promise.resolve(found && this.#isVisible(found.tenantId) ? found : undefined);
   }
 
   save(payment: Payment): Promise<void> {
+    this.#calls.push({ method: "save", scope: this.#scope, id: payment.id });
+    if (!this.#isVisible(payment.tenantId)) {
+      throw new Error("A tenant scoped repository may not write outside its own tenant");
+    }
     this.#payments.set(payment.id, payment);
     return Promise.resolve();
   }
 
   get saved(): readonly Payment[] {
     return [...this.#payments.values()];
+  }
+
+  get calls(): readonly StubPaymentRepositoryCall[] {
+    return this.#calls;
   }
 }
 

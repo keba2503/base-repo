@@ -213,6 +213,7 @@ export function recordProviderPaymentEventOperation(): RecordProviderPaymentEven
   const parts = container();
   return recordProviderPaymentEvent({
     payments: paymentPersistenceOf(parts).registry,
+    paymentsScopedTo: parts.paymentsScopedTo,
     gateway: parts.paymentGateway,
     auditScopedTo: parts.auditScopedTo,
     permissions: parts.permissions,

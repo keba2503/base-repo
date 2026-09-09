@@ -284,6 +284,19 @@ function postgresBillingPersistence(client: PostgresClient): BillingPersistence 
   };
 }
 
+export function assertBillingPersistenceIsSafeInProduction(
+  environment: Environment,
+  billingActive: boolean,
+  hasDatabaseClient: boolean,
+): void {
+  if (!billingActive) return;
+  if (environment.nodeEnv !== "production") return;
+  if (hasDatabaseClient) return;
+  throw new Error(
+    "DATABASE_URL is required in production while the billing module is active: without it, payments are stored in memory, the in-memory unit of work serializes nothing, and the locked read that closes the double-processing race is never taken. Deactivate billing in architecture/modules.json instead if you do not need to take payments",
+  );
+}
+
 function fieldCipherFor(environment: Environment, logger: Logger): FieldCipher {
   if (environment.nodeEnv === "test") return new InMemoryFieldCipher();
   if (environment.databaseUrl === undefined) return new InMemoryFieldCipher();
@@ -475,6 +488,7 @@ export function createContainer(environment: Environment): Container {
   const documents =
     client !== undefined ? postgresDocumentsPersistence(client, fieldCipher) : memoryDocumentsPersistence();
 
+  assertBillingPersistenceIsSafeInProduction(environment, isModuleActive("billing"), client !== undefined);
   const billing = client !== undefined ? postgresBillingPersistence(client) : memoryBillingPersistence();
 
   const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);

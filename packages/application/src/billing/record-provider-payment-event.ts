@@ -34,6 +34,7 @@ import type { PaymentRepository } from "./ports/payment-repository";
 
 export type RecordProviderPaymentEventDependencies = {
   readonly payments: PaymentRepository;
+  readonly paymentsScopedTo: (tenantId: TenantId) => PaymentRepository;
   readonly gateway: PaymentGateway;
   readonly auditScopedTo: (tenantId: TenantId) => AuditTrail;
   readonly permissions: Permissions;
@@ -80,8 +81,18 @@ function applyTransition(payment: Payment, event: ProviderPaymentEvent, at: Date
 export function recordProviderPaymentEvent(
   dependencies: RecordProviderPaymentEventDependencies,
 ): RecordProviderPaymentEvent {
-  const { payments, gateway, auditScopedTo, permissions, clock, unitOfWork, outbox, idempotency, provider } =
-    dependencies;
+  const {
+    payments,
+    paymentsScopedTo,
+    gateway,
+    auditScopedTo,
+    permissions,
+    clock,
+    unitOfWork,
+    outbox,
+    idempotency,
+    provider,
+  } = dependencies;
 
   return async (request) => {
     const authorization = await authorize({
@@ -119,16 +130,18 @@ export function recordProviderPaymentEvent(
       );
     }
 
+    const scopedPayments = paymentsScopedTo(payment.tenantId);
+
     const outcome = await unitOfWork.run(
       { kind: "tenant", tenantId: payment.tenantId },
       async (): Promise<Result<RecordProviderPaymentEventResponse, DomainError>> => {
-        const locked = await payments.findByIdForUpdate(paymentId);
+        const locked = await scopedPayments.findByIdForUpdate(paymentId);
         if (!locked) return ok(unmatchedResponse(event));
 
         const transition = applyTransition(locked, event, clock.now());
         if (isErr(transition)) return transition;
 
-        await payments.save(locked);
+        await scopedPayments.save(locked);
         await outbox.enqueue(locked.pullEvents());
         await auditScopedTo(locked.tenantId).record({
           tenantId: locked.tenantId,

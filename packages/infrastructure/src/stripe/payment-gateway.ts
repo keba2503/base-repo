@@ -58,6 +58,7 @@ function formOf(instruction: StartPaymentInstruction): URLSearchParams {
   form.set("metadata[paymentId]", instruction.paymentId);
   form.set("metadata[tenantId]", instruction.tenantId);
   form.set("payment_intent_data[metadata][paymentId]", instruction.paymentId);
+  form.set("payment_intent_data[metadata][tenantId]", instruction.tenantId);
   form.set("line_items[0][quantity]", "1");
   form.set("line_items[0][price_data][currency]", instruction.amount.currency.toLowerCase());
   form.set("line_items[0][price_data][unit_amount]", String(instruction.amount.amountMinor));
