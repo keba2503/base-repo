@@ -130,7 +130,9 @@ export function routeHandler(route: RouteDefinition, dependencies: ApiDependenci
 
       const outcome = await route.execute({ actor, payload: payload.payload });
       const reply = replyOf(outcome, route.successStatus, requestId);
-      if (idempotency.kind === "fresh") await dependencies.idempotencyStore.save(idempotency.record(reply));
+      if (idempotency.kind === "fresh" && reply.status < 500) {
+        await dependencies.idempotencyStore.save(idempotency.record(reply));
+      }
 
       span.setAttribute("statusCode", reply.status);
       span.end(reply.status < 500 ? "ok" : "error");

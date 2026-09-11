@@ -95,8 +95,8 @@ function translateFailure(status: number, payload: unknown): DomainError {
   return unavailable(paymentProviderUnavailableCode, `Stripe request failed with status ${String(status)}${suffix}`);
 }
 
-function messageOf(thrown: unknown): string {
-  return thrown instanceof Error ? thrown.message : String(thrown);
+function safeMessageOf(): string {
+  return "the request to the payment provider could not be completed";
 }
 
 function stripeEventOf(payload: unknown): StripeEventBody | undefined {
@@ -179,8 +179,8 @@ export class StripePaymentGateway implements PaymentGateway {
     let response: Response;
     try {
       response = await this.#client.createCheckoutSession(instruction.idempotencyKey, formOf(instruction));
-    } catch (thrown: unknown) {
-      return err(unavailable(paymentProviderUnavailableCode, messageOf(thrown)));
+    } catch {
+      return err(unavailable(paymentProviderUnavailableCode, safeMessageOf()));
     }
 
     let payload: unknown;

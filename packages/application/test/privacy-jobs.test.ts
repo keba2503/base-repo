@@ -8,6 +8,7 @@ import {
   type SubjectDataRow,
 } from "../src/index";
 import { StubClock, StubJobQueue, StubLogger } from "./doubles/ports";
+import { CounterIdGenerator } from "./doubles/id-generator";
 import { StubAnonymizableSource, StubRetainableSource, StubSubjectDataSource } from "./doubles/privacy-ports";
 import { StubFileStore } from "./doubles/documents-ports";
 import { tenantIdFactory } from "./factories/actor";
@@ -34,6 +35,7 @@ describe("composing a subject data export from classified sources", () => {
       exportStore,
       clock: new StubClock(new Date("2026-01-15T10:00:00.000Z")),
       logger: new StubLogger(),
+      tokens: new CounterIdGenerator(),
     });
 
     const result = await executor.execute(jobFor("privacy.export.subject", { subjectId }));
@@ -52,6 +54,7 @@ describe("erasing a subject across every registered source", () => {
     const executor = eraseSubjectDataExecutor({
       sources: [users, documents],
       clock: new StubClock(new Date("2026-01-15T10:00:00.000Z")),
+      tokens: new CounterIdGenerator(),
     });
 
     await executor.execute(jobFor("privacy.erasure.subject", { subjectId }));
@@ -73,6 +76,7 @@ describe("sweeping expired records for retention", () => {
       policy: { users: 365 },
       clock: new StubClock(new Date("2026-01-15T10:00:00.000Z")),
       jobs,
+      tokens: new CounterIdGenerator(),
       sweepIntervalDays: 1,
     });
 
@@ -92,6 +96,7 @@ describe("sweeping expired records for retention", () => {
       policy: {},
       clock: new StubClock(new Date("2026-01-15T10:00:00.000Z")),
       jobs,
+      tokens: new CounterIdGenerator(),
       sweepIntervalDays: 1,
     });
 

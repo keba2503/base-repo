@@ -246,11 +246,13 @@ describe("stripe payment gateway checkout session request", () => {
 });
 
 describe("stripe payment gateway error translation", () => {
-  it("reports a thrown network failure as unavailable", async () => {
+  it("reports a thrown network failure as unavailable without leaking the thrown message", async () => {
     const fake = fakeFetch(() => Promise.reject(new Error("socket hang up")));
     const result = await gatewayOver(fake.fetchImplementation).start(startPaymentInstructionFactory());
     if (!isErr(result)) throw new Error("Expected a failure");
-    expect([result.error.kind, result.error.message]).toEqual(["unavailable", "socket hang up"]);
+    expect(result.error.kind).toBe("unavailable");
+    expect(result.error.message).toBe("the request to the payment provider could not be completed");
+    expect(result.error.message).not.toContain("socket hang up");
   });
 
   it("gives up when Stripe does not answer within the timeout", async () => {

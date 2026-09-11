@@ -49,10 +49,6 @@ function translate(error: ErrorResponse): DomainError {
   return unavailable(mailProviderUnavailableCode, `Resend could not send the message: ${error.name}`);
 }
 
-function reasonOf(thrown: unknown): string {
-  return thrown instanceof Error ? thrown.message : String(thrown);
-}
-
 function withTimeout<Value>(pending: Promise<Value>, timeoutMs: number): Promise<Value> {
   return new Promise<Value>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -86,8 +82,8 @@ export class ResendMailer implements Mailer {
     let response: CreateEmailResponse;
     try {
       response = await withTimeout(this.#client.emails.send(payloadOf(this.#from, message)), this.#timeoutMs);
-    } catch (thrown: unknown) {
-      return err(unavailable(mailProviderUnavailableCode, reasonOf(thrown)));
+    } catch {
+      return err(unavailable(mailProviderUnavailableCode, "the mail provider could not be reached"));
     }
     if (response.error) return err(translate(response.error));
     return ok(undefined);

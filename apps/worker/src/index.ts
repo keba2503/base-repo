@@ -1,10 +1,15 @@
 import { createContainer } from "./main/container";
 import { env } from "./main/env";
 import { dispatchJobsOperation, dispatchOutboxOperation } from "./main/use-cases";
+import { schedulePrivacyRetentionSweep } from "./main/retention-sweep-seed";
 
 const container = createContainer(env);
 const dispatchOutboxBatch = dispatchOutboxOperation(container, env);
 const dispatchJobsBatch = dispatchJobsOperation(container);
+
+await schedulePrivacyRetentionSweep(container).catch((thrown: unknown) => {
+  container.logger.error("the retention sweep could not be scheduled", { reason: failureMessageOf(thrown) });
+});
 
 const state = { running: true };
 

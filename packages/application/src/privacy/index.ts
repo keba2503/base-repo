@@ -41,5 +41,6 @@ export {
 export {
   retentionSweepExecutor,
   retentionSweepJobName,
+  scheduleFirstRetentionSweep,
   type RetentionSweepDependencies,
 } from "./jobs/retention-sweep";

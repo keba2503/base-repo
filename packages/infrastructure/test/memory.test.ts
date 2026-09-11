@@ -24,12 +24,16 @@ import {
   InMemoryPaymentGateway,
   InMemoryPaymentRepository,
   InMemoryPaymentStore,
+  InMemoryPrivacyUserStore,
   InMemoryTelemetry,
   NoopAnalytics,
   NoopTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  MemoryUserAnonymizableSource,
+  MemoryUserRetainableSource,
+  MemoryUserSubjectDataSource,
   NullDocumentProcessor,
   RandomIdGenerator,
   redact,
@@ -43,8 +47,10 @@ import {
   type LogSink,
 } from "@base/infrastructure";
 import type { LogFields, MailMessage } from "@base/application";
+import { userFieldClassifications } from "@base/domain";
 import { startPaymentInstructionFactory } from "./factories/payment";
 import { tenantIdFactory } from "./factories/tenant";
+import { entityIdFactory, emailFactory } from "./factories/identity";
 import {
   describeAnalyticsContract,
   describeAuditTrailContract,
@@ -64,6 +70,7 @@ import {
   describePaymentGatewayContract,
   describePaymentRepositoryContract,
   describePermissionsContract,
+  describePrivacySourceContract,
   describeRateLimiterContract,
   describeTelemetryContract,
   describeTenantRepositoryContract,
@@ -85,6 +92,35 @@ describeFieldCipherContract("InMemoryFieldCipher", () => new InMemoryFieldCipher
 describeConsentRepositoryContract("InMemoryConsentRepository", () => ({
   consents: new InMemoryConsentRepository(new InMemoryConsentStore(), tenantIdFactory(1)),
 }));
+
+describePrivacySourceContract("InMemoryUserPrivacySources", () => {
+  const store = new InMemoryPrivacyUserStore();
+  const tenantId = tenantIdFactory(1);
+  const subjectId = entityIdFactory(10);
+  store.put({
+    id: subjectId,
+    tenantId,
+    email: emailFactory("subject@example.com"),
+    displayName: "Test Subject",
+    createdAt: new Date("2025-06-01T00:00:00.000Z"),
+  });
+  return {
+    anonymizable: new MemoryUserAnonymizableSource(store),
+    subjectData: new MemoryUserSubjectDataSource(store, userFieldClassifications),
+    retainable: new MemoryUserRetainableSource(store),
+    tenantId,
+    subjectId,
+    seedSubject: (seedTenant, seedSubject, createdAt) => {
+      store.put({
+        id: seedSubject,
+        tenantId: seedTenant,
+        email: emailFactory("seeded@example.com"),
+        displayName: "Seeded Subject",
+        createdAt,
+      });
+    },
+  };
+});
 
 describeAuditTrailContract("InMemoryAuditTrail", () => ({
   audit: new InMemoryAuditTrail(new InMemoryAuditStore(), tenantIdFactory(1)),

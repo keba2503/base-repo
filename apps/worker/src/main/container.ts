@@ -1,4 +1,5 @@
 import type {
+  AnonymizableSource,
   Clock,
   DocumentProcessor,
   DocumentRepository,
@@ -10,11 +11,18 @@ import type {
   Mailer,
   Outbox,
   Permissions,
+  RetainableSource,
+  SubjectDataSource,
   Telemetry,
   TenantRepository,
   UnitOfWork,
 } from "@base/application";
-import { documentFieldClassifications, tenantFieldClassifications, type TenantId } from "@base/domain";
+import {
+  documentFieldClassifications,
+  tenantFieldClassifications,
+  userFieldClassifications,
+  type TenantId,
+} from "@base/domain";
 import {
   AesGcmFieldCipher,
   ConsoleLogger,
@@ -30,10 +38,14 @@ import {
   InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
+  InMemoryPrivacyUserStore,
   InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  MemoryUserAnonymizableSource,
+  MemoryUserRetainableSource,
+  MemoryUserSubjectDataSource,
   NoopTelemetry,
   NullDocumentProcessor,
   OtelTelemetry,
@@ -42,6 +54,9 @@ import {
   PostgresOutbox,
   PostgresTenantRepository,
   PostgresUnitOfWork,
+  PostgresUserAnonymizableSource,
+  PostgresUserRetainableSource,
+  PostgresUserSubjectDataSource,
   RandomIdGenerator,
   redactionPolicyFrom,
   ResendMailer,
@@ -67,6 +82,9 @@ export type Container = {
   readonly outbox: Outbox;
   readonly jobQueue: JobQueue;
   documentsScopedTo(tenantId: TenantId): DocumentRepository;
+  readonly privacyAnonymizableSources: readonly AnonymizableSource[];
+  readonly privacySubjectSources: readonly SubjectDataSource[];
+  readonly privacyRetainableSources: readonly RetainableSource[];
   readonly fileStore: FileStore;
   readonly documentProcessor: DocumentProcessor;
   readonly logger: Logger;
@@ -74,6 +92,25 @@ export type Container = {
   readonly mailer: Mailer;
   close(): Promise<void>;
 };
+
+function privacyPersistence(memoryStore: InMemoryPrivacyUserStore, client: PostgresClient | undefined): {
+  readonly privacyAnonymizableSources: readonly AnonymizableSource[];
+  readonly privacySubjectSources: readonly SubjectDataSource[];
+  readonly privacyRetainableSources: readonly RetainableSource[];
+} {
+  if (client === undefined) {
+    return {
+      privacyAnonymizableSources: [new MemoryUserAnonymizableSource(memoryStore)],
+      privacySubjectSources: [new MemoryUserSubjectDataSource(memoryStore, userFieldClassifications)],
+      privacyRetainableSources: [new MemoryUserRetainableSource(memoryStore)],
+    };
+  }
+  return {
+    privacyAnonymizableSources: [new PostgresUserAnonymizableSource(client.db)],
+    privacySubjectSources: [new PostgresUserSubjectDataSource(client.db, userFieldClassifications)],
+    privacyRetainableSources: [new PostgresUserRetainableSource(client.db)],
+  };
+}
 
 const logRedactionPolicy = redactionPolicyFrom(tenantFieldClassifications, documentFieldClassifications);
 
@@ -192,10 +229,13 @@ export function createContainer(environment: Environment): Container {
   }
   const fieldCipher = fieldCipherFor(environment, logger);
   const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
+  const privacyStore = new InMemoryPrivacyUserStore();
+  const privacy = privacyPersistence(privacyStore, client);
   const { telemetry, otelClient } = telemetryFor(environment, logger, logRedactionPolicy);
 
   return {
     ...persistence,
+    ...privacy,
     clock: new SystemClock(),
     idGenerator: new RandomIdGenerator(),
     permissions: new ScopedPermissions(),

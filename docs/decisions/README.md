@@ -41,6 +41,8 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0030 | Money is an integer count of minor units, and a provider notification is verified inside the adapter | accepted |
 | 0031 | The stop hook runs `check:fast`, the full check runs once at pre-push and CI | accepted |
 | 0032 | Code scanning stays as it is, and a private derivative either buys it or turns it off | accepted |
+| 0033 | The anonymization token is random, superseding the deterministic one in 0018 | accepted |
+| 0034 | The privacy source ports take their tenant per call, and that is the exception to the tenant scoped rule | accepted |
 
 ## Template
 

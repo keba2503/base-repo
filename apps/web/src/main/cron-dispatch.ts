@@ -5,9 +5,17 @@ import { cronActor } from "./actor";
 import { env } from "./env";
 import { dispatchJobsOperation, dispatchOutboxOperation, sharedContainer } from "./use-cases";
 
-function authorized(request: Request): boolean {
+let warnedAboutMissingSecret = false;
+
+function authorized(request: Request, warn: (message: string) => void): boolean {
   const secret = env.cronSecret;
-  if (secret === undefined) return env.nodeEnv !== "production";
+  if (secret === undefined) {
+    if (!warnedAboutMissingSecret) {
+      warnedAboutMissingSecret = true;
+      warn("CRON_SECRET is not configured: every cron dispatch call is rejected until it is set");
+    }
+    return false;
+  }
   const provided = cronBearerTokenOf(request.headers.get("authorization"));
   if (provided === undefined) return false;
   return cronSecretsMatch(secret, provided);
@@ -23,7 +31,7 @@ export async function handleCronDispatch(request: Request): Promise<Response> {
   });
 
   try {
-    if (!authorized(request)) {
+    if (!authorized(request, (message) => container.logger.warn(message))) {
       container.logger.warn("cron dispatch rejected an unauthenticated call", {
         requestId,
         remoteAddress: remoteAddressOf(request),

@@ -1,13 +1,17 @@
 import {
   dispatchJobs,
   dispatchOutbox,
+  eraseSubjectDataExecutor,
   executorRegistry,
+  exportSubjectDataExecutor,
   handlerRegistry,
   processDocument,
+  retentionSweepExecutor,
   sendTenantWelcome,
   type DispatchJobsResponse,
   type DispatchOutboxResponse,
   type MailMessage,
+  type RetentionPolicy,
   type TenantResponse,
 } from "@base/application";
 import { presentTenantWelcomeEmail, renderEmail } from "@base/adapters";
@@ -75,10 +79,12 @@ export type DispatchJobsOutcome =
   | { readonly refused: true; readonly code: string };
 
 export function dispatchJobsOperation(container: Container, modules: ModuleActivation = defaultModuleActivation) {
+  const privacySweepIntervalDays = 1;
+  const privacyRetentionPolicy: RetentionPolicy = { users: 365 };
   const dispatch = dispatchJobs({
     jobs: container.jobQueue,
-    executors: executorRegistry(
-      isModuleActive("documents", modules)
+    executors: executorRegistry([
+      ...(isModuleActive("documents", modules)
         ? [
             processDocument({
               documentsScopedTo: (tenantId) => container.documentsScopedTo(tenantId),
@@ -88,8 +94,32 @@ export function dispatchJobsOperation(container: Container, modules: ModuleActiv
               unitOfWork: container.unitOfWork,
             }),
           ]
-        : [],
-    ),
+        : []),
+      ...(isModuleActive("privacy", modules)
+        ? [
+            eraseSubjectDataExecutor({
+              sources: container.privacyAnonymizableSources,
+              clock: container.clock,
+              tokens: container.idGenerator,
+            }),
+            exportSubjectDataExecutor({
+              sources: container.privacySubjectSources,
+              exportStore: container.fileStore,
+              clock: container.clock,
+              logger: container.logger,
+              tokens: container.idGenerator,
+            }),
+            retentionSweepExecutor({
+              sources: container.privacyRetainableSources,
+              policy: privacyRetentionPolicy,
+              clock: container.clock,
+              jobs: container.jobQueue,
+              tokens: container.idGenerator,
+              sweepIntervalDays: privacySweepIntervalDays,
+            }),
+          ]
+        : []),
+    ]),
     permissions: container.permissions,
     logger: container.logger,
     clock: container.clock,

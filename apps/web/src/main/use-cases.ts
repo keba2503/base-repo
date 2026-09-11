@@ -5,7 +5,9 @@ import {
   createTenant,
   dispatchJobs,
   dispatchOutbox,
+  eraseSubjectDataExecutor,
   executorRegistry,
+  exportSubjectDataExecutor,
   getDocument,
   getTenantBySlug,
   grantConsent,
@@ -19,6 +21,7 @@ import {
   resolveActorFromApiKey,
   resolveActorFromSession,
   revokeApiKey,
+  retentionSweepExecutor,
   sendTenantWelcome,
   startPayment,
   withdrawConsent,
@@ -34,6 +37,7 @@ import {
   type RegisterUser,
   type ResolveActorFromApiKey,
   type ResolveActorFromSession,
+  type RetentionPolicy,
   type TenantResponse,
   type WithdrawConsent,
 } from "@base/application";
@@ -335,10 +339,12 @@ export type DispatchJobsOutcome =
 
 export function dispatchJobsOperation() {
   const parts = container();
+  const privacySweepIntervalDays = 1;
+  const privacyRetentionPolicy: RetentionPolicy = { users: 365 };
   const dispatch = dispatchJobs({
     jobs: dispatchPersistenceOf(parts).jobQueue,
-    executors: executorRegistry(
-      isModuleActive("documents")
+    executors: executorRegistry([
+      ...(isModuleActive("documents")
         ? [
             processDocument({
               documentsScopedTo: (tenantId) => parts.documentsScopedTo(tenantId),
@@ -348,8 +354,32 @@ export function dispatchJobsOperation() {
               unitOfWork: parts.unitOfWork,
             }),
           ]
-        : [],
-    ),
+        : []),
+      ...(isModuleActive("privacy")
+        ? [
+            eraseSubjectDataExecutor({
+              sources: parts.privacyAnonymizableSources,
+              clock: parts.clock,
+              tokens: parts.idGenerator,
+            }),
+            exportSubjectDataExecutor({
+              sources: parts.privacySubjectSources,
+              exportStore: parts.fileStore,
+              clock: parts.clock,
+              logger: parts.logger,
+              tokens: parts.idGenerator,
+            }),
+            retentionSweepExecutor({
+              sources: parts.privacyRetainableSources,
+              policy: privacyRetentionPolicy,
+              clock: parts.clock,
+              jobs: dispatchPersistenceOf(parts).jobQueue,
+              tokens: parts.idGenerator,
+              sweepIntervalDays: privacySweepIntervalDays,
+            }),
+          ]
+        : []),
+    ]),
     permissions: parts.permissions,
     logger: parts.logger,
     clock: parts.clock,

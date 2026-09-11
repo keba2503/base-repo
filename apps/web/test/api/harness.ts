@@ -143,7 +143,11 @@ export function ok<Value>(value: Value): { kind: "ok"; value: Value } {
   return { kind: "ok", value };
 }
 
-export function domainError(kind: "invariantViolation" | "notFound" | "conflict" | "forbidden", code: string, message: string) {
+export function domainError(
+  kind: "invariantViolation" | "notFound" | "conflict" | "forbidden" | "unavailable",
+  code: string,
+  message: string,
+) {
   return { kind: "err" as const, error: { kind, code, message } };
 }
 

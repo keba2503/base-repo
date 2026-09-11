@@ -50,7 +50,7 @@ describe("idempotent create with an Idempotency-Key", () => {
     expect((await errorOf(second)).code).toBe("idempotency.payloadMismatch");
   });
 
-  it("replays a stored failure too", async () => {
+  it("replays a stored 4xx failure, keeping the payload guard meaningful", async () => {
     const harness = harnessFactory({
       createTenant: () => Promise.resolve(domainError("conflict", "tenant.slug.taken", "taken")),
     });
@@ -58,6 +58,32 @@ describe("idempotent create with an Idempotency-Key", () => {
     const second = await postTenant(harness.api, validTenantPayload, withKey("k-1"));
     expect(second.status).toBe(409);
     expect(second.headers.get(idempotencyReplayedHeader)).toBe("true");
+  });
+
+  it("refuses the same key with a different payload after a first call that failed", async () => {
+    const harness = harnessFactory({
+      createTenant: () => Promise.resolve(domainError("conflict", "tenant.slug.taken", "taken")),
+    });
+    await postTenant(harness.api, validTenantPayload, withKey("k-1"));
+    const second = await postTenant(harness.api, { ...validTenantPayload, name: "Other" }, withKey("k-1"));
+    expect(second.status).toBe(422);
+    expect((await errorOf(second)).code).toBe("idempotency.payloadMismatch");
+  });
+
+  it("does not cache a server failure, so a retry with the same key runs the use case again", async () => {
+    let calls = 0;
+    const harness = harnessFactory({
+      createTenant: () => {
+        calls += 1;
+        return Promise.resolve(calls === 1 ? domainError("unavailable", "provider.unavailable", "down") : ok(tenantResponse));
+      },
+    });
+    const first = await postTenant(harness.api, validTenantPayload, withKey("k-1"));
+    expect(first.status).toBe(503);
+    const second = await postTenant(harness.api, validTenantPayload, withKey("k-1"));
+    expect(second.status).toBe(201);
+    expect(second.headers.get(idempotencyReplayedHeader)).toBeNull();
+    expect(calls).toBe(2);
   });
 
   it("keeps keys apart per actor", async () => {

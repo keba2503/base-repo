@@ -1,6 +1,7 @@
-import { fieldsClassifiedAs, ok, type EntityId } from "@base/domain";
+import { err, fieldsClassifiedAs, invariantViolation, isErr, ok, parseEntityId, type DomainError, type Result } from "@base/domain";
 import type { FileStore } from "../../documents/ports/file-store";
 import type { Clock } from "../../kernel/ports/clock";
+import type { IdGenerator } from "../../kernel/ports/id-generator";
 import type { Logger } from "../../kernel/ports/logger";
 import type { JobExecutor } from "../../jobs/job-executor";
 import type { SubjectDataSource } from "../ports/subject-data-source";
@@ -16,6 +17,7 @@ export type ExportSubjectDataDependencies = {
   readonly exportStore: FileStore;
   readonly clock: Clock;
   readonly logger: Logger;
+  readonly tokens: IdGenerator;
 };
 
 function isExportPayload(payload: unknown): payload is ExportSubjectDataPayload {
@@ -41,31 +43,34 @@ export function composeSubjectExport(
 }
 
 export function exportSubjectDataExecutor(dependencies: ExportSubjectDataDependencies): JobExecutor {
-  const { sources, exportStore, clock, logger } = dependencies;
+  const { sources, exportStore, clock, logger, tokens } = dependencies;
 
   return {
     jobName: exportSubjectDataJobName,
-    async execute(job) {
+    async execute(job): Promise<Result<void, DomainError>> {
       if (!isExportPayload(job.payload)) {
-        return ok(undefined);
+        return err(invariantViolation("privacy.export.payload.malformed", "A subject data export job must carry a subjectId"));
       }
-      const subjectId = job.payload.subjectId as EntityId;
+      const subjectId = parseEntityId(job.payload.subjectId);
+      if (isErr(subjectId)) {
+        return err(invariantViolation("privacy.export.payload.malformed", "A subject data export job must carry a valid subjectId"));
+      }
       const collected = await Promise.all(
         sources.map(async (source) => ({
           sourceName: source.sourceName,
           classifications: source.classifications,
-          rows: await source.findAllForSubject(job.tenantId, subjectId),
+          rows: await source.findAllForSubject(job.tenantId, subjectId.value),
         })),
       );
       const composed = composeSubjectExport(collected);
-      const storageKey = `privacy-exports/${job.tenantId}/${subjectId}-${String(clock.now().getTime())}.json`;
+      const storageKey = `privacy-exports/${job.tenantId}/${String(clock.now().getTime())}-${tokens.next()}.json`;
       await exportStore.save({
         tenantId: job.tenantId,
         storageKey,
         contentType: "application/json",
         bytes: new TextEncoder().encode(JSON.stringify(composed)),
       });
-      logger.info("subject data export composed", { jobId: job.id, subjectId, storageKey });
+      logger.info("subject data export composed", { jobId: job.id, exportStorageKey: storageKey });
       return ok(undefined);
     },
   };

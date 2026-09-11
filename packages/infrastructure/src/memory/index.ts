@@ -34,7 +34,14 @@ export {
   type PaymentNotificationFixture,
 } from "./billing/index";
 export { InMemoryTenantRepository, InMemoryTenantStore } from "./tenants/index";
-export { InMemoryConsentRepository, InMemoryConsentStore } from "./privacy/index";
+export {
+  InMemoryConsentRepository,
+  InMemoryConsentStore,
+  InMemoryPrivacyUserStore,
+  MemoryUserAnonymizableSource,
+  MemoryUserRetainableSource,
+  MemoryUserSubjectDataSource,
+} from "./privacy/index";
 export { InMemoryDocumentProcessor, InMemoryDocumentRepository, InMemoryDocumentStore, InMemoryFileStore } from "./documents/index";
 export {
   InMemoryApiKeyHasher,

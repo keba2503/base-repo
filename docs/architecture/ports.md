@@ -22,5 +22,5 @@ Ports are named by capability: `DocumentStore`, `Mailer`, `PaymentGateway`, `Job
 
 - A port receives and returns domain types or plain models. Never provider types.
 - A port method does one thing. A repository port exposes one method per query the use cases actually run.
-- Every repository port is tenant scoped. It cannot be constructed without a tenant context and it cannot query across tenants.
+- Every repository port is tenant scoped. It cannot be constructed without a tenant context and it cannot query across tenants. One exception, recorded in `docs/decisions/0034`: a port whose caller is a job executor carries the tenant per call, because the executor runs for whichever tenant's job the queue claims next, and its implementations enforce the same boundary through the tenant scope mechanism.
 - Time and randomness are ports (`Clock`, `IdGenerator`) so use cases stay deterministic under test.

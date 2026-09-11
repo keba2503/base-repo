@@ -18,7 +18,7 @@ describeAnalyticsContract(
 );
 
 describe("MeasurementProtocolAnalytics", () => {
-  it("posts the event to the measurement id and api secret it was configured with", async () => {
+  it("posts the event to the measurement id and api secret the protocol requires in the query string", async () => {
     const calls: { readonly url: string; readonly init: RequestInit }[] = [];
     const analytics = new MeasurementProtocolAnalytics({
       measurementId: "G-ABC123",

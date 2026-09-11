@@ -1,5 +1,6 @@
 import type {
   Analytics,
+  AnonymizableSource,
   ApiKeyHasher,
   ApiKeyRepository,
   AuditTrail,
@@ -23,7 +24,9 @@ import type {
   PaymentRepository,
   Permissions,
   RateLimiter,
+  RetainableSource,
   SecretGenerator,
+  SubjectDataSource,
   Telemetry,
   TenantRepository,
   UnitOfWork,
@@ -72,12 +75,16 @@ import {
   InMemoryPaymentGateway,
   InMemoryPaymentRepository,
   InMemoryPaymentStore,
+  InMemoryPrivacyUserStore,
   InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
   InMemoryUserRepository,
   InMemoryUserStore,
+  MemoryUserAnonymizableSource,
+  MemoryUserRetainableSource,
+  MemoryUserSubjectDataSource,
   MeasurementProtocolAnalytics,
   NoopAnalytics,
   NoopTelemetry,
@@ -92,6 +99,9 @@ import {
   PostgresOutbox,
   PostgresPaymentRepository,
   PostgresTenantRepository,
+  PostgresUserAnonymizableSource,
+  PostgresUserRetainableSource,
+  PostgresUserSubjectDataSource,
   PostgresUnitOfWork,
   PostgresUserRepository,
   RandomIdGenerator,
@@ -140,6 +150,9 @@ export type Container = {
   paymentsScopedTo(tenantId: TenantId): PaymentRepository;
   readonly paymentGateway: PaymentGateway;
   consentsScopedTo(tenantId: TenantId): ConsentRepository;
+  readonly privacyAnonymizableSources: readonly AnonymizableSource[];
+  readonly privacySubjectSources: readonly SubjectDataSource[];
+  readonly privacyRetainableSources: readonly RetainableSource[];
   auditScopedTo(tenantId: TenantId): AuditTrail;
   readonly fileStore: FileStore;
   readonly documentProcessor: DocumentProcessor;
@@ -493,10 +506,24 @@ export function createContainer(environment: Environment): Container {
 
   const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);
 
+  const privacyUserStore = new InMemoryPrivacyUserStore();
+  const privacy = client === undefined
+    ? {
+        privacyAnonymizableSources: [new MemoryUserAnonymizableSource(privacyUserStore)],
+        privacySubjectSources: [new MemoryUserSubjectDataSource(privacyUserStore, userFieldClassifications)],
+        privacyRetainableSources: [new MemoryUserRetainableSource(privacyUserStore)],
+      }
+    : {
+        privacyAnonymizableSources: [new PostgresUserAnonymizableSource(client.db)],
+        privacySubjectSources: [new PostgresUserSubjectDataSource(client.db, userFieldClassifications)],
+        privacyRetainableSources: [new PostgresUserRetainableSource(client.db)],
+      };
+
   const container: Container = {
     ...parts,
     ...persistence,
     ...identity,
+    ...privacy,
     documentRegistry: documents.documentRegistry,
     documentsScopedTo: documents.documentsScopedTo,
     jobsScopedTo: documents.jobsScopedTo,

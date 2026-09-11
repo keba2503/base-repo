@@ -114,11 +114,13 @@ describe("resend mailer outcome", () => {
     expect(result.error.kind).toBe("unavailable");
   });
 
-  it("reports a thrown network failure as unavailable", async () => {
+  it("reports a thrown network failure as unavailable without leaking the thrown message", async () => {
     const fake = fakeClient(() => Promise.reject(new Error("socket hang up")));
     const result = await mailerOver(fake).send(welcome);
     if (!isErr(result)) throw new Error("Expected a failure");
-    expect([result.error.kind, result.error.message]).toEqual(["unavailable", "socket hang up"]);
+    expect(result.error.kind).toBe("unavailable");
+    expect(result.error.message).toBe("the mail provider could not be reached");
+    expect(result.error.message).not.toContain("socket hang up");
   });
 
   it("gives up when Resend does not answer within the timeout", async () => {

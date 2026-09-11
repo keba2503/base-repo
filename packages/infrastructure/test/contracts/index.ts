@@ -31,6 +31,7 @@ export {
 } from "./payment-gateway.contract";
 export { describePaymentRepositoryContract, type PaymentRepositoryHarness } from "./payment-repository.contract";
 export { describePermissionsContract } from "./permissions.contract";
+export { describePrivacySourceContract, type PrivacySourceHarness } from "./privacy-sources.contract";
 export { describeRateLimiterContract, type RateLimiterHarness } from "./rate-limiter.contract";
 export { describeSecretGeneratorContract } from "./secret-generator.contract";
 export { describeTelemetryContract } from "./telemetry.contract";

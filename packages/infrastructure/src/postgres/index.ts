@@ -9,7 +9,12 @@ export { PostgresApiKeyRepository, PostgresMembershipRepository, PostgresUserRep
 export { PostgresAuditTrail } from "./audit-trail";
 export { PostgresPaymentRepository } from "./billing/index";
 export { PostgresDocumentRepository } from "./documents/index";
-export { PostgresConsentRepository } from "./privacy/index";
+export {
+  PostgresConsentRepository,
+  PostgresUserAnonymizableSource,
+  PostgresUserRetainableSource,
+  PostgresUserSubjectDataSource,
+} from "./privacy/index";
 export { PostgresJobQueue } from "./jobs/index";
 export { PostgresOutbox, outboxRowToEvent } from "./outbox";
 export {
