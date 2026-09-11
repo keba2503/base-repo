@@ -17,6 +17,7 @@
     "defects": "bun scripts/architecture/defects.ts",
     "workflows": "bun scripts/architecture/workflows.ts",
     "review-trailer": "bun scripts/architecture/review-trailer.ts",
+    "derive": "bun scripts/derive/run.ts",
     "depcruise": "depcruise --config .dependency-cruiser.mjs apps packages scripts",
     "test": "bun test --conditions react-server",
     "check": "bun run lint && bun run typecheck && bun run depcruise && bun run arch && bun run structure && bun run env-example && bun run defects && bun run workflows && bun run test",

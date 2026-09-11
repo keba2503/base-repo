@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { checkSource, formatIssues, type Issue } from "./check-source";
+import { checkBytes, formatIssues, type Issue } from "./check-source";
 
 const ignored = ["bun.lock", "next-env.d.ts"];
 
@@ -14,13 +14,13 @@ function trackedFiles(): string[] {
 const files = process.argv.slice(2).length > 0 ? process.argv.slice(2) : trackedFiles();
 const issues: Issue[] = [];
 for (const file of files) {
-  let text: string;
+  let bytes: Uint8Array;
   try {
-    text = readFileSync(file, "utf8");
+    bytes = readFileSync(file);
   } catch {
     continue;
   }
-  issues.push(...checkSource(file, text));
+  issues.push(...checkBytes(file, bytes));
 }
 if (issues.length > 0) {
   console.error(formatIssues(issues));

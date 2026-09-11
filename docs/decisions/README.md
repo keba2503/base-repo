@@ -40,6 +40,7 @@ One file per decision, numbered, never edited after acceptance. A reversal is a 
 | 0029 | The GitHub Actions dispatch trigger is opt-in per repository, and off in this base | accepted |
 | 0030 | Money is an integer count of minor units, and a provider notification is verified inside the adapter | accepted |
 | 0031 | The stop hook runs `check:fast`, the full check runs once at pre-push and CI | accepted |
+| 0032 | Code scanning stays as it is, and a private derivative either buys it or turns it off | accepted |
 
 ## Template
 

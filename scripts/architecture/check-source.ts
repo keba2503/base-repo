@@ -1,9 +1,11 @@
 import * as ts from "typescript";
 import { envAccessOnlyIn, layerByPackage, layerOf, type Layer } from "./layers";
+import { decodedText } from "../utf8";
 
 export type Issue = { file: string; line: number; rule: string; message: string };
 
 const scriptExtensions = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
+const markupExtensions = [".css", ".md", ".mdx", ".html", ".svg", ".json", ".jsonc"];
 const hashCommentExtensions = [".yml", ".yaml", ".sh", ".toml", ".env", ".gitignore", ".gitattributes"];
 const hashCommentNames = [".gitignore", ".gitattributes", ".npmrc", "CODEOWNERS", ".env.example"];
 
@@ -198,6 +200,24 @@ function rawElementIssues(file: string, source: ts.SourceFile): Issue[] {
   return issues;
 }
 
+const controlBytePattern = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+
+function controlByteIssues(file: string, text: string): Issue[] {
+  const issues: Issue[] = [];
+  let match: RegExpExecArray | null;
+  controlBytePattern.lastIndex = 0;
+  while ((match = controlBytePattern.exec(text)) !== null) {
+    const code = match[0].charCodeAt(0).toString(16).padStart(4, "0").toUpperCase();
+    issues.push({
+      file,
+      line: lineOf(text, match.index),
+      rule: "no-control-bytes",
+      message: `A raw control byte U+${code} makes this file read as binary to grep, git and every rename; write it as an escape instead`,
+    });
+  }
+  return issues;
+}
+
 function plainTextCommentIssues(file: string, text: string, pattern: RegExp, message: string): Issue[] {
   const issues: Issue[] = [];
   let match: RegExpExecArray | null;
@@ -208,6 +228,36 @@ function plainTextCommentIssues(file: string, text: string, pattern: RegExp, mes
 }
 
 export function checkSource(file: string, text: string): Issue[] {
+  return [...controlByteIssues(file, text), ...syntaxIssues(file, text)];
+}
+
+export function hasCheckedSyntax(file: string): boolean {
+  const ext = extensionOf(file);
+  const base = file.slice(file.lastIndexOf("/") + 1);
+  return (
+    scriptExtensions.includes(ext) ||
+    markupExtensions.includes(ext) ||
+    hashCommentExtensions.includes(ext) ||
+    hashCommentNames.includes(base)
+  );
+}
+
+export function checkBytes(file: string, bytes: Uint8Array): Issue[] {
+  const text = decodedText(bytes);
+  if (text !== undefined) return checkSource(file, text);
+  if (!hasCheckedSyntax(file)) return [];
+  return [
+    {
+      file,
+      line: 1,
+      rule: "invalid-utf8",
+      message:
+        "This file is not valid UTF-8, so every other rule would have to skip it; a file with a checked extension has to be readable text",
+    },
+  ];
+}
+
+function syntaxIssues(file: string, text: string): Issue[] {
   const ext = extensionOf(file);
   const base = file.slice(file.lastIndexOf("/") + 1);
   if (scriptExtensions.includes(ext)) {
