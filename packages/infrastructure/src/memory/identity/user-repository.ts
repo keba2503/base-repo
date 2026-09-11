@@ -19,6 +19,10 @@ export class InMemoryUserStore {
     return undefined;
   }
 
+  values(): IterableIterator<UserSnapshot> {
+    return this.#snapshots.values();
+  }
+
   get size(): number {
     return this.#snapshots.size;
   }

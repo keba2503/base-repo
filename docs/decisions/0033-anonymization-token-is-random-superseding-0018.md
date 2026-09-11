@@ -7,7 +7,7 @@ date: 2026-09-11
 
 ## Context
 
-Decision 0018 fixed the token an erasure writes into an anonymized record as `erased-${subjectId}`, deterministic and explicitly "not a secret". A full review of the repository found that property to be the defect: a token derived from the identifier it replaces is reversible by construction, so anyone holding the anonymized row can recover the subject identifier and re-link the record to the person it was supposed to stop pointing at. The review of the retention sweep found the same shape in `expired-${subjectId}`, and a second, weaker variant in the export storage key, a 32-bit home-made digest of the subject identifier that is brute-forceable and correlatable across exports.
+Decision 0018 fixed the token an erasure writes into an anonymized record as `erased-${subjectId}`, deterministic and explicitly "not a secret". A full review of the repository found that property to be the defect: a token derived from the identifier it replaces is reversible by construction, so anyone holding the anonymized row can recover the subject identifier and re-link the record to the person it was supposed to stop pointing at. The retention sweep carried the same shape in `expired-${subjectId}`, and the export storage key embedded the subject identifier verbatim, so two exports of the same subject were correlatable by name alone.
 
 ## Decision
 

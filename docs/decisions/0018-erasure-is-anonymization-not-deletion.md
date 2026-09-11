@@ -1,6 +1,6 @@
 ---
-status: accepted
 date: 2026-09-06
+status: superseded by 0033
 ---
 
 # 0018 The right to erasure anonymizes in place; it never deletes a row

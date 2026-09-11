@@ -37,7 +37,6 @@ export { InMemoryTenantRepository, InMemoryTenantStore } from "./tenants/index";
 export {
   InMemoryConsentRepository,
   InMemoryConsentStore,
-  InMemoryPrivacyUserStore,
   MemoryUserAnonymizableSource,
   MemoryUserRetainableSource,
   MemoryUserSubjectDataSource,

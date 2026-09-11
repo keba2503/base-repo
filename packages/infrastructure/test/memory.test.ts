@@ -24,7 +24,7 @@ import {
   InMemoryPaymentGateway,
   InMemoryPaymentRepository,
   InMemoryPaymentStore,
-  InMemoryPrivacyUserStore,
+  InMemoryUserStore,
   InMemoryTelemetry,
   NoopAnalytics,
   NoopTelemetry,
@@ -94,7 +94,7 @@ describeConsentRepositoryContract("InMemoryConsentRepository", () => ({
 }));
 
 describePrivacySourceContract("InMemoryUserPrivacySources", () => {
-  const store = new InMemoryPrivacyUserStore();
+  const store = new InMemoryUserStore();
   const tenantId = tenantIdFactory(1);
   const subjectId = entityIdFactory(10);
   store.put({

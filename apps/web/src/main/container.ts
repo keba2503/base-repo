@@ -75,7 +75,6 @@ import {
   InMemoryPaymentGateway,
   InMemoryPaymentRepository,
   InMemoryPaymentStore,
-  InMemoryPrivacyUserStore,
   InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
@@ -359,8 +358,7 @@ type IdentityPersistence = Pick<
   "userRegistry" | "membershipRegistry" | "membershipsScopedTo" | "apiKeyRegistry" | "apiKeysScopedTo"
 >;
 
-function memoryIdentityPersistence(): IdentityPersistence {
-  const users = new InMemoryUserStore();
+function memoryIdentityPersistence(users: InMemoryUserStore): IdentityPersistence {
   const memberships = new InMemoryMembershipStore();
   const apiKeys = new InMemoryApiKeyStore();
   return {
@@ -495,7 +493,8 @@ export function createContainer(environment: Environment): Container {
   }
   const persistence = client !== undefined ? postgresPersistence(client) : memoryPersistence();
 
-  const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence();
+  const privacyUserStore = new InMemoryUserStore();
+  const identity = client !== undefined ? postgresIdentityPersistence(client) : memoryIdentityPersistence(privacyUserStore);
 
   const fieldCipher = fieldCipherFor(environment, parts.logger);
   const documents =
@@ -506,7 +505,6 @@ export function createContainer(environment: Environment): Container {
 
   const { telemetry, otelClient } = telemetryFor(environment, parts.logger, logRedactionPolicy);
 
-  const privacyUserStore = new InMemoryPrivacyUserStore();
   const privacy = client === undefined
     ? {
         privacyAnonymizableSources: [new MemoryUserAnonymizableSource(privacyUserStore)],

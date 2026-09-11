@@ -38,11 +38,11 @@ import {
   InMemoryJobStore,
   InMemoryMailer,
   InMemoryOutbox,
-  InMemoryPrivacyUserStore,
   InMemoryTelemetry,
   InMemoryTenantRepository,
   InMemoryTenantStore,
   InMemoryUnitOfWork,
+  InMemoryUserStore,
   MemoryUserAnonymizableSource,
   MemoryUserRetainableSource,
   MemoryUserSubjectDataSource,
@@ -93,7 +93,7 @@ export type Container = {
   close(): Promise<void>;
 };
 
-function privacyPersistence(memoryStore: InMemoryPrivacyUserStore, client: PostgresClient | undefined): {
+function privacyPersistence(memoryStore: InMemoryUserStore, client: PostgresClient | undefined): {
   readonly privacyAnonymizableSources: readonly AnonymizableSource[];
   readonly privacySubjectSources: readonly SubjectDataSource[];
   readonly privacyRetainableSources: readonly RetainableSource[];
@@ -229,7 +229,7 @@ export function createContainer(environment: Environment): Container {
   }
   const fieldCipher = fieldCipherFor(environment, logger);
   const persistence = client !== undefined ? postgresPersistence(client, fieldCipher) : memoryPersistence();
-  const privacyStore = new InMemoryPrivacyUserStore();
+  const privacyStore = new InMemoryUserStore();
   const privacy = privacyPersistence(privacyStore, client);
   const { telemetry, otelClient } = telemetryFor(environment, logger, logRedactionPolicy);
 
