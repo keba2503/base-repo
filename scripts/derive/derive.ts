@@ -25,6 +25,8 @@ export const toolDirectory = "scripts/derive";
 export const structureDocument = "ESTRUCTURA.md";
 export const baseOnlyFiles = [
   "docs/base.html",
+  "docs/architecture-map.html",
+  "docs/architecture-map.json",
   `${toolDirectory}/derive.ts`,
   `${toolDirectory}/derive.test.ts`,
   `${toolDirectory}/run.ts`,

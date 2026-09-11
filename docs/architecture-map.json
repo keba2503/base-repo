@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "base-repo — Clean Architecture runtime",
+    "output": "base-repo.architecture.html",
+    "views": [
+      { "id": "request-path", "label": "HTTP request path", "focus": ["client", "web", "api", "adapters", "usecase", "domain"], "note": "From the browser to a use case and back." },
+      { "id": "job-path", "label": "Async job path", "focus": ["worker", "jobqueue", "infra"], "note": "The worker drains the queue and runs executors." },
+      { "id": "boundary", "label": "Layer boundary", "focus": ["domain", "usecase", "contracts", "adapters", "infra"], "note": "Dependencies point inward, enforced by layers.json." }
+    ]
+  },
+  "components": [
+    { "id": "client", "type": "external", "label": "Client", "sublabel": "Browser / API key", "pos": [40, 300], "size": [120, 60] },
+    { "id": "web", "type": "backend", "label": "apps/web", "sublabel": "Next.js", "pos": [240, 300], "size": [130, 60], "tag": "Ring 4" },
+    { "id": "api", "type": "backend", "label": "api routes", "sublabel": "Hono inside Next", "pos": [450, 300], "size": [130, 60] },
+    { "id": "adapters", "type": "backend", "label": "@base/adapters", "sublabel": "controllers", "pos": [450, 130], "size": [140, 60], "tag": "Ring 3" },
+    { "id": "contracts", "type": "backend", "label": "@base/contracts", "sublabel": "zod operations", "pos": [450, 470], "size": [140, 60], "tag": "Ring 3" },
+    { "id": "usecase", "type": "backend", "label": "@base/application", "sublabel": "use cases, ports", "pos": [670, 300], "size": [140, 60], "tag": "Ring 2" },
+    { "id": "domain", "type": "backend", "label": "@base/domain", "sublabel": "entities, invariants", "pos": [890, 300], "size": [140, 60], "tag": "Ring 1" },
+    { "id": "infra", "type": "backend", "label": "@base/infrastructure", "sublabel": "postgres, stripe, resend", "pos": [670, 470], "size": [160, 60], "tag": "Ring 4" },
+    { "id": "db", "type": "database", "label": "Postgres", "sublabel": "drizzle", "pos": [890, 470], "size": [130, 60] },
+    { "id": "worker", "type": "backend", "label": "apps/worker", "sublabel": "job poller", "pos": [240, 470], "size": [130, 60], "tag": "Ring 4" },
+    { "id": "jobqueue", "type": "messagebus", "label": "job queue", "sublabel": "outbox + jobs", "pos": [240, 630], "size": [140, 60] },
+    { "id": "providers", "type": "cloud", "label": "Providers", "sublabel": "Stripe, Resend, GA", "pos": [670, 630], "size": [140, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Dependencies point inward (layers.json)", "wraps": ["adapters", "contracts", "usecase", "domain"] },
+    { "kind": "security-group", "label": "process.env only in src/main", "wraps": ["web", "worker"] }
+  ],
+  "connections": [
+    { "id": "client-web", "from": "client", "to": "web", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "web-api", "from": "web", "to": "api" },
+    { "id": "api-adapters", "from": "api", "to": "adapters", "label": "controller", "fromSide": "top", "toSide": "bottom" },
+    { "id": "adapters-usecase", "from": "adapters", "to": "usecase", "label": "call use case", "fromSide": "right", "toSide": "top" },
+    { "id": "contracts-usecase", "from": "contracts", "to": "usecase", "label": "parse input", "variant": "dashed", "fromSide": "right", "toSide": "bottom" },
+    { "id": "usecase-domain", "from": "usecase", "to": "domain", "label": "domain types", "variant": "emphasis" },
+    { "id": "usecase-infra", "from": "usecase", "to": "infra", "label": "ports", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "infra-db", "from": "infra", "to": "db", "label": "repositories", "labelDy": 54 },
+    { "id": "infra-providers", "from": "infra", "to": "providers", "label": "adapters", "fromSide": "bottom", "toSide": "top" },
+    { "id": "worker-jobqueue", "from": "worker", "to": "jobqueue", "label": "claim jobs", "fromSide": "bottom", "toSide": "top" },
+    { "id": "worker-usecase", "from": "worker", "to": "usecase", "label": "executors", "variant": "dashed", "fromSide": "top", "toSide": "left" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Rings", "items": ["domain has zero dependencies", "application imports domain only", "adapters and contracts sit at ring 3"] },
+    { "dot": "emerald", "title": "Gates", "items": ["bun run check is the single gate", "depcruise reads layers.json", "agent hooks block writes and stops"] },
+    { "dot": "rose", "title": "Boundaries", "items": ["process.env only under apps/*/src/main", "views decide nothing, presenters decide all", "every aggregate is tenant scoped"] }
+  ]
+}

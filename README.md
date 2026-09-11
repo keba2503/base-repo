@@ -130,6 +130,19 @@ Recommended branch protection on `main` (GitHub repository settings):
 
 `ESTRUCTURA.md` describes, in Spanish, every directory of the tree and the role it plays, plus where the pieces that do not exist yet will live. It is verified by `bun run structure`, which is part of `bun run check`: a directory that is not described there fails the gate.
 
+`docs/architecture-map.html` is a self-contained, interactive map of this repository's runtime architecture — the rings, the request path, the job path and the boundaries — generated with [Archify](https://github.com/tt-a1i/archify) (MIT) from its typed JSON source, `docs/architecture-map.json`. Both are base-only artifacts: `derive` deletes them like it deletes `docs/base.html`, because a derived project's architecture is its own and copying this one would be a diagram of the wrong system.
+
+To regenerate it after the architecture changes, clone Archify and run it through `bun` — never `npx`, which this repository forbids:
+
+```bash
+git clone --depth 1 https://github.com/tt-a1i/archify.git ~/.local/share/archify
+cd ~/.local/share/archify/archify
+bun bin/archify.mjs doctor
+bun bin/archify.mjs render architecture path/to/architecture-map.json out.html
+```
+
+`render` writes a quick local artifact; `deliver` is the checked handoff, and it refuses to replace the target unless schema, layout, route and label-clearance checks all pass. A non-zero exit is never a success: read the `diagnostics[]` it prints and apply only the listed `supportedFixes`. The generated HTML carries HTML comments, which this repository's `no-comments` rule rejects, so strip them from the artifact before committing it.
+
 ## Environment variables
 
 `.env.example` lists every variable this repository reads, one file per app plus the ones shared across scripts and tests. `bun run env-example`, part of `bun run check`, reads every `requiredInProduction` list out of `apps/*/src/main/env.ts` and fails if any of those variables is missing from `.env.example` — so a variable a deployment actually needs is never discovered missing by first failing in production. It only enforces that direction: a variable used solely by a test suite (`SUPABASE_TEST_EMAIL`, say) can live in `.env.example` without any `env.ts` reading it.
