@@ -120,6 +120,30 @@ describe("checkSource", () => {
     expect(issues.some((issue) => issue.rule === "reuse-ui-primitives")).toBe(true);
   });
 
+  test("flags a line comment inside an html script block", () => {
+    const issues = checkSource(
+      "docs/example.html",
+      "<title>x</title>\n<script>\n// not allowed\nconst x = 1;\n</script>\n",
+    );
+    const comment = issues.find((issue) => issue.rule === "no-comments");
+    expect(comment?.line).toBe(3);
+  });
+
+  test("flags a block comment inside an html script block", () => {
+    const issues = checkSource("docs/example.html", "<script>/* not allowed */ const x = 1;</script>\n");
+    expect(issues.some((issue) => issue.rule === "no-comments")).toBe(true);
+  });
+
+  test("does not mistake a url inside an html script block for a comment", () => {
+    const issues = checkSource("docs/example.html", '<script>const a = `http://x`;</script>\n');
+    expect(issues.some((issue) => issue.rule === "no-comments")).toBe(false);
+  });
+
+  test("flags an html comment outside a script block", () => {
+    const issues = checkSource("docs/example.html", "<!-- not allowed -->\n");
+    expect(issues.some((issue) => issue.rule === "no-comments")).toBe(true);
+  });
+
   test("does not flag raw elements outside apps/web/src", () => {
     const issues = checkSource(
       "packages/adapters/src/tenants/example.tsx",

@@ -227,6 +227,23 @@ function plainTextCommentIssues(file: string, text: string, pattern: RegExp, mes
   return issues;
 }
 
+const scriptBlock = /<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g;
+
+function scriptCommentIssues(file: string, text: string): Issue[] {
+  const issues: Issue[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = scriptBlock.exec(text)) !== null) {
+    const body = match[1];
+    if (body === undefined || body.trim().length === 0) continue;
+    const offset = match.index + match[0].indexOf(body);
+    const source = ts.createSourceFile(file, body, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    for (const issue of commentIssuesInScript(file, source)) {
+      issues.push({ ...issue, line: lineOf(text, offset) + issue.line - 1 });
+    }
+  }
+  return issues;
+}
+
 export function checkSource(file: string, text: string): Issue[] {
   return [...controlByteIssues(file, text), ...syntaxIssues(file, text)];
 }
@@ -273,8 +290,14 @@ function syntaxIssues(file: string, text: string): Issue[] {
     return issues;
   }
   if (ext === ".css") return plainTextCommentIssues(file, text, /\/\*/g, "CSS comments are forbidden");
-  if (ext === ".md" || ext === ".mdx" || ext === ".html" || ext === ".svg") {
+  if (ext === ".md" || ext === ".mdx" || ext === ".svg") {
     return plainTextCommentIssues(file, text, /<!--/g, "HTML comments are forbidden");
+  }
+  if (ext === ".html") {
+    return [
+      ...plainTextCommentIssues(file, text, /<!--/g, "HTML comments are forbidden"),
+      ...scriptCommentIssues(file, text),
+    ];
   }
   if (ext === ".json" || ext === ".jsonc") return plainTextCommentIssues(file, text, /^\s*\/\//gm, "JSON comments are forbidden");
   if (hashCommentExtensions.includes(ext) || hashCommentNames.includes(base)) {
